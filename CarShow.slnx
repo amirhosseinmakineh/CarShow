@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+  </Folder>
+  <Project Path="CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj" />
+  <Project Path="CarShow.ApplicationService/CarShow.ApplicationService.csproj" />
+  <Project Path="CarShow.Domain/CarShow.Domain.csproj" />
+  <Project Path="CarShow.Infrastracture/CarShow.Infrastracture.csproj" Id="6301775b-afa5-424a-afcc-b45064bd81b3" />
+  <Project Path="CarShow.Security/CarShow.Security.csproj" Id="2557b25d-56e2-444b-a90b-4016fe892d59" />
+  <Project Path="Carshow.Utilities/Carshow.Utilities.csproj" Id="8c5d2338-de30-43ee-af88-e5986ac79710" />
+  <Project Path="CarShow/CarShow.csproj" />
+</Solution>

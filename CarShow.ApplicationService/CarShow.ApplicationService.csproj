@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CarShow.ApplicationService.Contract\CarShow.ApplicationService.Contract.csproj" />
+    <ProjectReference Include="..\CarShow.Domain\CarShow.Domain.csproj" />
+    <ProjectReference Include="..\CarShow.Security\CarShow.Security.csproj" />
+    <ProjectReference Include="..\Carshow.Utilities\Carshow.Utilities.csproj" />
+  </ItemGroup>
+
+</Project>
