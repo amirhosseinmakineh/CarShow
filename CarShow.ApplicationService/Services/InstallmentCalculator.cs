@@ -20,7 +20,7 @@ namespace CarShow.ApplicationService.Services
                 throw new ArgumentException("تعداد اقساط باید بزرگتر از صفر باشد");
             decimal balance = carPrice - prePayment;
 
-            decimal interest = balance * 6 * (time / 2m + 0.5m);
+            decimal interest = balance * 7 * (time / 2m + 0.5m);
             interest = interest / 100;
 
             decimal installmentAmount = (interest + balance) / time;
