@@ -1,4 +1,3 @@
-﻿using CarShow.ApplicationService.Contract.Dtos.CompanyDto;
 using CarShow.ApplicationService.Contract.Dtos.ModelDto;
 using CarShow.ApplicationService.Contract.IService;
 using CarShow.Domain.IRepository;
@@ -8,9 +7,9 @@ namespace CarShow.ApplicationService.Services
 {
     public class ModelService : IModelService
     {
-        private readonly IBaseRepository<long, Model> modelRepository;
+        private readonly IBaseRepository<long, CarModel> modelRepository;
 
-        public ModelService(IBaseRepository<long, Model> modelRepository)
+        public ModelService(IBaseRepository<long, CarModel> modelRepository)
         {
             this.modelRepository = modelRepository;
         }
@@ -18,18 +17,15 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<object>> CreateModel(CreateModelDto dto)
         {
             var model = modelRepository.GetAll().FirstOrDefault(x => x.Name == dto.Name);
-            if (model is  null)
+            if (model is null)
             {
-                model = new Model()
-                {
-                    Name = dto.Name,
-                };
+                model = new CarModel { Name = dto.Name };
                 await modelRepository.Create(model);
                 await modelRepository.SaveChanges();
-                return Result<object>.Success(model,"مدل مورد نظر با موفقیت ثبت شد ");
+                return Result<object>.Success(model, "مدل مورد نظر با موفقیت ثبت شد");
             }
-            else
-                return Result<object>.Failure("مدل از قبل در سیسام موجود میباشد");
+
+            return Result<object>.Failure("مدل از قبل در سیستم موجود می‌باشد");
         }
 
         public async Task<Result<string>> DeleteModel(long id)
@@ -39,19 +35,18 @@ namespace CarShow.ApplicationService.Services
             {
                 await modelRepository.Delete(model);
                 await modelRepository.SaveChanges();
-                return Result<string>.Success("حذف مذل با موفقیت اتنجام شد");
+                return Result<string>.Success("حذف مدل با موفقیت انجام شد");
             }
-            else
-                return Result<string>.Failure("مدلی یافت نشد");
+
+            return Result<string>.Failure("مدلی یافت نشد");
         }
 
         public Result<List<ModelDto>> GetModels()
         {
-            var result =  modelRepository.GetAll().Select(x=> new ModelDto()
-            {
-                Id  = x.Id,
-                Name = x.Name,
-            }).ToList();
+            var result = modelRepository.GetAll()
+                .Select(x => new ModelDto { Id = x.Id, Name = x.Name })
+                .ToList();
+
             return Result<List<ModelDto>>.Success(result);
         }
 
@@ -61,13 +56,12 @@ namespace CarShow.ApplicationService.Services
             if (model is not null)
             {
                 model.Name = dto.Name;
-                model.Id = dto.Id;
                 await modelRepository.Update(model);
                 await modelRepository.SaveChanges();
                 return Result<object>.Success(model, "مدل با موفقیت ویرایش شد");
             }
-            else
-                return Result<object>.Failure("مدلی یافت نشد");
+
+            return Result<object>.Failure("مدلی یافت نشد");
         }
     }
 }
