@@ -1,10 +1,9 @@
-﻿namespace CarShow.Domain.Models
+namespace CarShow.Domain.Models
 {
-    public class Model : BaseEntity<long>
+    public class CarModel : BaseEntity<long>
     {
         public string Name { get; set; } = string.Empty;
-        #region Relaions
-        public ICollection<Car> Cars { get; set; }
-        #endregion
+
+        public ICollection<Car> Cars { get; set; } = new List<Car>();
     }
 }
