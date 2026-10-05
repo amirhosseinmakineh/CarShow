@@ -5,6 +5,7 @@ using CarShow.Domain.Models;
 using CarShow.Infrastracture.BackgroundServices;
 using CarShow.Infrastracture.Configuration;
 using CarShow.Infrastracture.Context;
+using CarShow.Infrastracture.Crawlers;
 using CarShow.Infrastracture.Repository;
 using CarShow.Security.Token;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,6 +36,12 @@ builder.Services.Configure<CrawlerSettings>(
 builder.Services.AddDbContext<CarShowContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("CarShow"));
+});
+
+builder.Services.AddHttpClient<ICarIrCrawlerService, CarIrCrawlerService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(2);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 CarShowCrawler/1.0");
 });
 
 builder.Services.AddHostedService<GetCarsBackgroundService>();
