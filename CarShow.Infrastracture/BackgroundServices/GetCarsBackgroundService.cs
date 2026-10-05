@@ -1,3 +1,5 @@
+using CarShow.Infrastracture.Crawlers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -6,11 +8,15 @@ namespace CarShow.Infrastracture.BackgroundServices
     public sealed class GetCarsBackgroundService : BackgroundService
     {
         private readonly ILogger<GetCarsBackgroundService> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly SemaphoreSlim _executionLock = new(1, 1);
 
-        public GetCarsBackgroundService(ILogger<GetCarsBackgroundService> logger)
+        public GetCarsBackgroundService(
+            ILogger<GetCarsBackgroundService> logger,
+            IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -40,26 +46,22 @@ namespace CarShow.Infrastracture.BackgroundServices
 
             try
             {
-                // Crawler implementation is intentionally deferred to CarIrCrawlerService.
-                await GetCars(stoppingToken);
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var crawler = scope.ServiceProvider.GetRequiredService<ICarIrCrawlerService>();
+                var count = await crawler.SyncAsync(stoppingToken);
+                _logger.LogInformation("Car.ir synchronization completed. {Count} records processed.", count);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                // Normal shutdown.
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Car price crawler background execution failed.");
+                _logger.LogError(ex, "Car.ir crawler background execution failed.");
             }
             finally
             {
                 _executionLock.Release();
             }
-        }
-
-        private static Task GetCars(CancellationToken stoppingToken)
-        {
-            return Task.CompletedTask;
         }
 
         public override void Dispose()
