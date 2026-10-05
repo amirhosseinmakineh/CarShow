@@ -2,6 +2,8 @@ using CarShow.ApplicationService.Contract.IService;
 using CarShow.ApplicationService.Services;
 using CarShow.Domain.IRepository;
 using CarShow.Domain.Models;
+using CarShow.Infrastracture.BackgroundServices;
+using CarShow.Infrastracture.Configuration;
 using CarShow.Infrastracture.Context;
 using CarShow.Infrastracture.Repository;
 using CarShow.Security.Token;
@@ -27,10 +29,15 @@ builder.Services.AddCors(options =>
                         .AllowAnyHeader());
 });
 
+builder.Services.Configure<CrawlerSettings>(
+    builder.Configuration.GetSection(CrawlerSettings.SectionName));
+
 builder.Services.AddDbContext<CarShowContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("CarShow"));
 });
+
+builder.Services.AddHostedService<GetCarsBackgroundService>();
 
 builder.Services.AddScoped(typeof(IBaseRepository<,>), typeof(BaseRepository<,>));
 builder.Services.AddScoped<IUserService, UserService>();
@@ -67,6 +74,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 app.UseSwagger();
@@ -76,15 +85,11 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-// ترتیب درست:
-app.UseCors("AllowAll"); // حتماً اینجا باشد
+app.UseCors("AllowAll");
 app.UseStaticFiles();
-
-app.UseRouting(); // این خط را حتماً اضافه کنید (اگر نبود)
-
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
