@@ -77,11 +77,14 @@ public sealed class CarCrawlerSyncService : ICarCrawlerSyncService
 
             car.CompanyId = company.Id;
             car.CarModelId = model.Id;
-            car.TipId = tip?.Id;
+            // A missing explicit tip means the source did not provide one; preserve an existing value.
+            if (tip is not null)
+                car.TipId = tip.Id;
             car.MarketPrice = row.MarketPrice;
             car.FactoryPrice = row.FactoryPrice;
             car.LastUpdated = DateTime.UtcNow;
-            car.Slug = new Uri(row.SourceUrl).AbsolutePath.Trim('/');
+            if (Uri.TryCreate(row.SourceUrl, UriKind.Absolute, out var sourceUri))
+                car.Slug = sourceUri.AbsolutePath.Trim('/');
             if (row.Details is not null)
             {
                 // Versioned structured payload in the existing text column: no schema change.
