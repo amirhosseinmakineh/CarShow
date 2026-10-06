@@ -113,6 +113,10 @@ namespace CarShow.ApplicationService.Services
                     Description = c.Description,
                     ImageName = c.ImageName,
                     Price = (float)c.MarketPrice,
+                    MarketPrice = c.MarketPrice,
+                    FactoryPrice = c.FactoryPrice,
+                    SourceUrl = c.SourceUrl,
+                    LastUpdated = c.LastUpdated,
                     carModeName = c.CarModel.Name,
                     CompanyName = c.Company.Name,
                     tipName = c.Tip != null ? c.Tip.Name : string.Empty
