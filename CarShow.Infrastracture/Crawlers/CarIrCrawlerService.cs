@@ -58,7 +58,7 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
             row.ModelName = ExtractModelName(row.CarName);
             row.TipName = detail.Sections
                 .SelectMany(x => x.Specifications)
-                .Where(x => x.Name is "تیپ" or "نام تیپ" or "نوع تیپ")
+                .Where(x => x.Name.Contains("تیپ", StringComparison.OrdinalIgnoreCase))
                 .Select(x => x.Value)
                 .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
         }
