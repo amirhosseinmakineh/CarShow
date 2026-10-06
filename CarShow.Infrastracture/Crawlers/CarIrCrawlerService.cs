@@ -165,16 +165,13 @@ namespace CarShow.Infrastracture.Crawlers
                     image = document.DocumentNode.SelectSingleNode("//main//img[@src]")?.GetAttributeValue("src", "") ?? "";
                 image = MakeAbsoluteUrl(image, url);
 
-                var description = Normalize(document.DocumentNode.SelectSingleNode("//meta[@name='description']")
-                    ?.GetAttributeValue("content", "") ?? "");
+                var mainText = document.DocumentNode.SelectSingleNode("//main")?.InnerText ?? "";
+                var description = Normalize(Regex.Replace(mainText, @"\\s+", " "));
                 if (description.Length == 0)
-                {
-                    var paragraphs = document.DocumentNode.SelectNodes("//main//p")
-                        ?.Select(x => Normalize(x.InnerText))
-                        .Where(x => x.Length > 30)
-                        .Take(20) ?? Enumerable.Empty<string>();
-                    description = string.Join(" ", paragraphs);
-                }
+                    description = Normalize(document.DocumentNode.SelectSingleNode("//meta[@name='description']")
+                        ?.GetAttributeValue("content", "") ?? "");
+                if (description.Length > 20000)
+                    description = description[..20000];
 
                 var tip = Normalize(document.DocumentNode.SelectSingleNode(
                     "//*[contains(normalize-space(text()), 'تیپ')]")?.InnerText ?? "");
