@@ -1,7 +1,8 @@
+using CarShow.Domain.Crawling;
+
 namespace CarShow.Infrastracture.Crawlers
 {
-    public interface ICarIrCrawlerService
+    public interface ICarIrCrawlerService : ICarDataSource
     {
-        Task<int> SyncAsync(CancellationToken cancellationToken = default);
     }
 }
