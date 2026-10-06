@@ -8,5 +8,7 @@ namespace CarShow.Infrastracture.Crawlers.DTOs
         public decimal MarketPrice { get; set; }
         public decimal FactoryPrice { get; set; }
         public string DetailUrl { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
     }
 }
