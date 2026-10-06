@@ -1,5 +1,6 @@
 using CarShow.ApplicationService.Contract.IService;
 using CarShow.ApplicationService.Services;
+using CarShow.Domain.Crawling;
 using CarShow.Domain.IRepository;
 using CarShow.Domain.Models;
 using CarShow.Infrastracture.BackgroundServices;
@@ -44,6 +45,8 @@ builder.Services.AddHttpClient<ICarIrCrawlerService, CarIrCrawlerService>(client
     client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 CarShowCrawler/1.0");
 });
 
+builder.Services.AddScoped<ICarDataSource>(sp => sp.GetRequiredService<ICarIrCrawlerService>());
+builder.Services.AddScoped<ICarCrawlerSyncService, CarCrawlerSyncService>();
 builder.Services.AddHostedService<GetCarsBackgroundService>();
 
 builder.Services.AddScoped(typeof(IBaseRepository<,>), typeof(BaseRepository<,>));
