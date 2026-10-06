@@ -119,8 +119,11 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
         var current = new CarDetailSection { Name = "اطلاعات خودرو" };
         result.Sections.Add(current);
 
-        foreach (var node in root.SelectNodes("//main//*[self::h2 or self::h3 or self::h4 or self::tr or self::p or self::li or self::img]") ?? Enumerable.Empty<HtmlNode>())
+        foreach (var node in root.SelectNodes("//body//*[self::h2 or self::h3 or self::h4 or self::tr or self::p or self::li or self::img]") ?? Enumerable.Empty<HtmlNode>())
         {
+            if (node.Ancestors("nav").Any() || node.Ancestors("footer").Any())
+                continue;
+
             if (node.Name is "h2" or "h3" or "h4")
             {
                 current = new CarDetailSection { Name = Normalize(node.InnerText) };
