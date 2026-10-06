@@ -55,8 +55,6 @@ namespace CarShow.Infrastracture.Crawlers
 
                     row.ImageUrl = detail.ImageUrl;
                     row.Description = detail.Description;
-                    if (!string.IsNullOrWhiteSpace(detail.Name))
-                        row.CarName = $"{detail.Name} {ExtractYear(row.CarName)}".Trim();
                     if (!string.IsNullOrWhiteSpace(detail.TipName))
                         row.TipName = detail.TipName;
                 }
