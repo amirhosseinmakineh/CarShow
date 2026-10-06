@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CarShow.ApplicationService.Contract.Dtos.CarDto;
 using CarShow.ApplicationService.Contract.Dtos.CategoryDto;
 using CarShow.ApplicationService.Contract.Dtos.CompanyDto;
@@ -195,27 +196,47 @@ namespace CarShow.ApplicationService.Services
 
         public async Task<Result<CarDto>> GetCarDetail(long carId)
         {
-            var result = await carRepository.GetAll()
+            var car = await carRepository.GetAll()
                 .Include(x => x.Tip)
                 .Include(x => x.Company)
                 .Include(x => x.CarModel)
-                .Where(x => x.Id == carId)
-                .Select(x => new CarDto
-                {
-                    carModeName = x.CarModel.Name,
-                    CategoryName = string.Empty,
-                    CompanyName = x.Company.Name,
-                    Description = x.Description,
-                    ImageName = x.ImageName,
-                    Name = x.Name,
-                    Price = (float)x.MarketPrice,
-                    tipName = x.Tip != null ? x.Tip.Name : string.Empty
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(x => x.Id == carId);
 
-            return result is null
-                ? Result<CarDto>.Failure("اتوموبیلی یافت نشد")
-                : Result<CarDto>.Success(result);
+            if (car is null)
+                return Result<CarDto>.Failure("اتومبیلی یافت نشد");
+
+            CarDetailsDto? details = null;
+            if (!string.IsNullOrWhiteSpace(car.Description))
+            {
+                try
+                {
+                    details = JsonSerializer.Deserialize<CarDetailsDto>(car.Description);
+                }
+                catch (JsonException)
+                {
+                    // Older manually entered descriptions are plain text.
+                }
+            }
+
+            var result = new CarDto
+            {
+                Id = car.Id,
+                carModeName = car.CarModel?.Name ?? string.Empty,
+                CategoryName = string.Empty,
+                CompanyName = car.Company?.Name ?? string.Empty,
+                Description = details?.Description ?? car.Description,
+                Details = details,
+                ImageName = car.ImageName,
+                Name = car.Name,
+                Price = (float)car.MarketPrice,
+                MarketPrice = car.MarketPrice,
+                FactoryPrice = car.FactoryPrice,
+                SourceUrl = car.SourceUrl,
+                LastUpdated = car.LastUpdated,
+                tipName = car.Tip?.Name ?? string.Empty
+            };
+
+            return Result<CarDto>.Success(result);
         }
     }
 }
