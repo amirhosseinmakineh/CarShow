@@ -34,28 +34,46 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
             .Select(x => x.First())
             .ToList();
 
-        var detailCache = new Dictionary<string, CarSourceDetails>(StringComparer.OrdinalIgnoreCase);
-        foreach (var row in rows)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (string.IsNullOrWhiteSpace(row.SourceUrl)) continue;
+        // Detail pages are fetched with bounded concurrency so a full daily sync
+        // does not take hours or get killed before any row is persisted.
+        var detailCache = new System.Collections.Concurrent.ConcurrentDictionary<string, CarSourceDetails>(
+            StringComparer.OrdinalIgnoreCase);
 
-            if (!detailCache.TryGetValue(row.SourceUrl, out var detail))
+        var detailUrls = rows
+            .Where(x => !string.IsNullOrWhiteSpace(x.SourceUrl))
+            .Select(x => x.SourceUrl)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        await Parallel.ForEachAsync(
+            detailUrls,
+            new ParallelOptions
+            {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = 8
+            },
+            async (url, ct) =>
             {
                 try
                 {
-                    detail = await ReadDetailsAsync(row.SourceUrl, cancellationToken);
-                    detailCache[row.SourceUrl] = detail;
+                    var detail = await ReadDetailsAsync(url, ct);
+                    detailCache[url] = detail;
                 }
                 catch (Exception ex) when (ex is HttpRequestException or InvalidDataException)
                 {
-                    _logger.LogWarning(ex, "Could not read detail page {Url}", row.SourceUrl);
-                    continue;
+                    _logger.LogWarning(ex, "Could not read detail page {Url}", url);
                 }
-            }
+            });
+
+        foreach (var row in rows)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            row.ModelName = ExtractModelName(row.CarName);
+
+            if (!detailCache.TryGetValue(row.SourceUrl, out var detail))
+                continue;
 
             row.Details = detail;
-            row.ModelName = ExtractModelName(row.CarName);
+            // A tip is stored only when the detail page has an explicit tip field.
             row.TipName = detail.Sections
                 .SelectMany(x => x.Specifications)
                 .Where(x => x.Name.Contains("تیپ", StringComparison.OrdinalIgnoreCase))
