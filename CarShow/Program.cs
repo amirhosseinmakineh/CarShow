@@ -38,8 +38,6 @@ builder.Services.Configure<CrawlerSettings>(
 builder.Services.AddDbContext<CarShowContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("CarShow"));
-    // The crawler migration was created manually and its model snapshot is older than
-    // the current domain model. Keep startup alive while the schema migration is applied.
     options.ConfigureWarnings(warnings =>
         warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
@@ -93,7 +91,6 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Apply every pending EF Core migration against the database configured for this server.
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
