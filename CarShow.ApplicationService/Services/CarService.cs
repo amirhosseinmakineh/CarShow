@@ -95,7 +95,11 @@ namespace CarShow.ApplicationService.Services
             if (maxPrice.HasValue)
                 query = query.Where(c => c.MarketPrice <= (decimal)maxPrice.Value);
             if (!string.IsNullOrWhiteSpace(company))
-                query = query.Where(c => c.Company.Name == company);
+            {
+                var companyName = company.Trim();
+                query = query.Where(c => c.Company != null &&
+                    c.Company.Name.Trim() == companyName);
+            }
 
             var page = pageNumber.GetValueOrDefault();
             var size = pageSize.GetValueOrDefault(10);
