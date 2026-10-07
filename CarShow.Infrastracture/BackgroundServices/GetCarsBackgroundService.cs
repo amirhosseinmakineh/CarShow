@@ -21,10 +21,10 @@ public sealed class GetCarsBackgroundService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            await RunOnceAsync(stoppingToken);
+            var succeeded = await RunOnceAsync(stoppingToken);
             try
             {
-                await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
+                await Task.Delay(succeeded ? TimeSpan.FromDays(1) : TimeSpan.FromMinutes(5), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -33,12 +33,12 @@ public sealed class GetCarsBackgroundService : BackgroundService
         }
     }
 
-    private async Task RunOnceAsync(CancellationToken stoppingToken)
+    private async Task<bool> RunOnceAsync(CancellationToken stoppingToken)
     {
         if (!await _executionLock.WaitAsync(0, stoppingToken))
         {
             _logger.LogWarning("Crawler execution skipped because another execution is still running.");
-            return;
+            return true;
         }
 
         try
@@ -46,14 +46,17 @@ public sealed class GetCarsBackgroundService : BackgroundService
             await using var scope = _scopeFactory.CreateAsyncScope();
             var synchronizer = scope.ServiceProvider.GetRequiredService<ICarCrawlerSyncService>();
             var count = await synchronizer.SyncAsync(stoppingToken);
-            _logger.LogInformation("Car.ir synchronization completed. {Count} records processed.", count);
+            _logger.LogWarning("Car.ir synchronization completed. {Count} records processed.", count);
+            return count > 0;
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
+            return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Car.ir crawler background execution failed.");
+            _logger.LogError(ex, "Car.ir synchronization failed; retrying in 5 minutes.");
+            return false;
         }
         finally
         {
