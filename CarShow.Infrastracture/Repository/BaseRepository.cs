@@ -41,8 +41,16 @@ namespace CarShow.Infrastracture.Repository
 
         public async Task SaveChanges()
         {
-            await _context.SaveChangesAsync();
-
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                // A failed entity must not poison the scoped DbContext for the next crawler row.
+                _context.ChangeTracker.Clear();
+                throw;
+            }
         }
 
         public Task Update(TEntity entity)
