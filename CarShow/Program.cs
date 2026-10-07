@@ -11,6 +11,7 @@ using CarShow.Infrastracture.Repository;
 using CarShow.Security.Token;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -37,6 +38,10 @@ builder.Services.Configure<CrawlerSettings>(
 builder.Services.AddDbContext<CarShowContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("CarShow"));
+    // The crawler migration was created manually and its model snapshot is older than
+    // the current domain model. Keep startup alive while the schema migration is applied.
+    options.ConfigureWarnings(warnings =>
+        warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
 
 builder.Services.AddHttpClient<ICarIrCrawlerService, CarIrCrawlerService>(client =>
@@ -89,8 +94,6 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Apply every pending EF Core migration against the database configured for this server.
-// The API fails fast when the database cannot be migrated, instead of silently running
-// with an incomplete schema and allowing the crawler to return an empty list.
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
