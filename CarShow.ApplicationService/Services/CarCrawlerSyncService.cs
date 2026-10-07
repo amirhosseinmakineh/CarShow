@@ -63,7 +63,37 @@ public sealed class CarCrawlerSyncService : ICarCrawlerSyncService
             }
         }
 
-        logger.LogWarning("Car synchronization finished. {Processed}/{Total} rows processed.", count, rows.Count);
+        // Enrich already-saved cars afterwards. Detail failures never remove the price row.
+        foreach (var row in rows)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(row.SourceUrl))
+                continue;
+
+            try
+            {
+                var details = await source.FetchDetailsAsync(row.SourceUrl, cancellationToken);
+                if (details is null)
+                    continue;
+
+                row.Details = details;
+                row.TipName = details.Sections
+                    .SelectMany(x => x.Specifications)
+                    .Where(x => x.Name.Contains("تیپ", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => x.Value)
+                    .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+
+                await SyncRowAsync(row, cancellationToken);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or OperationCanceledException)
+            {
+                logger.LogWarning(ex,
+                    "Detail enrichment failed. Company={Company}, Car={Car}, SourceUrl={SourceUrl}",
+                    row.CompanyName, row.CarName, row.SourceUrl);
+            }
+        }
+
+        logger.LogWarning("Car synchronization finished. {Processed}/{Total} price rows processed.", count, rows.Count);
         return count;
     }
 
