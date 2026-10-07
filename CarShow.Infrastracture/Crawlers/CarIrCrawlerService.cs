@@ -36,6 +36,10 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
 
         // Detail pages are fetched with bounded concurrency so a full daily sync
         // does not take hours or get killed before any row is persisted.
+        if (rows.Count == 0)
+            throw new InvalidDataException($"No car price rows were found at {pricesUrl}. Check the source response and selectors.");
+        _logger.LogWarning("Car.ir price list parsed: {Count} rows from {Url}.", rows.Count, pricesUrl);
+
         var detailCache = new System.Collections.Concurrent.ConcurrentDictionary<string, CarSourceDetails>(
             StringComparer.OrdinalIgnoreCase);
 
@@ -57,6 +61,10 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
                 {
                     var detail = await ReadDetailsAsync(url, ct);
                     detailCache[url] = detail;
+                }
+                catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+                {
+                    _logger.LogWarning(ex, "Detail request timed out: {Url}. Price row will still be returned.", url);
                 }
                 catch (Exception ex) when (ex is HttpRequestException or InvalidDataException)
                 {
@@ -86,10 +94,12 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
 
     private async Task<CarSourceDetails> ReadDetailsAsync(string url, CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync(url, cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        using var response = await _httpClient.GetAsync(url, timeout.Token);
         response.EnsureSuccessStatusCode();
         var document = new HtmlDocument();
-        document.LoadHtml(await response.Content.ReadAsStringAsync(cancellationToken));
+        document.LoadHtml(await response.Content.ReadAsStringAsync(timeout.Token));
         return ParseDetails(document);
     }
 
@@ -216,9 +226,21 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
 
     private static string MakeAbsoluteUrl(string href, string source)
     {
-        if (Uri.TryCreate(href, UriKind.Absolute, out var absolute)) return absolute.ToString();
-        if (!Uri.TryCreate(source, UriKind.Absolute, out var baseUri)) return href;
-        return new Uri(baseUri, href.StartsWith("/") ? href : "/" + href).ToString();
+        if (string.IsNullOrWhiteSpace(href))
+            throw new InvalidDataException("The source URL is empty.");
+
+        if (Uri.TryCreate(href, UriKind.Absolute, out var absolute) &&
+            absolute.Scheme is "http" or "https")
+            return absolute.ToString();
+
+        if (!Uri.TryCreate(source, UriKind.Absolute, out var baseUri) ||
+            baseUri.Scheme is not ("http" or "https"))
+            throw new InvalidDataException("Crawler BaseUrl must be an absolute HTTP or HTTPS URL.");
+
+        var resolved = new Uri(baseUri, href);
+        if (resolved.Scheme is not ("http" or "https"))
+            throw new InvalidDataException("The resolved source URL must use HTTP or HTTPS.");
+        return resolved.ToString();
     }
 
     private static string Normalize(string value)
