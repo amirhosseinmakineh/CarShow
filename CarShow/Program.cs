@@ -58,6 +58,13 @@ await using (var scope = app.Services.CreateAsyncScope())
     {
         logger.LogWarning(ex, "Migration encountered existing columns/tables; continuing with the already-provisioned production schema.");
     }
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF COL_LENGTH('Cars', 'SourceUrl') IS NULL ALTER TABLE [Cars] ADD [SourceUrl] nvarchar(max) NULL;
+        IF COL_LENGTH('Cars', 'FactoryPrice') IS NULL ALTER TABLE [Cars] ADD [FactoryPrice] decimal(18,2) NULL;
+        IF COL_LENGTH('Cars', 'MarketPrice') IS NULL ALTER TABLE [Cars] ADD [MarketPrice] decimal(18,2) NULL;
+        IF COL_LENGTH('Cars', 'Slug') IS NULL ALTER TABLE [Cars] ADD [Slug] nvarchar(450) NULL;
+        IF COL_LENGTH('Cars', 'LastUpdated') IS NULL ALTER TABLE [Cars] ADD [LastUpdated] datetime2 NULL;
+        "");
 }
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
