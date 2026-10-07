@@ -88,6 +88,27 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Apply every pending EF Core migration against the database configured for this server.
+// The API fails fast when the database cannot be migrated, instead of silently running
+// with an incomplete schema and allowing the crawler to return an empty list.
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("DatabaseMigration");
+
+    try
+    {
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogCritical(ex, "Database migration failed. API startup aborted.");
+        throw;
+    }
+}
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
