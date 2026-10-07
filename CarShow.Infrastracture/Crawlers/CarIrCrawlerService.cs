@@ -34,65 +34,15 @@ public sealed class CarIrCrawlerService : ICarIrCrawlerService
             .Select(x => x.First())
             .ToList();
 
-        // Detail pages are fetched with bounded concurrency so a full daily sync
-        // does not take hours or get killed before any row is persisted.
         if (rows.Count == 0)
             throw new InvalidDataException($"No car price rows were found at {pricesUrl}. Check the source response and selectors.");
+
         _logger.LogWarning("Car.ir price list parsed: {Count} rows from {Url}.", rows.Count, pricesUrl);
-
-        var detailCache = new System.Collections.Concurrent.ConcurrentDictionary<string, CarSourceDetails>(
-            StringComparer.OrdinalIgnoreCase);
-
-        var detailUrls = rows
-            .Where(x => !string.IsNullOrWhiteSpace(x.SourceUrl))
-            .Select(x => x.SourceUrl)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        await Parallel.ForEachAsync(
-            detailUrls,
-            new ParallelOptions
-            {
-                CancellationToken = cancellationToken,
-                MaxDegreeOfParallelism = 8
-            },
-            async (url, ct) =>
-            {
-                try
-                {
-                    var detail = await ReadDetailsAsync(url, ct);
-                    detailCache[url] = detail;
-                }
-                catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
-                {
-                    _logger.LogWarning(ex, "Detail request timed out: {Url}. Price row will still be returned.", url);
-                }
-                catch (Exception ex) when (ex is HttpRequestException or InvalidDataException)
-                {
-                    _logger.LogWarning(ex, "Could not read detail page {Url}", url);
-                }
-            });
-
-        foreach (var row in rows)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            row.ModelName = ExtractModelName(row.CarName);
-
-            if (!detailCache.TryGetValue(row.SourceUrl, out var detail))
-                continue;
-
-            row.Details = detail;
-            // A tip is stored only when the detail page has an explicit tip field.
-            row.TipName = detail.Sections
-                .SelectMany(x => x.Specifications)
-                .Where(x => x.Name.Contains("تیپ", StringComparison.OrdinalIgnoreCase))
-                .Select(x => x.Value)
-                .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-        }
-
+        // Prices are returned immediately. Details are enriched by the application layer afterwards.
         return rows;
     }
 
-    private async Task<CarSourceDetails> ReadDetailsAsync(string url, CancellationToken cancellationToken)
+    public async Task<CarSourceDetails?> FetchDetailsAsync(string url, CancellationToken cancellationToken = default)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
