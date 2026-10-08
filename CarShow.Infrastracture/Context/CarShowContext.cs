@@ -25,6 +25,12 @@ namespace CarShow.Infrastracture.Context
         {
             base.OnModelCreating(modelBuilder);
 
+            // The initial database migration created this column as TipName.
+            // Keep the CLR property named Name while targeting the existing schema.
+            modelBuilder.Entity<Tip>()
+                .Property(x => x.Name)
+                .HasColumnName("TipName");
+
             modelBuilder.Entity<Car>(entity =>
             {
                 entity.Property(x => x.MarketPrice).HasColumnType("decimal(18,2)");
