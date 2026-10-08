@@ -88,46 +88,83 @@ namespace CarShow.ApplicationService.Services
 
         public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
         {
+            var page = Math.Max(0, pageNumber.GetValueOrDefault());
+            var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
+
             var query = carRepository.GetAll();
 
             if (minPrice.HasValue)
                 query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
             if (maxPrice.HasValue)
                 query = query.Where(c => c.MarketPrice <= (decimal)maxPrice.Value);
+
             if (!string.IsNullOrWhiteSpace(company))
             {
                 var companyName = company.Trim();
-                query = query.Where(c => c.Company != null &&
-                    c.Company.Name.Trim() == companyName);
+                var companyIds = await companyRepository.GetAll()
+                    .Where(x => x.Name.Trim() == companyName)
+                    .Select(x => x.Id)
+                    .ToListAsync();
+
+                if (companyIds.Count == 0)
+                    return new List<CarDto>();
+
+                query = query.Where(c => companyIds.Contains(c.CompanyId));
             }
 
-            var page = Math.Max(0, pageNumber.GetValueOrDefault());
-            var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
-
-            // Project directly from SQL and tolerate legacy/orphaned relations in production.
-            var cars = await query
+            var rows = await query
                 .OrderBy(c => c.Id)
                 .Skip(page * size)
                 .Take(size)
-                .Select(c => new CarDto
+                .Select(c => new
                 {
-                    Id = c.Id,
-                    CategoryName = string.Empty,
-                    Name = c.Name,
-                    Description = c.Description,
-                    ImageName = c.ImageName,
-                    Price = (float)c.MarketPrice,
-                    MarketPrice = c.MarketPrice,
-                    FactoryPrice = c.FactoryPrice,
-                    SourceUrl = c.SourceUrl,
-                    LastUpdated = c.LastUpdated,
-                    carModeName = c.CarModel != null ? c.CarModel.Name : string.Empty,
-                    CompanyName = c.Company != null ? c.Company.Name : string.Empty,
-                    tipName = c.Tip != null ? c.Tip.Name : string.Empty
+                    c.Id,
+                    c.Name,
+                    c.Description,
+                    c.ImageName,
+                    c.MarketPrice,
+                    c.FactoryPrice,
+                    c.SourceUrl,
+                    c.LastUpdated,
+                    c.CompanyId,
+                    c.CarModelId,
+                    c.TipId
                 })
                 .ToListAsync();
 
-            return cars;
+            if (rows.Count == 0)
+                return new List<CarDto>();
+
+            var companyIdsForRows = rows.Select(x => x.CompanyId).Distinct().ToList();
+            var modelIdsForRows = rows.Select(x => x.CarModelId).Distinct().ToList();
+            var tipIdsForRows = rows.Where(x => x.TipId.HasValue).Select(x => x.TipId!.Value).Distinct().ToList();
+
+            var companyNames = await companyRepository.GetAll()
+                .Where(x => companyIdsForRows.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+            var modelNames = await carModelRepository.GetAll()
+                .Where(x => modelIdsForRows.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+            var tipNames = await tipRepository.GetAll()
+                .Where(x => tipIdsForRows.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+
+            return rows.Select(c => new CarDto
+            {
+                Id = c.Id,
+                CategoryName = string.Empty,
+                Name = c.Name,
+                Description = c.Description,
+                ImageName = c.ImageName,
+                Price = (float)c.MarketPrice,
+                MarketPrice = c.MarketPrice,
+                FactoryPrice = c.FactoryPrice,
+                SourceUrl = c.SourceUrl,
+                LastUpdated = c.LastUpdated,
+                carModeName = modelNames.GetValueOrDefault(c.CarModelId, string.Empty),
+                CompanyName = companyNames.GetValueOrDefault(c.CompanyId, string.Empty),
+                tipName = c.TipId.HasValue ? tipNames.GetValueOrDefault(c.TipId.Value, string.Empty) : string.Empty
+            }).ToList();
         }
 
         public async Task<GetCarForCreateDto> GetCarInfoForCreate()
