@@ -42,7 +42,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 var jwtSetting = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSetting["SecretKey"] ?? throw new InvalidOperationException("Jwt SecretKey is missing!"));
-builder.Services.AddAuthentication(options => { options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; }).AddJwtBearer(options => { options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSetting["Issuer"], ValidAudience = jwtSetting["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) }; });
+builder.Services.AddAuthentication(options => { options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; options.AddPolicyScheme = null; }).AddJwtBearer(options => { options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSetting["Issuer"], ValidAudience = jwtSetting["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) }; });
 builder.Services.AddAuthorization();
 var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
@@ -59,11 +59,12 @@ await using (var scope = app.Services.CreateAsyncScope())
         logger.LogWarning(ex, "Migration encountered existing columns/tables; continuing with the already-provisioned production schema.");
     }
     await db.Database.ExecuteSqlRawAsync(@"
-        IF COL_LENGTH('Cars', 'SourceUrl') IS NULL ALTER TABLE [Cars] ADD [SourceUrl] nvarchar(max) NULL;
-        IF COL_LENGTH('Cars', 'FactoryPrice') IS NULL ALTER TABLE [Cars] ADD [FactoryPrice] decimal(18,2) NULL;
-        IF COL_LENGTH('Cars', 'MarketPrice') IS NULL ALTER TABLE [Cars] ADD [MarketPrice] decimal(18,2) NULL;
-        IF COL_LENGTH('Cars', 'Slug') IS NULL ALTER TABLE [Cars] ADD [Slug] nvarchar(450) NULL;
-        IF COL_LENGTH('Cars', 'LastUpdated') IS NULL ALTER TABLE [Cars] ADD [LastUpdated] datetime2 NULL;
+        IF COL_LENGTH('dbo.Cars', 'SourceUrl') IS NULL ALTER TABLE [dbo].[Cars] ADD [SourceUrl] nvarchar(max) NULL;
+        IF COL_LENGTH('dbo.Cars', 'FactoryPrice') IS NULL ALTER TABLE [dbo].[Cars] ADD [FactoryPrice] decimal(18,2) NULL;
+        IF COL_LENGTH('dbo.Cars', 'MarketPrice') IS NULL ALTER TABLE [dbo].[Cars] ADD [MarketPrice] decimal(18,2) NULL;
+        IF COL_LENGTH('dbo.Cars', 'Slug') IS NULL ALTER TABLE [dbo].[Cars] ADD [Slug] nvarchar(450) NULL;
+        IF COL_LENGTH('dbo.Cars', 'LastUpdated') IS NULL ALTER TABLE [dbo].[Cars] ADD [LastUpdated] datetime2 NULL;
+        IF COL_LENGTH('dbo.Cars', 'CategoryId') IS NOT NULL ALTER TABLE [dbo].[Cars] ALTER COLUMN [CategoryId] bigint NULL;
         ");
 }
 app.UseSwagger();
