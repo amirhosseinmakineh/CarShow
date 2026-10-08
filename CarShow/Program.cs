@@ -42,7 +42,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 var jwtSetting = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSetting["SecretKey"] ?? throw new InvalidOperationException("Jwt SecretKey is missing!"));
-builder.Services.AddAuthentication(options => { options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; options.AddPolicyScheme = null; }).AddJwtBearer(options => { options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSetting["Issuer"], ValidAudience = jwtSetting["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) }; });
+builder.Services.AddAuthentication(options => { options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; }).AddJwtBearer(options => { options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSetting["Issuer"], ValidAudience = jwtSetting["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) }; });
 builder.Services.AddAuthorization();
 var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
