@@ -59,6 +59,20 @@ await using (var scope = app.Services.CreateAsyncScope())
         logger.LogWarning(ex, "Migration encountered existing columns/tables; continuing with the already-provisioned production schema.");
     }
     await db.Database.ExecuteSqlRawAsync(@"
+        IF OBJECT_ID(N'dbo.CarPriceHistories', N'U') IS NULL
+        BEGIN
+            CREATE TABLE [dbo].[CarPriceHistories] (
+                [Id] bigint NOT NULL IDENTITY(1,1),
+                [CarId] bigint NOT NULL,
+                [MarketPrice] decimal(18,2) NOT NULL,
+                [FactoryPrice] decimal(18,2) NOT NULL,
+                [Date] datetime2 NOT NULL,
+                [IsDelete] bit NOT NULL CONSTRAINT [DF_CarPriceHistories_IsDelete] DEFAULT (0),
+                CONSTRAINT [PK_CarPriceHistories] PRIMARY KEY ([Id]),
+                CONSTRAINT [FK_CarPriceHistories_Cars_CarId] FOREIGN KEY ([CarId]) REFERENCES [dbo].[Cars] ([Id]) ON DELETE CASCADE
+            );
+            CREATE INDEX [IX_CarPriceHistories_CarId] ON [dbo].[CarPriceHistories] ([CarId]);
+        END;
         IF COL_LENGTH('dbo.Cars', 'SourceUrl') IS NULL ALTER TABLE [dbo].[Cars] ADD [SourceUrl] nvarchar(max) NULL;
         IF COL_LENGTH('dbo.Cars', 'FactoryPrice') IS NULL ALTER TABLE [dbo].[Cars] ADD [FactoryPrice] decimal(18,2) NULL;
         IF COL_LENGTH('dbo.Cars', 'MarketPrice') IS NULL ALTER TABLE [dbo].[Cars] ADD [MarketPrice] decimal(18,2) NULL;
