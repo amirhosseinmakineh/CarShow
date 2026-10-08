@@ -65,6 +65,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         IF COL_LENGTH('dbo.Cars', 'Slug') IS NULL ALTER TABLE [dbo].[Cars] ADD [Slug] nvarchar(450) NULL;
         IF COL_LENGTH('dbo.Cars', 'LastUpdated') IS NULL ALTER TABLE [dbo].[Cars] ADD [LastUpdated] datetime2 NULL;
         IF COL_LENGTH('dbo.Cars', 'CategoryId') IS NOT NULL ALTER TABLE [dbo].[Cars] ALTER COLUMN [CategoryId] bigint NULL;
+        IF COL_LENGTH('dbo.Cars', 'TipId') IS NOT NULL ALTER TABLE [dbo].[Cars] ALTER COLUMN [dbo].[Cars].[TipId] bigint NULL;
         IF COL_LENGTH('dbo.Cars', 'MarketPrice') IS NOT NULL BEGIN UPDATE [dbo].[Cars] SET [MarketPrice] = 0 WHERE [MarketPrice] IS NULL; ALTER TABLE [dbo].[Cars] ALTER COLUMN [MarketPrice] decimal(18,2) NOT NULL; END;
         IF COL_LENGTH('dbo.Cars', 'FactoryPrice') IS NOT NULL BEGIN UPDATE [dbo].[Cars] SET [FactoryPrice] = 0 WHERE [FactoryPrice] IS NULL; ALTER TABLE [dbo].[Cars] ALTER COLUMN [FactoryPrice] decimal(18,2) NOT NULL; END;
         IF COL_LENGTH('dbo.Cars', 'LastUpdated') IS NOT NULL BEGIN UPDATE [dbo].[Cars] SET [LastUpdated] = GETUTCDATE() WHERE [LastUpdated] IS NULL; ALTER TABLE [dbo].[Cars] ALTER COLUMN [LastUpdated] datetime2 NOT NULL; END;
