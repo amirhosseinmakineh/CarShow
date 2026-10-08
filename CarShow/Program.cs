@@ -64,7 +64,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         IF COL_LENGTH('Cars', 'MarketPrice') IS NULL ALTER TABLE [Cars] ADD [MarketPrice] decimal(18,2) NULL;
         IF COL_LENGTH('Cars', 'Slug') IS NULL ALTER TABLE [Cars] ADD [Slug] nvarchar(450) NULL;
         IF COL_LENGTH('Cars', 'LastUpdated') IS NULL ALTER TABLE [Cars] ADD [LastUpdated] datetime2 NULL;
-        "");
+        ");
 }
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
