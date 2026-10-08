@@ -101,14 +101,13 @@ namespace CarShow.ApplicationService.Services
                     c.Company.Name.Trim() == companyName);
             }
 
-            var page = pageNumber.GetValueOrDefault();
-            var size = pageSize.GetValueOrDefault(10);
+            var page = Math.Max(0, pageNumber.GetValueOrDefault());
+            var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
+
+            // Project directly from SQL and tolerate legacy/orphaned relations in production.
             var cars = await query
-                .Include(c => c.CarModel)
-                .Include(c => c.Company)
-                .Include(c => c.Tip)
                 .OrderBy(c => c.Id)
-                .Skip(Math.Max(0, page) * size)
+                .Skip(page * size)
                 .Take(size)
                 .Select(c => new CarDto
                 {
@@ -122,8 +121,8 @@ namespace CarShow.ApplicationService.Services
                     FactoryPrice = c.FactoryPrice,
                     SourceUrl = c.SourceUrl,
                     LastUpdated = c.LastUpdated,
-                    carModeName = c.CarModel.Name,
-                    CompanyName = c.Company.Name,
+                    carModeName = c.CarModel != null ? c.CarModel.Name : string.Empty,
+                    CompanyName = c.Company != null ? c.Company.Name : string.Empty,
                     tipName = c.Tip != null ? c.Tip.Name : string.Empty
                 })
                 .ToListAsync();
