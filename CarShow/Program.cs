@@ -66,6 +66,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         IF COL_LENGTH('dbo.Cars', 'LastUpdated') IS NULL ALTER TABLE [dbo].[Cars] ADD [LastUpdated] datetime2 NULL;
         IF COL_LENGTH('dbo.Cars', 'CategoryId') IS NOT NULL ALTER TABLE [dbo].[Cars] ALTER COLUMN [CategoryId] bigint NULL;
         IF COL_LENGTH('dbo.Cars', 'TipId') IS NOT NULL ALTER TABLE [dbo].[Cars] ALTER COLUMN [TipId] bigint NULL;
+        IF COL_LENGTH('dbo.Cars', 'StartDate') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.default_constraints WHERE parent_object_id = OBJECT_ID('dbo.Cars') AND parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.Cars'), 'StartDate', 'ColumnId')) ALTER TABLE [dbo].[Cars] ADD CONSTRAINT [DF_Cars_StartDate] DEFAULT (N'') FOR [StartDate];
         IF COL_LENGTH('dbo.Cars', 'MarketPrice') IS NOT NULL BEGIN UPDATE [dbo].[Cars] SET [MarketPrice] = 0 WHERE [MarketPrice] IS NULL; ALTER TABLE [dbo].[Cars] ALTER COLUMN [MarketPrice] decimal(18,2) NOT NULL; END;
         IF COL_LENGTH('dbo.Cars', 'FactoryPrice') IS NOT NULL BEGIN UPDATE [dbo].[Cars] SET [FactoryPrice] = 0 WHERE [FactoryPrice] IS NULL; ALTER TABLE [dbo].[Cars] ALTER COLUMN [FactoryPrice] decimal(18,2) NOT NULL; END;
         IF COL_LENGTH('dbo.Cars', 'LastUpdated') IS NOT NULL BEGIN UPDATE [dbo].[Cars] SET [LastUpdated] = GETUTCDATE() WHERE [LastUpdated] IS NULL; ALTER TABLE [dbo].[Cars] ALTER COLUMN [LastUpdated] datetime2 NOT NULL; END;
