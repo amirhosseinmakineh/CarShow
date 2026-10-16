@@ -16,3 +16,5 @@ Telegram__SessionPath
 ```
 
 The account must be authorized and have access to each channel. The collector reads up to 500 recent messages per queued channel, stores each message idempotently, then extracts listings with a replaceable `ITelegramListingExtractor`. Messages without a positive price are intentionally excluded from listings.
+
+The backend also requires `ConnectionStrings__CarShow` and `JwtSettings__SecretKey` in the deployment environment. These values are intentionally absent from source-controlled appsettings files.
