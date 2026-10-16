@@ -25,7 +25,8 @@ public sealed class TelegramCollector(IConfiguration configuration, ILogger<Tele
         {
             await EnsureConnectedAsync(cancellationToken);
             var peer = await client!.Contacts_ResolveUsername(identifier[1..]);
-            var history = await client.Messages_GetHistory(peer, limit: 500);
+            var historyLimit = GetHistoryLimit();
+            var history = await client.Messages_GetHistory(peer, limit: historyLimit);
             var messages = history.Messages
                 .OfType<Message>()
                 .Where(message => !string.IsNullOrWhiteSpace(message.message))
@@ -65,6 +66,12 @@ public sealed class TelegramCollector(IConfiguration configuration, ILogger<Tele
         {
             loginGate.Release();
         }
+    }
+
+    private int GetHistoryLimit()
+    {
+        var configured = configuration.GetValue<int?>("Telegram:HistoryPerChannel") ?? 500;
+        return Math.Clamp(configured, 1, 2000);
     }
 
     private string? GetConfigurationValue(string key)
