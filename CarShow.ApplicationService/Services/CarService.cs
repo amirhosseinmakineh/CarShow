@@ -45,6 +45,7 @@ namespace CarShow.ApplicationService.Services
             var imagePath = await SaveImageAsync(dto.ImageName);
             var car = new Car
             {
+                CategoryId = dto.CategoryId == 0 ? null : dto.CategoryId,
                 Name = dto.Name,
                 Description = dto.Description,
                 ImageName = imagePath ?? string.Empty,
@@ -88,10 +89,35 @@ namespace CarShow.ApplicationService.Services
 
         public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
         {
+            return await GetCars(minPrice, maxPrice, company, null, false, pageSize, pageNumber);
+        }
+
+        public async Task<List<CarDto>> GetNewCars(float? minPrice, float? maxPrice, string? company, long? modelId, int? pageSize = 10, int? pageNumber = 0)
+        {
+            return await GetCars(minPrice, maxPrice, company, modelId, true, pageSize, pageNumber);
+        }
+
+        private async Task<List<CarDto>> GetCars(
+            float? minPrice,
+            float? maxPrice,
+            string? company,
+            long? modelId,
+            bool onlyNew,
+            int? pageSize,
+            int? pageNumber)
+        {
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
             var query = carRepository.GetAll();
+
+            if (onlyNew)
+            {
+                query = query.Where(c => c.CategoryId.HasValue
+                    && (c.Category!.Name.Contains("صفر")
+                        || c.Category.Name.Contains("نو")
+                        || c.Category.Name.ToLower().Contains("new")));
+            }
 
             if (minPrice.HasValue)
                 query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
@@ -112,6 +138,9 @@ namespace CarShow.ApplicationService.Services
                 query = query.Where(c => companyIds.Contains(c.CompanyId));
             }
 
+            if (modelId.HasValue)
+                query = query.Where(c => c.CarModelId == modelId.Value);
+
             var rows = await query
                 .OrderBy(c => c.Id)
                 .Skip(page * size)
@@ -128,7 +157,8 @@ namespace CarShow.ApplicationService.Services
                     c.LastUpdated,
                     c.CompanyId,
                     c.CarModelId,
-                    c.TipId
+                    c.TipId,
+                    c.CategoryId
                 })
                 .ToListAsync();
 
@@ -138,6 +168,7 @@ namespace CarShow.ApplicationService.Services
             var companyIdsForRows = rows.Select(x => x.CompanyId).Distinct().ToList();
             var modelIdsForRows = rows.Select(x => x.CarModelId).Distinct().ToList();
             var tipIdsForRows = rows.Where(x => x.TipId.HasValue).Select(x => x.TipId!.Value).Distinct().ToList();
+            var categoryIdsForRows = rows.Where(x => x.CategoryId.HasValue).Select(x => x.CategoryId!.Value).Distinct().ToList();
 
             var companyNames = await companyRepository.GetAll()
                 .Where(x => companyIdsForRows.Contains(x.Id))
@@ -148,11 +179,14 @@ namespace CarShow.ApplicationService.Services
             var tipNames = await tipRepository.GetAll()
                 .Where(x => tipIdsForRows.Contains(x.Id))
                 .ToDictionaryAsync(x => x.Id, x => x.Name);
+            var categoryNames = await categoryRepository.GetAll()
+                .Where(x => categoryIdsForRows.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
 
             return rows.Select(c => new CarDto
             {
                 Id = c.Id,
-                CategoryName = string.Empty,
+                CategoryName = c.CategoryId.HasValue ? categoryNames.GetValueOrDefault(c.CategoryId.Value, string.Empty) : string.Empty,
                 Name = c.Name,
                 Description = c.Description,
                 ImageName = c.ImageName,
@@ -240,6 +274,7 @@ namespace CarShow.ApplicationService.Services
                 .Include(x => x.Tip)
                 .Include(x => x.Company)
                 .Include(x => x.CarModel)
+                .Include(x => x.Category)
                 .FirstOrDefaultAsync(x => x.Id == carId);
 
             if (car is null)
@@ -262,7 +297,7 @@ namespace CarShow.ApplicationService.Services
             {
                 Id = car.Id,
                 carModeName = car.CarModel?.Name ?? string.Empty,
-                CategoryName = string.Empty,
+                CategoryName = car.Category?.Name ?? string.Empty,
                 CompanyName = car.Company?.Name ?? string.Empty,
                 Description = details?.Description ?? car.Description,
                 Details = details,

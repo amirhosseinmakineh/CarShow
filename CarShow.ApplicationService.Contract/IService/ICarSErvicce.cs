@@ -8,6 +8,7 @@ namespace CarShow.ApplicationService.Contract.IService
         Task<Result<object>> CreateCar(CreateCarDto dto);
         Task<Result<object>> UpdateCar(UpdateCarDto dto);
         Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0);
+        Task<List<CarDto>> GetNewCars(float? minPrice, float? maxPrice, string? company, long? modelId, int? pageSize = 10, int? pageNumber = 0);
         Task<Result<string>> DeleteCar(long id);
         Task<GetCarForCreateDto> GetCarInfoForCreate();
         Task<GetCarForUpdateDto> GetCarInfoForUpdate(long carId);

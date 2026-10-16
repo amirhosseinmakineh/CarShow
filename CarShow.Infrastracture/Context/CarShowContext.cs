@@ -41,6 +41,12 @@ namespace CarShow.Infrastracture.Context
                     .HasForeignKey(x => x.CompanyId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(x => x.Category)
+                    .WithMany(x => x.Car)
+                    .HasForeignKey(x => x.CategoryId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasOne(x => x.CarModel)
                     .WithMany(x => x.Cars)
                     .HasForeignKey(x => x.CarModelId)
