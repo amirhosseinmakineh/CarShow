@@ -10,6 +10,7 @@ namespace CarShow.Infrastracture.Telegram;
 public sealed class TelegramCollectionWorker(
     ITelegramCollectionQueue queue,
     IServiceScopeFactory scopeFactory,
+    IConfiguration configuration,
     ILogger<TelegramCollectionWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -123,7 +124,8 @@ public sealed class TelegramCollectionWorker(
         await db.SaveChangesAsync(cancellationToken);
         if (!result.Success && !result.AccessRequired && channel.Enabled && channel.RetryCount <= 3)
         {
-            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, channel.RetryCount)), cancellationToken);
+            var retryDelay = TimeSpan.FromSeconds(Math.Pow(2, channel.RetryCount));
+            await Task.Delay(retryDelay, cancellationToken);
             await queue.EnqueueAsync(channel.Id, cancellationToken);
         }
     }
