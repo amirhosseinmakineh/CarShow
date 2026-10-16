@@ -24,6 +24,7 @@ namespace CarShow.Infrastracture.Context
         public DbSet<TelegramChannel> TelegramChannels { get; set; } = null!;
         public DbSet<TelegramRawMessage> TelegramRawMessages { get; set; } = null!;
         public DbSet<CarListing> CarListings { get; set; } = null!;
+        public DbSet<TelegramCollectionJob> TelegramCollectionJobs { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -66,6 +67,12 @@ namespace CarShow.Infrastracture.Context
             });
             modelBuilder.Entity<TelegramRawMessage>(entity => entity.HasIndex(x => new { x.ChannelId, x.ExternalMessageId }).IsUnique());
             modelBuilder.Entity<CarListing>(entity => entity.HasIndex(x => new { x.ChannelId, x.SourceMessageId }).IsUnique());
+            modelBuilder.Entity<TelegramCollectionJob>(entity =>
+            {
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(64);
+                entity.HasIndex(x => new { x.ChannelId, x.CreatedAt });
+                entity.HasOne(x => x.Channel).WithMany().HasForeignKey(x => x.ChannelId).OnDelete(DeleteBehavior.Cascade);
+            });
 
             modelBuilder.Entity<CarPriceHistory>(entity =>
             {
