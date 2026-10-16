@@ -31,7 +31,8 @@ builder.Services.AddScoped<ICarCrawlerSyncService, CarCrawlerSyncService>();
 builder.Services.AddHostedService<GetCarsBackgroundService>();
 builder.Services.AddSingleton<ITelegramCollectionQueue, TelegramCollectionQueue>();
 builder.Services.AddScoped<ITelegramChannelService, TelegramChannelService>();
-builder.Services.AddScoped<ITelegramCollector, TelegramCollector>();
+builder.Services.AddSingleton<ITelegramCollector, TelegramCollector>();
+builder.Services.AddScoped<ITelegramListingExtractor, TelegramListingExtractor>();
 builder.Services.AddHostedService<TelegramCollectionWorker>();
 builder.Services.AddScoped(typeof(IBaseRepository<,>), typeof(BaseRepository<,>));
 builder.Services.AddScoped<IUserService, UserService>();
@@ -100,6 +101,11 @@ await using (var scope = app.Services.CreateAsyncScope())
         BEGIN
             CREATE TABLE [dbo].[TelegramRawMessages] ([Id] bigint IDENTITY(1,1) NOT NULL PRIMARY KEY, [IsDelete] bit NOT NULL DEFAULT(0), [ChannelId] bigint NOT NULL, [ExternalMessageId] nvarchar(256) NOT NULL, [MessageText] nvarchar(max) NOT NULL, [MessageDate] datetime2 NOT NULL, [MediaMetadata] nvarchar(max) NULL, [SourceUrl] nvarchar(1024) NULL, [CollectedAt] datetime2 NOT NULL, [ProcessingStatus] nvarchar(64) NOT NULL, [ProcessingError] nvarchar(max) NULL, CONSTRAINT [FK_TelegramRawMessages_TelegramChannels] FOREIGN KEY([ChannelId]) REFERENCES [dbo].[TelegramChannels]([Id]) ON DELETE CASCADE);
             CREATE UNIQUE INDEX [IX_TelegramRawMessages_ChannelId_ExternalMessageId] ON [dbo].[TelegramRawMessages]([ChannelId], [ExternalMessageId]);
+        END;
+        IF OBJECT_ID(N'dbo.TelegramCollectionJobs', N'U') IS NULL
+        BEGIN
+            CREATE TABLE [dbo].[TelegramCollectionJobs] ([Id] bigint IDENTITY(1,1) NOT NULL PRIMARY KEY, [IsDelete] bit NOT NULL DEFAULT(0), [ChannelId] bigint NOT NULL, [Status] nvarchar(64) NOT NULL, [Attempt] int NOT NULL DEFAULT(0), [CreatedAt] datetime2 NOT NULL, [StartedAt] datetime2 NULL, [CompletedAt] datetime2 NULL, [Error] nvarchar(max) NULL, CONSTRAINT [FK_TelegramCollectionJobs_TelegramChannels] FOREIGN KEY([ChannelId]) REFERENCES [dbo].[TelegramChannels]([Id]) ON DELETE CASCADE);
+            CREATE INDEX [IX_TelegramCollectionJobs_ChannelId_CreatedAt] ON [dbo].[TelegramCollectionJobs]([ChannelId], [CreatedAt]);
         END;
         IF OBJECT_ID(N'dbo.CarListings', N'U') IS NULL
         BEGIN
