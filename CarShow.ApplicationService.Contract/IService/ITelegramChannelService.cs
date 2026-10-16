@@ -12,4 +12,5 @@ public interface ITelegramChannelService
     Task<bool> DeleteAsync(long id, CancellationToken cancellationToken);
     Task<bool> RetryAsync(long id, CancellationToken cancellationToken);
     Task<bool> TestAsync(long id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken);
 }
