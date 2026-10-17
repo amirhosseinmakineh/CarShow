@@ -5,6 +5,7 @@ namespace CarShow.ApplicationService.Contract.Dtos.CarDto
     public record CreateCarDto
     {
         public string Name { get; set; } = string.Empty;
+        public bool IsUsed { get; set; }
         public long CarModelId { get; set; }
         public string StartDate { get; set; } = string.Empty;
         public float Price { get; set; }
