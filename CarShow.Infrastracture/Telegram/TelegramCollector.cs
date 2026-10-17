@@ -1,24 +1,51 @@
+using HtmlAgilityPack;
 using TL;
 using WTelegram;
 
 namespace CarShow.Infrastracture.Telegram;
 
-public sealed class TelegramCollector(IConfiguration configuration, ILogger<TelegramCollector> logger) : ITelegramCollector, IAsyncDisposable
+public sealed class TelegramCollector(
+    IConfiguration configuration,
+    IHttpClientFactory httpClientFactory,
+    ILogger<TelegramCollector> logger) : ITelegramCollector, IAsyncDisposable
 {
     private readonly SemaphoreSlim loginGate = new(1, 1);
     private Client? client;
 
-    public async Task<TelegramCollectionResult> CollectChannelAsync(string identifier, CancellationToken cancellationToken)
+    public async Task<TelegramCollectionResult> CollectChannelAsync(
+        string identifier,
+        CancellationToken cancellationToken)
     {
-        if (!long.TryParse(configuration["Telegram:ApiId"], out _) || string.IsNullOrWhiteSpace(configuration["Telegram:ApiHash"]))
+        var provider = configuration["Telegram:Provider"]?.ToLowerInvariant() ?? "auto";
+        var hasMtProtoCredentials = long.TryParse(configuration["Telegram:ApiId"], out _)
+            && !string.IsNullOrWhiteSpace(configuration["Telegram:ApiHash"]);
+
+        if (provider == "web-preview" || (provider == "auto" && !hasMtProtoCredentials))
+        {
+            return await CollectFromWebPreviewAsync(identifier, cancellationToken);
+        }
+
+        return await CollectWithMtProtoAsync(identifier, cancellationToken);
+    }
+
+    private async Task<TelegramCollectionResult> CollectWithMtProtoAsync(
+        string identifier,
+        CancellationToken cancellationToken)
+    {
+        if (!long.TryParse(configuration["Telegram:ApiId"], out _)
+            || string.IsNullOrWhiteSpace(configuration["Telegram:ApiHash"]))
         {
             return AccessRequired("Telegram ApiId/ApiHash are not configured.");
         }
 
-        if (!identifier.StartsWith("@", StringComparison.Ordinal)) identifier = $"@{identifier}";
+        if (!identifier.StartsWith("@", StringComparison.Ordinal))
+        {
+            identifier = $"@{identifier}";
+        }
+
         if (identifier.StartsWith("@-100", StringComparison.Ordinal))
         {
-            return AccessRequired("Numeric channel identifiers require a resolved MTProto peer. Store a public username or configure peer resolution.");
+            return AccessRequired("Numeric identifiers require an MTProto peer with a resolved access hash.");
         }
 
         try
@@ -37,6 +64,7 @@ public sealed class TelegramCollector(IConfiguration configuration, ILogger<Tele
                     $"https://t.me/{identifier[1..]}/{message.id}",
                     null))
                 .ToList();
+
             return new TelegramCollectionResult(true, false, messages, null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -45,9 +73,84 @@ public sealed class TelegramCollector(IConfiguration configuration, ILogger<Tele
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "Telegram collection failed for {Identifier}", identifier);
+            logger.LogWarning(exception, "MTProto collection failed for {Identifier}", identifier);
             return new TelegramCollectionResult(false, false, Array.Empty<TelegramCollectedMessage>(), exception.Message);
         }
+    }
+
+    private async Task<TelegramCollectionResult> CollectFromWebPreviewAsync(
+        string identifier,
+        CancellationToken cancellationToken)
+    {
+        var username = identifier.Trim().TrimStart('@');
+        if (username.StartsWith("-100", StringComparison.Ordinal)
+            || username.Contains('/'))
+        {
+            return AccessRequired("Web Preview supports public channel usernames only.");
+        }
+
+        var url = $"https://t.me/s/{Uri.EscapeDataString(username)}";
+        var client = httpClientFactory.CreateClient("TelegramWebPreview");
+
+        try
+        {
+            using var response = await client.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new TelegramCollectionResult(
+                    false,
+                    response.StatusCode is System.Net.HttpStatusCode.Forbidden
+                        or System.Net.HttpStatusCode.NotFound,
+                    Array.Empty<TelegramCollectedMessage>(),
+                    $"Telegram web preview returned {(int)response.StatusCode}.");
+            }
+
+            var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            var document = new HtmlDocument();
+            document.LoadHtml(html);
+            var messages = document.DocumentNode
+                .SelectNodes("//div[contains(@class,'tgme_widget_message_wrap')]")?
+                .Select(node => ParsePreviewMessage(node, username))
+                .Where(message => message is not null)
+                .Cast<TelegramCollectedMessage>()
+                .ToList() ?? [];
+
+            return new TelegramCollectionResult(true, false, messages, null);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Telegram web preview collection failed for {Username}", username);
+            return new TelegramCollectionResult(false, false, Array.Empty<TelegramCollectedMessage>(), exception.Message);
+        }
+    }
+
+    private static TelegramCollectedMessage? ParsePreviewMessage(HtmlNode node, string username)
+    {
+        var post = node.GetAttributeValue("data-post", string.Empty);
+        var messageId = post[(post.LastIndexOf('/') + 1)..];
+        if (string.IsNullOrWhiteSpace(messageId)) return null;
+
+        var textNode = node.SelectSingleNode(".//div[contains(@class,'tgme_widget_message_text')]");
+        var text = HtmlEntity.DeEntitize(textNode?.InnerText ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        var timeNode = node.SelectSingleNode(".//time[@datetime]");
+        var date = DateTime.TryParse(
+            timeNode?.GetAttributeValue("datetime", string.Empty),
+            out var parsedDate)
+            ? parsedDate.ToUniversalTime()
+            : DateTime.UtcNow;
+
+        return new TelegramCollectedMessage(
+            messageId,
+            text,
+            date,
+            $"https://t.me/{username}/{messageId}",
+            null);
     }
 
     private async Task EnsureConnectedAsync(CancellationToken cancellationToken)
