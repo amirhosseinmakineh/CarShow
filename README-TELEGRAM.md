@@ -20,3 +20,5 @@ The account must be authorized and have access to each channel. The collector re
 The backend also requires `ConnectionStrings__CarShow` and `JwtSettings__SecretKey` in the deployment environment. These values are intentionally absent from source-controlled appsettings files.
 
 Optional tuning values are `Telegram__HistoryPerChannel` (default 500, clamped to 1..2000) and the worker currently processes one queued channel at a time to keep Telegram rate limits bounded.
+
+When `Telegram:Provider` is `auto` (the default) and MTProto credentials are missing, the collector uses Telegram's public web preview (`t.me/s/{username}`). This supports public usernames and latest preview messages without adding a bot to channels. Numeric IDs, private channels, and channels without a public username still require MTProto access. Use `Telegram__Provider=mtproto` to force MTProto or `Telegram__Provider=web-preview` to force the public preview adapter.
