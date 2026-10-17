@@ -13,4 +13,5 @@ public interface ITelegramChannelService
     Task<bool> RetryAsync(long id, CancellationToken cancellationToken);
     Task<bool> TestAsync(long id, CancellationToken cancellationToken);
     Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken);
+    Task<TelegramCapabilityDto> GetCapabilitiesAsync(CancellationToken cancellationToken);
 }
