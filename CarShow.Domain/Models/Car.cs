@@ -2,6 +2,7 @@ namespace CarShow.Domain.Models
 {
     public class Car : BaseEntity<long>
     {
+        public long? CategoryId { get; set; }
         public long CompanyId { get; set; }
         public long CarModelId { get; set; }
         public long? TipId { get; set; }
@@ -19,6 +20,7 @@ namespace CarShow.Domain.Models
 
         public Company Company { get; set; } = null!;
         public CarModel CarModel { get; set; } = null!;
+        public Category? Category { get; set; }
         public Tip? Tip { get; set; }
     }
 }

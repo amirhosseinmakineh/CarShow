@@ -23,6 +23,19 @@ namespace CarShow.Controllers
             return Ok(result);
         }
 
+        [HttpGet("new")]
+        public async Task<IActionResult> GetNewCars(
+            float? minPrice,
+            float? maxPrice,
+            string? company,
+            long? modelId,
+            int pageSize = 12,
+            int pageNumber = 0)
+        {
+            var result = await servicce.GetNewCars(minPrice, maxPrice, company, modelId, pageSize, pageNumber);
+            return Ok(result);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateCar(CreateCarDto dto)
         {
