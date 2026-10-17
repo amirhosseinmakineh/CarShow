@@ -7,3 +7,11 @@ public sealed record TelegramChannelSummaryDto(int TotalChannels, int Active, in
 public sealed record BulkTelegramChannelImportResult(int Total, int Created, int Duplicates, int Invalid, int Queued, IReadOnlyList<string> InvalidEntries);
 
 public sealed record TelegramJobLogDto(long Id, long ChannelId, string Status, int Attempt, DateTime CreatedAt, DateTime? CompletedAt, string? Error);
+
+public sealed record TelegramCapabilityDto(
+    string Provider,
+    bool PublicPreviewEnabled,
+    bool RequiresApiCredentials,
+    bool SupportsPublicUsernames,
+    bool SupportsHistory,
+    string Message);
