@@ -3,6 +3,7 @@ namespace CarShow.ApplicationService.Contract.Dtos.CarDto
     public record CarDto
     {
         public long Id { get; set; }
+        public bool IsUsed { get; set; }
         public string Name { get; set; } = string.Empty;
         public string carModeName { get; set; } = string.Empty;
         public string StartDate { get; set; } = string.Empty;
