@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace CarShow.Infrastracture.Telegram;
 
-public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectionQueue queue) : ITelegramChannelService
+public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectionQueue queue, IConfiguration configuration) : ITelegramChannelService
 {
     private static readonly Regex Username = new("^[A-Za-z][A-Za-z0-9_]{4,31}$", RegexOptions.Compiled);
 
@@ -106,6 +106,28 @@ public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectio
         if (channel is null) return false;
         await queue.EnqueueAsync(id, cancellationToken);
         return true;
+    }
+
+    public Task<TelegramCapabilityDto> GetCapabilitiesAsync(CancellationToken cancellationToken)
+    {
+        var provider = configuration["Telegram:Provider"]?.ToLowerInvariant() ?? "auto";
+        var hasApiCredentials = long.TryParse(configuration["Telegram:ApiId"], out _)
+            && !string.IsNullOrWhiteSpace(configuration["Telegram:ApiHash"]);
+        var publicPreviewEnabled = provider is "auto" or "web-preview";
+        var effectiveProvider = provider == "auto"
+            ? hasApiCredentials ? "mtproto" : "web-preview"
+            : provider;
+        var message = effectiveProvider == "web-preview"
+            ? "کانال‌های عمومی دارای username بدون Bot Admin پردازش می‌شوند."
+            : "پردازش با MTProto و Session کاربر فعال است.";
+        var result = new TelegramCapabilityDto(
+            effectiveProvider,
+            publicPreviewEnabled,
+            effectiveProvider == "mtproto",
+            true,
+            effectiveProvider == "mtproto",
+            message);
+        return Task.FromResult(result);
     }
 
     public async Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken)
