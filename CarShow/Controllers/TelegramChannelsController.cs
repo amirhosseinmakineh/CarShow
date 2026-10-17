@@ -22,6 +22,12 @@ public sealed class TelegramChannelsController(ITelegramChannelService service) 
         return Ok(await service.GetSummaryAsync(cancellationToken));
     }
 
+    [HttpGet("capabilities")]
+    public async Task<IActionResult> Capabilities(CancellationToken cancellationToken)
+    {
+        return Ok(await service.GetCapabilitiesAsync(cancellationToken));
+    }
+
     [HttpGet("jobs")]
     public async Task<IActionResult> Jobs(CancellationToken cancellationToken)
     {
