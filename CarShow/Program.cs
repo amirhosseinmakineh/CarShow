@@ -26,6 +26,7 @@ builder.Services.AddCors(options => options.AddPolicy("AllowAll", policy => poli
 builder.Services.Configure<CrawlerSettings>(builder.Configuration.GetSection(CrawlerSettings.SectionName));
 builder.Services.AddDbContext<CarShowContext>(options => { options.UseSqlServer(builder.Configuration.GetConnectionString("CarShow")); options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)); });
 builder.Services.AddHttpClient<ICarIrCrawlerService, CarIrCrawlerService>(client => { client.Timeout = TimeSpan.FromMinutes(2); client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 CarShowCrawler/1.0"); });
+builder.Services.AddHttpClient("TelegramWebPreview", client => { client.Timeout = TimeSpan.FromSeconds(30); client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 CarShowTelegramPreview/1.0"); });
 builder.Services.AddScoped<ICarDataSource>(sp => sp.GetRequiredService<ICarIrCrawlerService>());
 builder.Services.AddScoped<ICarCrawlerSyncService, CarCrawlerSyncService>();
 builder.Services.AddHostedService<GetCarsBackgroundService>();
