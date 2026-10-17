@@ -37,7 +37,7 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<object>> CreateCar(CreateCarDto dto)
         {
             var existingCar = await carRepository.GetAll()
-                .FirstOrDefaultAsync(x => x.Name == dto.Name);
+                .FirstOrDefaultAsync(x => x.Name == dto.Name && x.IsUsed == dto.IsUsed);
 
             if (existingCar != null)
                 return Result<object>.Failure("ماشین مورد نظر جهت ثبت در سیستم موجود می‌باشد");
@@ -46,6 +46,7 @@ namespace CarShow.ApplicationService.Services
             var car = new Car
             {
                 Name = dto.Name,
+                IsUsed = dto.IsUsed,
                 Description = dto.Description,
                 ImageName = imagePath ?? string.Empty,
                 IsDelete = false,
@@ -86,12 +87,13 @@ namespace CarShow.ApplicationService.Services
             return Result<string>.Success("اتوموبیل با موفقیت حذف شد");
         }
 
-        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
+        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, bool isUsed = false, int? pageSize = 10, int? pageNumber = 0)
         {
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
-            var query = carRepository.GetAll();
+            var query = carRepository.GetAll()
+                .Where(car => car.IsUsed == isUsed);
 
             if (minPrice.HasValue)
                 query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
@@ -119,6 +121,7 @@ namespace CarShow.ApplicationService.Services
                 .Select(c => new
                 {
                     c.Id,
+                    c.IsUsed,
                     c.Name,
                     c.Description,
                     c.ImageName,
@@ -152,6 +155,7 @@ namespace CarShow.ApplicationService.Services
             return rows.Select(c => new CarDto
             {
                 Id = c.Id,
+                IsUsed = c.IsUsed,
                 CategoryName = string.Empty,
                 Name = c.Name,
                 Description = c.Description,
@@ -224,6 +228,7 @@ namespace CarShow.ApplicationService.Services
                 return Result<object>.Failure("اتوموبیلی یافت نشد");
 
             car.Name = dto.Name;
+            car.IsUsed = dto.IsUsed;
             car.MarketPrice = (decimal)dto.Price;
             car.Description = dto.Description;
             car.ImageName = dto.ImageName;
@@ -261,6 +266,7 @@ namespace CarShow.ApplicationService.Services
             var result = new CarDto
             {
                 Id = car.Id,
+                IsUsed = car.IsUsed,
                 carModeName = car.CarModel?.Name ?? string.Empty,
                 CategoryName = string.Empty,
                 CompanyName = car.Company?.Name ?? string.Empty,
