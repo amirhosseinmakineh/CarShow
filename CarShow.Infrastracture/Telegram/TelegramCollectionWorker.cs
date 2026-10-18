@@ -25,10 +25,15 @@ public sealed class TelegramCollectionWorker(
             {
                 await ProcessAsync(channelId, stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception exception)
             {
                 logger.LogError(exception, "Telegram collection job failed for channel {ChannelId}", channelId);
                 await RecordFailureAsync(channelId, exception, stoppingToken);
+                await ScheduleRetryAsync(channelId, stoppingToken);
             }
         }
     }
@@ -41,13 +46,26 @@ public sealed class TelegramCollectionWorker(
             .Where(x => x.Enabled && (x.Status == TelegramChannelStatus.Pending || x.Status == TelegramChannelStatus.Processing))
             .ToListAsync(cancellationToken);
 
+        var interruptedJobs = await db.TelegramCollectionJobs
+            .Where(job => job.Status == TelegramCollectionJobStatus.Processing)
+            .ToListAsync(cancellationToken);
+        foreach (var job in interruptedJobs)
+        {
+            job.Status = TelegramCollectionJobStatus.Failed;
+            job.Error = "Collection interrupted by application restart.";
+            job.CompletedAt = DateTime.UtcNow;
+        }
+
         foreach (var channel in channels)
         {
             channel.Status = TelegramChannelStatus.Pending;
-            await queue.EnqueueAsync(channel.Id, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        foreach (var channel in channels)
+        {
+            await queue.EnqueueAsync(channel.Id, cancellationToken);
+        }
     }
 
     private async Task RecordFailureAsync(long channelId, Exception exception, CancellationToken cancellationToken)
@@ -57,9 +75,12 @@ public sealed class TelegramCollectionWorker(
             await using var scope = scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
             var channel = await db.TelegramChannels.FirstOrDefaultAsync(x => x.Id == channelId, cancellationToken);
-            if (channel is null) return;
+            if (channel is null)
+            {
+                return;
+            }
 
-            channel.Status = TelegramChannelStatus.Error;
+            channel.Status = channel.Enabled ? TelegramChannelStatus.Error : TelegramChannelStatus.Paused;
             channel.LastError = exception.Message;
             channel.LastAttemptAt = DateTime.UtcNow;
             channel.UpdatedAt = DateTime.UtcNow;
@@ -92,33 +113,44 @@ public sealed class TelegramCollectionWorker(
         var collector = scope.ServiceProvider.GetRequiredService<ITelegramCollector>();
         var extractor = scope.ServiceProvider.GetRequiredService<ITelegramListingExtractor>();
         var channel = await db.TelegramChannels.FirstOrDefaultAsync(x => x.Id == channelId, cancellationToken);
-        if (channel is null || !channel.Enabled) return;
-
-        var job = new TelegramCollectionJob
+        if (channel is null || !channel.Enabled)
         {
-            ChannelId = channelId,
-            Status = TelegramCollectionJobStatus.Processing,
-            Attempt = channel.RetryCount + 1,
-            StartedAt = DateTime.UtcNow
-        };
-        db.TelegramCollectionJobs.Add(job);
+            return;
+        }
+
+        var job = await db.TelegramCollectionJobs
+            .Where(x => x.ChannelId == channelId && x.Status == TelegramCollectionJobStatus.Queued)
+            .OrderBy(x => x.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (job is null)
+        {
+            return;
+        }
+
+        job.Status = TelegramCollectionJobStatus.Processing;
+        job.StartedAt = DateTime.UtcNow;
         channel.Status = TelegramChannelStatus.Processing;
         channel.LastAttemptAt = DateTime.UtcNow;
         channel.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromMinutes(2));
+        var timeoutSeconds = Math.Clamp(configuration.GetValue("Telegram:TimeoutSeconds", 120), 1, 600);
+        timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
         var result = await collector.CollectChannelAsync(channel.NormalizedIdentifier, timeout.Token);
         var insertedMessages = 0;
         var insertedListings = 0;
 
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         foreach (var item in result.Messages)
         {
             var duplicate = await db.TelegramRawMessages.AnyAsync(
                 x => x.ChannelId == channel.Id && x.ExternalMessageId == item.ExternalMessageId,
                 cancellationToken);
-            if (duplicate) continue;
+            if (duplicate)
+            {
+                continue;
+            }
 
             var rawMessage = new TelegramRawMessage
             {
@@ -153,6 +185,16 @@ public sealed class TelegramCollectionWorker(
             }
         }
 
+        // A pause during network collection must not be overwritten by this scope's stale entity.
+        var enabled = await db.TelegramChannels.AsNoTracking()
+            .Where(x => x.Id == channelId)
+            .Select(x => (bool?)x.Enabled)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (enabled is null)
+        {
+            return;
+        }
+
         channel.MessagesCollected += insertedMessages;
         channel.ListingsExtracted += insertedListings;
         channel.LastError = result.Error;
@@ -178,12 +220,38 @@ public sealed class TelegramCollectionWorker(
                 : TelegramChannelStatus.Error;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
-        if (!result.Success && !result.AccessRequired && channel.Enabled && channel.RetryCount <= 3)
+        if (!enabled.Value)
         {
-            var retryDelay = TimeSpan.FromSeconds(Math.Pow(2, channel.RetryCount));
-            await Task.Delay(retryDelay, cancellationToken);
-            await queue.EnqueueAsync(channel.Id, cancellationToken);
+            channel.Status = TelegramChannelStatus.Paused;
         }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        if (!result.Success && !result.AccessRequired)
+        {
+            await ScheduleRetryAsync(channel.Id, cancellationToken);
+        }
+
+        var delayMilliseconds = Math.Clamp(configuration.GetValue("Telegram:RequestDelayMilliseconds", 1000), 100, 60000);
+        await Task.Delay(delayMilliseconds, cancellationToken);
+    }
+
+    private async Task ScheduleRetryAsync(long channelId, CancellationToken cancellationToken)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        var channel = await db.TelegramChannels.FindAsync([channelId], cancellationToken);
+        var maxRetries = Math.Clamp(configuration.GetValue("Telegram:MaxRetries", 3), 0, 10);
+        if (channel is null || !channel.Enabled || channel.RetryCount > maxRetries)
+        {
+            return;
+        }
+
+        // Persist Pending before the delay so restart recovery cannot lose a retry.
+        channel.Status = TelegramChannelStatus.Pending;
+        await db.SaveChangesAsync(cancellationToken);
+        var retryDelay = TimeSpan.FromSeconds(Math.Min(300, Math.Pow(2, channel.RetryCount)));
+        await Task.Delay(retryDelay, cancellationToken);
+        await queue.EnqueueAsync(channel.Id, cancellationToken);
     }
 }

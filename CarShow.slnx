@@ -9,4 +9,5 @@
   <Project Path="CarShow.Security/CarShow.Security.csproj" Id="2557b25d-56e2-444b-a90b-4016fe892d59" />
   <Project Path="Carshow.Utilities/Carshow.Utilities.csproj" Id="8c5d2338-de30-43ee-af88-e5986ac79710" />
   <Project Path="CarShow/CarShow.csproj" />
+  <Project Path="CarShow.Tests/CarShow.Tests.csproj" />
 </Solution>
