@@ -8,7 +8,11 @@ using System.Text.RegularExpressions;
 
 namespace CarShow.ApplicationService.Services;
 
-public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel> channelRepository, IBaseRepository<long, TelegramCollectionJob> jobRepository, ITelegramCollectionQueue queue, IConfiguration configuration) : ITelegramChannelService
+public sealed class TelegramChannelService(
+    IBaseRepository<long, TelegramChannel> channelRepository,
+    IBaseRepository<long, TelegramCollectionJob> jobRepository,
+    ITelegramCollectionQueue queue,
+    IConfiguration configuration) : ITelegramChannelService
 {
     private static readonly Regex Username = new("^[A-Za-z][A-Za-z0-9_]{4,31}$", RegexOptions.Compiled);
 
@@ -28,7 +32,9 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
             channels.Count,
             channels.Count(x => x.Status == TelegramChannelStatus.Active),
             channels.Count(x => x.Status == TelegramChannelStatus.Paused),
-            channels.Count(x => x.Status is TelegramChannelStatus.Error or TelegramChannelStatus.AccessRequired),
+            channels.Count(x => x.Status is TelegramChannelStatus.Error
+                or TelegramChannelStatus.AccessRequired
+                or TelegramChannelStatus.UnsupportedByCurrentCredentials),
             channels.Count(x => x.Status == TelegramChannelStatus.Pending),
             channels.Count(x => x.Status == TelegramChannelStatus.Processing),
             channels.Sum(x => x.MessagesCollected),
@@ -38,7 +44,9 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
 
     public async Task<BulkTelegramChannelImportResult> ImportAsync(BulkTelegramChannelImportRequest request, CancellationToken cancellationToken)
     {
-        var entries = (request.Input ?? string.Empty).Split(new[] { '\r', '\n', ',', ';', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var entries = (request.Input ?? string.Empty).Split(
+            ['\r', '\n', ',', ';', '\t', ' '],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var invalid = new List<string>();
         var normalized = new List<(string id, string username, string url)>();
@@ -50,37 +58,80 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
                 invalid.Add(entry);
                 continue;
             }
-            if (unique.Add(value.Value.id)) normalized.Add(value.Value);
+            if (unique.Add(value.Value.id))
+            {
+                normalized.Add(value.Value);
+            }
         }
         var ids = normalized.Select(x => x.id).ToList();
-        var existing = await channelRepository.GetAll().Where(x => ids.Contains(x.NormalizedIdentifier)).Select(x => x.NormalizedIdentifier).ToHashSetAsync(cancellationToken);
+        var existing = await channelRepository.GetAll()
+            .Where(x => ids.Contains(x.NormalizedIdentifier))
+            .Select(x => x.NormalizedIdentifier)
+            .ToHashSetAsync(cancellationToken);
         var created = 0;
         var queued = 0;
         foreach (var item in normalized.Where(x => !existing.Contains(x.id)))
         {
-            var channel = new TelegramChannel { TelegramIdentifier = item.id, NormalizedIdentifier = item.id, Username = item.username, PublicUrl = string.IsNullOrEmpty(item.url) ? null : item.url, Status = TelegramChannelStatus.Pending };
+            cancellationToken.ThrowIfCancellationRequested();
+            var channel = new TelegramChannel
+            {
+                TelegramIdentifier = item.id,
+                NormalizedIdentifier = item.id,
+                Username = item.username,
+                PublicUrl = string.IsNullOrEmpty(item.url) ? null : item.url,
+                Status = TelegramChannelStatus.Pending
+            };
             await channelRepository.Create(channel);
             await channelRepository.SaveChanges();
             await queue.EnqueueAsync(channel.Id, cancellationToken);
-            created++; queued++;
+            created++;
+            queued++;
         }
-        return new(entries.Length, created, entries.Length - invalid.Count - normalized.Count, invalid.Count, queued, invalid);
+        return new(entries.Length, created, entries.Length - invalid.Count - created, invalid.Count, queued, invalid);
     }
 
     public async Task<TelegramChannelDto?> AddAsync(AddTelegramChannelRequest request, CancellationToken cancellationToken)
     {
+        var normalized = Normalize(request.Input);
+        if (normalized is null)
+        {
+            return null;
+        }
+
         var result = await ImportAsync(new BulkTelegramChannelImportRequest(request.Input), cancellationToken);
-        if (result.Created == 0) return null;
-        return await channelRepository.GetAll().OrderByDescending(x => x.Id).Select(ToDto).FirstAsync(cancellationToken);
+        if (result.Created == 0)
+        {
+            return null;
+        }
+        var identifier = normalized.Value.id;
+        return await channelRepository.GetAll()
+            .Where(x => x.NormalizedIdentifier == identifier)
+            .Select(ToDto)
+            .SingleAsync(cancellationToken);
     }
 
     public async Task<bool> SetEnabledAsync(long id, bool enabled, CancellationToken cancellationToken)
     {
-        var channel = await channelRepository.GetAll().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (channel is null) return false;
-        channel.Enabled = enabled; channel.Status = enabled ? TelegramChannelStatus.Pending : TelegramChannelStatus.Paused; channel.UpdatedAt = DateTime.UtcNow;
+        var channel = await channelRepository.GetAll()
+            .AsTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (channel is null)
+        {
+            return false;
+        }
+        channel.Enabled = enabled;
+        channel.Status = enabled ? TelegramChannelStatus.Pending : TelegramChannelStatus.Paused;
+        channel.UpdatedAt = DateTime.UtcNow;
+        if (enabled)
+        {
+            channel.RetryCount = 0;
+            channel.LastError = null;
+        }
         await channelRepository.SaveChanges();
-        if (enabled) await queue.EnqueueAsync(id, cancellationToken);
+        if (enabled)
+        {
+            await queue.EnqueueAsync(id, cancellationToken);
+        }
         return true;
     }
 
@@ -103,10 +154,7 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
     }
     public async Task<bool> TestAsync(long id, CancellationToken cancellationToken)
     {
-        var channel = await channelRepository.GetById(id);
-        if (channel is null) return false;
-        await queue.EnqueueAsync(id, cancellationToken);
-        return true;
+        return await SetEnabledAsync(id, true, cancellationToken);
     }
 
     public Task<TelegramCapabilityDto> GetCapabilitiesAsync(CancellationToken cancellationToken)
@@ -114,16 +162,16 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
         var provider = configuration["Telegram:Provider"]?.ToLowerInvariant() ?? "auto";
         var hasApiCredentials = long.TryParse(configuration["Telegram:ApiId"], out _)
             && !string.IsNullOrWhiteSpace(configuration["Telegram:ApiHash"]);
-        var publicPreviewEnabled = provider is "auto" or "web-preview";
+
         var effectiveProvider = provider == "auto"
             ? hasApiCredentials ? "mtproto" : "web-preview"
             : provider;
         var message = effectiveProvider == "web-preview"
-            ? "کانال‌های عمومی دارای username بدون Bot Admin پردازش می‌شوند."
-            : "پردازش با MTProto و Session کاربر فعال است.";
+            ? "دریافت پیام‌های قابل مشاهده در پیش‌نمایش عمومی، بدون Bot Admin و ApiId/ApiHash؛ دسترسی کامل به تاریخچه تضمین نمی‌شود."
+            : "دریافت با MTProto به ApiId/ApiHash و Session معتبر نیاز دارد؛ اتصال هنگام اجرای Job بررسی می‌شود.";
         var result = new TelegramCapabilityDto(
             effectiveProvider,
-            publicPreviewEnabled,
+            effectiveProvider == "web-preview",
             effectiveProvider == "mtproto",
             true,
             effectiveProvider == "mtproto",
@@ -143,12 +191,39 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
     private static (string id, string username, string url)? Normalize(string input)
     {
         var value = input.Trim();
-        if (value.StartsWith("https://t.me/", StringComparison.OrdinalIgnoreCase) || value.StartsWith("http://t.me/", StringComparison.OrdinalIgnoreCase)) value = value[(value.IndexOf("t.me/", StringComparison.OrdinalIgnoreCase) + 5)..].Trim('/');
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
+        {
+            if (uri.Host != "t.me" || (uri.Scheme != "https" && uri.Scheme != "http"))
+            {
+                return null;
+            }
+
+            value = uri.AbsolutePath.Trim('/');
+        }
         value = value.TrimStart('@');
-        if (value.StartsWith("-100") && value.Length > 5 && value[1..].All(char.IsDigit)) return (value, string.Empty, string.Empty);
-        if (!Username.IsMatch(value)) return null;
-        return (value.ToLowerInvariant(), value, $"https://t.me/{value}");
+        if (value.StartsWith("-100") && value.Length > 5 && value[1..].All(char.IsDigit))
+        {
+            return (value, string.Empty, string.Empty);
+        }
+        if (!Username.IsMatch(value))
+        {
+            return null;
+        }
+        return (value.ToLowerInvariant(), value, $"https://t.me/{value.ToLowerInvariant()}");
     }
 
-    private static readonly System.Linq.Expressions.Expression<Func<TelegramChannel, TelegramChannelDto>> ToDto = x => new(x.Id, x.TelegramIdentifier, x.Username, x.PublicUrl, x.Title, x.Status.ToString(), x.Enabled, x.LastAttemptAt, x.LastSuccessAt, x.LastError, x.MessagesCollected, x.ListingsExtracted, x.RetryCount);
+    private static readonly System.Linq.Expressions.Expression<Func<TelegramChannel, TelegramChannelDto>> ToDto = x => new(
+        x.Id,
+        x.TelegramIdentifier,
+        x.Username,
+        x.PublicUrl,
+        x.Title,
+        x.Status.ToString(),
+        x.Enabled,
+        x.LastAttemptAt,
+        x.LastSuccessAt,
+        x.LastError,
+        x.MessagesCollected,
+        x.ListingsExtracted,
+        x.RetryCount);
 }

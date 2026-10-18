@@ -47,7 +47,13 @@ public sealed class TelegramChannelsController(ITelegramChannelService service) 
         AddTelegramChannelRequest request,
         CancellationToken cancellationToken)
     {
-        return Ok(await service.AddAsync(request, cancellationToken));
+        var channel = await service.AddAsync(request, cancellationToken);
+        if (channel is null)
+        {
+            return BadRequest(new { message = "Channel identifier is invalid or already exists." });
+        }
+
+        return Ok(channel);
     }
 
     [HttpPatch("{id:long}/enabled")]

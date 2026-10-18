@@ -53,9 +53,9 @@ public sealed class TelegramCollector(
         try
         {
             await EnsureConnectedAsync(cancellationToken);
-            var peer = await client!.Contacts_ResolveUsername(identifier[1..]);
+            var peer = await client!.Contacts_ResolveUsername(identifier[1..]).WaitAsync(cancellationToken);
             var historyLimit = GetHistoryLimit();
-            var history = await client.Messages_GetHistory(peer, limit: historyLimit);
+            var history = await client.Messages_GetHistory(peer, limit: historyLimit).WaitAsync(cancellationToken);
             var messages = history.Messages
                 .OfType<Message>()
                 .Where(message => !string.IsNullOrWhiteSpace(message.message))
@@ -66,6 +66,15 @@ public sealed class TelegramCollector(
                     $"https://t.me/{identifier[1..]}/{message.id}",
                     null))
                 .ToList();
+
+            if (messages.Count == 0)
+            {
+                return new TelegramCollectionResult(
+                    false,
+                    false,
+                    messages,
+                    "Telegram returned no readable text messages for this channel.");
+            }
 
             return new TelegramCollectionResult(true, false, messages, null);
         }
@@ -92,7 +101,7 @@ public sealed class TelegramCollector(
         }
 
         var url = $"https://t.me/s/{Uri.EscapeDataString(username)}";
-        var client = httpClientFactory.CreateClient("TelegramWebPreview");
+        using var client = httpClientFactory.CreateClient("TelegramWebPreview");
 
         try
         {
@@ -110,12 +119,26 @@ public sealed class TelegramCollector(
             var html = await response.Content.ReadAsStringAsync(cancellationToken);
             var document = new HtmlDocument();
             document.LoadHtml(html);
+            if (document.DocumentNode.SelectSingleNode("//*[contains(@class,'tgme_channel_history')]") is null)
+            {
+                return AccessRequired("This channel has no accessible public web preview.");
+            }
+
             var messages = document.DocumentNode
                 .SelectNodes("//div[contains(@class,'tgme_widget_message_wrap')]")?
                 .Select(node => ParsePreviewMessage(node, username))
                 .Where(message => message is not null)
                 .Cast<TelegramCollectedMessage>()
                 .ToList() ?? [];
+
+            if (messages.Count == 0)
+            {
+                return new TelegramCollectionResult(
+                    false,
+                    false,
+                    messages,
+                    "Telegram returned no readable text messages for this channel.");
+            }
 
             return new TelegramCollectionResult(true, false, messages, null);
         }
@@ -135,11 +158,25 @@ public sealed class TelegramCollector(
         var post = node.SelectSingleNode(".//*[@data-post]")?.GetAttributeValue("data-post", string.Empty)
             ?? node.GetAttributeValue("data-post", string.Empty);
         var messageId = post[(post.LastIndexOf('/') + 1)..];
-        if (string.IsNullOrWhiteSpace(messageId)) return null;
+        if (string.IsNullOrWhiteSpace(messageId))
+        {
+            return null;
+        }
 
         var textNode = node.SelectSingleNode(".//div[contains(@class,'tgme_widget_message_text')]");
+        if (textNode is not null)
+        {
+            foreach (var lineBreak in textNode.SelectNodes(".//br") ?? Enumerable.Empty<HtmlNode>())
+            {
+                lineBreak.ParentNode.ReplaceChild(HtmlNode.CreateNode("&#10;"), lineBreak);
+            }
+        }
+
         var text = HtmlEntity.DeEntitize(textNode?.InnerText ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(text)) return null;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
 
         var timeNode = node.SelectSingleNode(".//time[@datetime]");
         var date = DateTime.TryParse(
@@ -158,14 +195,17 @@ public sealed class TelegramCollector(
 
     private async Task EnsureConnectedAsync(CancellationToken cancellationToken)
     {
-        if (client is not null) return;
+        if (client is not null)
+        {
+            return;
+        }
         await loginGate.WaitAsync(cancellationToken);
         try
         {
             if (client is null)
             {
                 client = new Client(GetConfigurationValue);
-                await client.LoginUserIfNeeded();
+                await client.LoginUserIfNeeded().WaitAsync(cancellationToken);
             }
         }
         finally
@@ -200,6 +240,9 @@ public sealed class TelegramCollector(
     public async ValueTask DisposeAsync()
     {
         loginGate.Dispose();
-        if (client is not null) await client.DisposeAsync();
+        if (client is not null)
+        {
+            await client.DisposeAsync();
+        }
     }
 }
