@@ -3,6 +3,8 @@ using CarShow.ApplicationService.Contract.IService;
 using CarShow.Domain.Models.Telegram;
 using CarShow.Domain.IRepository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
 namespace CarShow.ApplicationService.Services;
