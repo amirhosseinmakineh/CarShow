@@ -17,6 +17,8 @@ public sealed class TelegramCollectionWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await RecoverPendingChannelsAsync(stoppingToken);
+
         await foreach (var channelId in queue.ReadAllAsync(stoppingToken))
         {
             try
@@ -26,7 +28,60 @@ public sealed class TelegramCollectionWorker(
             catch (Exception exception)
             {
                 logger.LogError(exception, "Telegram collection job failed for channel {ChannelId}", channelId);
+                await RecordFailureAsync(channelId, exception, stoppingToken);
             }
+        }
+    }
+
+    private async Task RecoverPendingChannelsAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        var channels = await db.TelegramChannels
+            .Where(x => x.Enabled && (x.Status == TelegramChannelStatus.Pending || x.Status == TelegramChannelStatus.Processing))
+            .ToListAsync(cancellationToken);
+
+        foreach (var channel in channels)
+        {
+            channel.Status = TelegramChannelStatus.Pending;
+            await queue.EnqueueAsync(channel.Id, cancellationToken);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task RecordFailureAsync(long channelId, Exception exception, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+            var channel = await db.TelegramChannels.FirstOrDefaultAsync(x => x.Id == channelId, cancellationToken);
+            if (channel is null) return;
+
+            channel.Status = TelegramChannelStatus.Error;
+            channel.LastError = exception.Message;
+            channel.LastAttemptAt = DateTime.UtcNow;
+            channel.UpdatedAt = DateTime.UtcNow;
+            channel.RetryCount++;
+
+            var job = await db.TelegramCollectionJobs
+                .Where(x => x.ChannelId == channelId && x.Status == TelegramCollectionJobStatus.Processing)
+                .OrderByDescending(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (job is not null)
+            {
+                job.Status = TelegramCollectionJobStatus.Failed;
+                job.Error = exception.Message;
+                job.CompletedAt = DateTime.UtcNow;
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception loggingException)
+        {
+            logger.LogError(loggingException, "Failed to persist Telegram collection error for channel {ChannelId}", channelId);
         }
     }
 

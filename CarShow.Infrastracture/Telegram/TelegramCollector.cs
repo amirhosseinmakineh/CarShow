@@ -62,7 +62,7 @@ public sealed class TelegramCollector(
                 .Select(message => new TelegramCollectedMessage(
                     message.id.ToString(),
                     message.message!,
-                    DateTimeOffset.FromUnixTimeSeconds(new DateTimeOffset(message.date.ToUniversalTime()).ToUnixTimeSeconds()).UtcDateTime,
+                    message.date.ToUniversalTime(),
                     $"https://t.me/{identifier[1..]}/{message.id}",
                     null))
                 .ToList();
@@ -132,7 +132,8 @@ public sealed class TelegramCollector(
 
     private static TelegramCollectedMessage? ParsePreviewMessage(HtmlNode node, string username)
     {
-        var post = node.GetAttributeValue("data-post", string.Empty);
+        var post = node.SelectSingleNode(".//*[@data-post]")?.GetAttributeValue("data-post", string.Empty)
+            ?? node.GetAttributeValue("data-post", string.Empty);
         var messageId = post[(post.LastIndexOf('/') + 1)..];
         if (string.IsNullOrWhiteSpace(messageId)) return null;
 

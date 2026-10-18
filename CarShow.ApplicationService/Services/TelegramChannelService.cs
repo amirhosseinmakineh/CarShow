@@ -4,7 +4,6 @@ using CarShow.Domain.Models.Telegram;
 using CarShow.Domain.IRepository;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
 namespace CarShow.ApplicationService.Services;
@@ -34,7 +33,7 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
             channels.Count(x => x.Status == TelegramChannelStatus.Processing),
             channels.Sum(x => x.MessagesCollected),
             channels.Sum(x => x.ListingsExtracted),
-            channels.Max(x => x.LastSuccessAt));
+            channels.Count == 0 ? null : channels.Max(x => x.LastSuccessAt));
     }
 
     public async Task<BulkTelegramChannelImportResult> ImportAsync(BulkTelegramChannelImportRequest request, CancellationToken cancellationToken)
@@ -146,7 +145,7 @@ public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel
         var value = input.Trim();
         if (value.StartsWith("https://t.me/", StringComparison.OrdinalIgnoreCase) || value.StartsWith("http://t.me/", StringComparison.OrdinalIgnoreCase)) value = value[(value.IndexOf("t.me/", StringComparison.OrdinalIgnoreCase) + 5)..].Trim('/');
         value = value.TrimStart('@');
-        if (value.StartsWith("-100") && value.Length > 5 && value.All(char.IsDigit)) return (value, string.Empty, string.Empty);
+        if (value.StartsWith("-100") && value.Length > 5 && value[1..].All(char.IsDigit)) return (value, string.Empty, string.Empty);
         if (!Username.IsMatch(value)) return null;
         return (value.ToLowerInvariant(), value, $"https://t.me/{value}");
     }
