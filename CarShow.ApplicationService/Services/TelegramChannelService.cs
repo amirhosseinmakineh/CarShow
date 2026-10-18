@@ -1,19 +1,21 @@
 using CarShow.ApplicationService.Contract.Dtos.Telegram;
 using CarShow.ApplicationService.Contract.IService;
 using CarShow.Domain.Models.Telegram;
-using CarShow.Infrastracture.Context;
+using CarShow.Domain.IRepository;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
-namespace CarShow.Infrastracture.Telegram;
+namespace CarShow.ApplicationService.Services;
 
-public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectionQueue queue, IConfiguration configuration) : ITelegramChannelService
+public sealed class TelegramChannelService(IBaseRepository<long, TelegramChannel> channelRepository, IBaseRepository<long, TelegramCollectionJob> jobRepository, ITelegramCollectionQueue queue, IConfiguration configuration) : ITelegramChannelService
 {
     private static readonly Regex Username = new("^[A-Za-z][A-Za-z0-9_]{4,31}$", RegexOptions.Compiled);
 
     public async Task<IReadOnlyList<TelegramChannelDto>> GetChannelsAsync(CancellationToken cancellationToken)
     {
-        return await db.TelegramChannels
+        return await channelRepository.GetAll()
             .AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)
             .Select(ToDto)
@@ -22,7 +24,7 @@ public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectio
 
     public async Task<TelegramChannelSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
     {
-        var channels = await db.TelegramChannels.AsNoTracking().ToListAsync(cancellationToken);
+        var channels = await channelRepository.GetAll().AsNoTracking().ToListAsync(cancellationToken);
         return new TelegramChannelSummaryDto(
             channels.Count,
             channels.Count(x => x.Status == TelegramChannelStatus.Active),
@@ -52,14 +54,14 @@ public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectio
             if (unique.Add(value.Value.id)) normalized.Add(value.Value);
         }
         var ids = normalized.Select(x => x.id).ToList();
-        var existing = await db.TelegramChannels.Where(x => ids.Contains(x.NormalizedIdentifier)).Select(x => x.NormalizedIdentifier).ToHashSetAsync(cancellationToken);
+        var existing = await channelRepository.GetAll().Where(x => ids.Contains(x.NormalizedIdentifier)).Select(x => x.NormalizedIdentifier).ToHashSetAsync(cancellationToken);
         var created = 0;
         var queued = 0;
         foreach (var item in normalized.Where(x => !existing.Contains(x.id)))
         {
             var channel = new TelegramChannel { TelegramIdentifier = item.id, NormalizedIdentifier = item.id, Username = item.username, PublicUrl = string.IsNullOrEmpty(item.url) ? null : item.url, Status = TelegramChannelStatus.Pending };
-            db.TelegramChannels.Add(channel);
-            await db.SaveChangesAsync(cancellationToken);
+            await channelRepository.Create(channel);
+            await channelRepository.SaveChanges();
             await queue.EnqueueAsync(channel.Id, cancellationToken);
             created++; queued++;
         }
@@ -70,29 +72,29 @@ public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectio
     {
         var result = await ImportAsync(new BulkTelegramChannelImportRequest(request.Input), cancellationToken);
         if (result.Created == 0) return null;
-        return await db.TelegramChannels.OrderByDescending(x => x.Id).Select(ToDto).FirstAsync(cancellationToken);
+        return await channelRepository.GetAll().OrderByDescending(x => x.Id).Select(ToDto).FirstAsync(cancellationToken);
     }
 
     public async Task<bool> SetEnabledAsync(long id, bool enabled, CancellationToken cancellationToken)
     {
-        var channel = await db.TelegramChannels.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var channel = await channelRepository.GetAll().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (channel is null) return false;
         channel.Enabled = enabled; channel.Status = enabled ? TelegramChannelStatus.Pending : TelegramChannelStatus.Paused; channel.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
+        await channelRepository.SaveChanges();
         if (enabled) await queue.EnqueueAsync(id, cancellationToken);
         return true;
     }
 
     public async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken)
     {
-        var channel = await db.TelegramChannels.FindAsync(new object[] { id }, cancellationToken);
+        var channel = await channelRepository.GetById(id);
         if (channel is null)
         {
             return false;
         }
 
-        db.TelegramChannels.Remove(channel);
-        await db.SaveChangesAsync(cancellationToken);
+        await channelRepository.Delete(channel);
+        await channelRepository.SaveChanges();
         return true;
     }
 
@@ -102,7 +104,7 @@ public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectio
     }
     public async Task<bool> TestAsync(long id, CancellationToken cancellationToken)
     {
-        var channel = await db.TelegramChannels.FindAsync(new object[] { id }, cancellationToken);
+        var channel = await channelRepository.GetById(id);
         if (channel is null) return false;
         await queue.EnqueueAsync(id, cancellationToken);
         return true;
@@ -132,7 +134,7 @@ public sealed class TelegramChannelService(CarShowContext db, ITelegramCollectio
 
     public async Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken)
     {
-        return await db.TelegramCollectionJobs.AsNoTracking()
+        return await jobRepository.GetAll().AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)
             .Take(500)
             .Select(x => new TelegramJobLogDto(x.Id, x.ChannelId, x.Status.ToString(), x.Attempt, x.CreatedAt, x.CompletedAt, x.Error))

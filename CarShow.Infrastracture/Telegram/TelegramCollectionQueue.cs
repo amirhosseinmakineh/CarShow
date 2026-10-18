@@ -1,12 +1,7 @@
 using System.Threading.Channels;
+using CarShow.Domain.IRepository;
 
 namespace CarShow.Infrastracture.Telegram;
-
-public interface ITelegramCollectionQueue
-{
-    ValueTask EnqueueAsync(long channelId, CancellationToken cancellationToken = default);
-    IAsyncEnumerable<long> ReadAllAsync(CancellationToken cancellationToken);
-}
 
 public sealed class TelegramCollectionQueue : ITelegramCollectionQueue
 {

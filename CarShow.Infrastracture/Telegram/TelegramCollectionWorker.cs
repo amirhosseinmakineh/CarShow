@@ -1,3 +1,4 @@
+using CarShow.Domain.IRepository;
 using CarShow.Domain.Models.Telegram;
 using CarShow.Infrastracture.Context;
 using Microsoft.EntityFrameworkCore;
