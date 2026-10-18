@@ -1,4 +1,6 @@
 using HtmlAgilityPack;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using TL;
 using WTelegram;
 
@@ -60,7 +62,7 @@ public sealed class TelegramCollector(
                 .Select(message => new TelegramCollectedMessage(
                     message.id.ToString(),
                     message.message!,
-                    DateTimeOffset.FromUnixTimeSeconds(message.date).UtcDateTime,
+                    DateTimeOffset.FromUnixTimeSeconds(new DateTimeOffset(message.date.ToUniversalTime()).ToUnixTimeSeconds()).UtcDateTime,
                     $"https://t.me/{identifier[1..]}/{message.id}",
                     null))
                 .ToList();
