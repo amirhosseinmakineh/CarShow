@@ -17,9 +17,9 @@ namespace CarShow.Controllers
             this.servicce = servicce;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAllCars(float? minPrice,float? maxPrice,string? company,int pageSize = 10,int pageNumber = 0)
+        public async Task<IActionResult> GetAllCars(float? minPrice, float? maxPrice, string? company, bool isUsed = false, int pageSize = 10, int pageNumber = 0)
         {
-            var result = await servicce.GetAllCars(minPrice,maxPrice,company,pageSize,pageNumber);
+            var result = await servicce.GetAllCars(minPrice, maxPrice, company, isUsed, pageSize, pageNumber);
             return Ok(result);
         }
 

@@ -2,6 +2,7 @@ namespace CarShow.Domain.Models
 {
     public class Car : BaseEntity<long>
     {
+        public bool IsUsed { get; set; }
         public long CompanyId { get; set; }
         public long CarModelId { get; set; }
         public long? TipId { get; set; }

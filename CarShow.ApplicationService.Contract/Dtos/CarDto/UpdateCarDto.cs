@@ -3,6 +3,7 @@
     public record UpdateCarDto
     {
         public long Id { get; set; }
+        public bool IsUsed { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Model { get; set; } = string.Empty;
         public string Create { get; set; } = string.Empty;
