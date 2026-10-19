@@ -33,7 +33,7 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<long>("CarModelId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("CategoryId")
+                    b.Property<long?>("CategoryId")
                         .HasColumnType("bigint");
 
                     b.Property<long>("CompanyId")
@@ -43,6 +43,9 @@ namespace CarShow.Infrastracture.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("FactoryPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("ImageName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -50,18 +53,37 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MarketPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateOnly?>("MarketPriceDay")
+                        .HasColumnType("date");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<float>("Price")
-                        .HasColumnType("real");
+                    b.Property<DateTime?>("PriceCalculatedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("StartDate")
+                    b.Property<int>("PriceSampleCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Slug")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long>("TipId")
+                    b.Property<string>("SourceUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("TipId")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -75,6 +97,70 @@ namespace CarShow.Infrastracture.Migrations
                     b.HasIndex("TipId");
 
                     b.ToTable("Cars");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.CarModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CarModels");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.CarPriceHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CalculatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("CarId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("FactoryPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFinal")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("MarketPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateOnly?>("PriceDay")
+                        .HasColumnType("date");
+
+                    b.Property<int>("SampleCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarId", "PriceDay")
+                        .IsUnique()
+                        .HasFilter("[PriceDay] IS NOT NULL");
+
+                    b.ToTable("CarPriceHistories");
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.Category", b =>
@@ -118,26 +204,6 @@ namespace CarShow.Infrastracture.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Companies");
-                });
-
-            modelBuilder.Entity("CarShow.Domain.Models.Model", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CarModels");
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.Order", b =>
@@ -235,6 +301,324 @@ namespace CarShow.Infrastracture.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.CarListing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("BodyCondition")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Brand")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("CarId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ChannelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("City")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Color")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeduplicationKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ExtractedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Fingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Fuel")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MatchReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MatchStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int?>("Mileage")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Model")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("NormalizedPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateOnly?>("PriceDay")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("RawMessageId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("RawText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SourceChannel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceMessageId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SourceUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Transmission")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Trim")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RawMessageId")
+                        .IsUnique()
+                        .HasFilter("[RawMessageId] IS NOT NULL");
+
+                    b.HasIndex("CarId", "PriceDay");
+
+                    b.HasIndex("ChannelId", "SourceMessageId")
+                        .IsUnique();
+
+                    b.ToTable("CarListings");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.TelegramChannel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("CollectorType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastSuccessAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ListingsExtracted")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MessagesCollected")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NormalizedIdentifier")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PublicUrl")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("TelegramIdentifier")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedIdentifier")
+                        .IsUnique();
+
+                    b.HasIndex("PublicUrl")
+                        .IsUnique()
+                        .HasFilter("[PublicUrl] IS NOT NULL");
+
+                    b.ToTable("TelegramChannels");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.TelegramCollectionJob", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ChannelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelId")
+                        .IsUnique()
+                        .HasFilter("[Status] IN ('Queued', 'Processing')");
+
+                    b.HasIndex("ChannelId", "CreatedAt");
+
+                    b.ToTable("TelegramCollectionJobs");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.TelegramPricingState", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastSuccessAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TelegramPricingStates");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.TelegramRawMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("ChannelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CollectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExternalMessageId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MediaMetadata")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("MessageDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MessageText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProcessingError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProcessingStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelId", "ExternalMessageId")
+                        .IsUnique();
+
+                    b.ToTable("TelegramRawMessages");
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.Tip", b =>
                 {
                     b.Property<long>("Id")
@@ -246,9 +630,10 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
 
-                    b.Property<string>("TipName")
+                    b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("TipName");
 
                     b.HasKey("Id");
 
@@ -316,37 +701,43 @@ namespace CarShow.Infrastracture.Migrations
 
             modelBuilder.Entity("CarShow.Domain.Models.Car", b =>
                 {
-                    b.HasOne("CarShow.Domain.Models.Model", "CarModel")
+                    b.HasOne("CarShow.Domain.Models.CarModel", "CarModel")
                         .WithMany("Cars")
                         .HasForeignKey("CarModelId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("CarShow.Domain.Models.Category", "Category")
+                    b.HasOne("CarShow.Domain.Models.Category", null)
                         .WithMany("Car")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CategoryId");
 
                     b.HasOne("CarShow.Domain.Models.Company", "Company")
                         .WithMany("Cars")
                         .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("CarShow.Domain.Models.Tip", "Tip")
                         .WithMany("Cars")
                         .HasForeignKey("TipId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CarModel");
-
-                    b.Navigation("Category");
 
                     b.Navigation("Company");
 
                     b.Navigation("Tip");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.CarPriceHistory", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.Car", "Car")
+                        .WithMany()
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Car");
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.Order", b =>
@@ -387,6 +778,45 @@ namespace CarShow.Infrastracture.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.CarListing", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.Car", "Car")
+                        .WithMany()
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CarShow.Domain.Models.Telegram.TelegramRawMessage", "RawMessage")
+                        .WithMany()
+                        .HasForeignKey("RawMessageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Car");
+
+                    b.Navigation("RawMessage");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.TelegramCollectionJob", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.Telegram.TelegramChannel", "Channel")
+                        .WithMany()
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.TelegramRawMessage", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.Telegram.TelegramChannel", "Channel")
+                        .WithMany("RawMessages")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.UserRole", b =>
                 {
                     b.HasOne("CarShow.Domain.Models.Role", "Role")
@@ -406,17 +836,17 @@ namespace CarShow.Infrastracture.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.CarModel", b =>
+                {
+                    b.Navigation("Cars");
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.Category", b =>
                 {
                     b.Navigation("Car");
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.Company", b =>
-                {
-                    b.Navigation("Cars");
-                });
-
-            modelBuilder.Entity("CarShow.Domain.Models.Model", b =>
                 {
                     b.Navigation("Cars");
                 });
@@ -429,6 +859,11 @@ namespace CarShow.Infrastracture.Migrations
             modelBuilder.Entity("CarShow.Domain.Models.Role", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.Telegram.TelegramChannel", b =>
+                {
+                    b.Navigation("RawMessages");
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.Tip", b =>

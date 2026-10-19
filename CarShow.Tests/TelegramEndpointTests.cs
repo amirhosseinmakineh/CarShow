@@ -1,3 +1,5 @@
+using CarShow.Domain.Telegram;
+using CarShow.BackgroundServices;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -6,6 +8,7 @@ using System.Security.Claims;
 using System.Text;
 using CarShow.ApplicationService.Contract.Dtos.Telegram;
 using CarShow.ApplicationService.Contract.IService;
+using CarShow.ApplicationService.Services;
 using CarShow.Controllers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -30,6 +33,8 @@ public sealed class TelegramEndpointTests
         var services = builder.Services;
         services.AddControllers().AddApplicationPart(typeof(TelegramChannelsController).Assembly);
         services.AddSingleton(scope.ServiceProvider.GetRequiredService<ITelegramChannelService>());
+        services.AddSingleton<ITelegramPricingQueries>(new TelegramPricingQueries(
+            scope.ServiceProvider.GetRequiredService<CarShow.Domain.IRepository.ITelegramProcessingStore>()));
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
             {
@@ -51,6 +56,7 @@ public sealed class TelegramEndpointTests
         using var client = app.GetTestClient();
         const string baseUrl = "/api/admin/telegram-channels";
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(baseUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/admin/telegram-pricing/prices")).StatusCode);
         var token = new JwtSecurityToken(
             issuer: "telegram-tests",
             audience: "telegram-tests",
@@ -62,6 +68,11 @@ public sealed class TelegramEndpointTests
         foreach (var suffix in new[] { "", "/summary", "/jobs", "/capabilities" })
         {
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(baseUrl + suffix)).StatusCode);
+        }
+
+        foreach (var suffix in new[] { "prices", "observations", "state" })
+        {
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/admin/telegram-pricing/" + suffix)).StatusCode);
         }
 
         var invalid = await client.PostAsJsonAsync(baseUrl + "/import", new { input = "" });

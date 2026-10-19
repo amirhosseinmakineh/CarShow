@@ -47,7 +47,7 @@ namespace CarShow.Infrastracture.Repository
             }
             catch
             {
-                // A failed entity must not poison the scoped DbContext for the next crawler row.
+                // A failed entity must not poison the scoped DbContext for the next operation.
                 _context.ChangeTracker.Clear();
                 throw;
             }

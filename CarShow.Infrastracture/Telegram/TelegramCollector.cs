@@ -1,3 +1,4 @@
+using CarShow.Domain.Telegram;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -179,11 +180,13 @@ public sealed class TelegramCollector(
         }
 
         var timeNode = node.SelectSingleNode(".//time[@datetime]");
-        var date = DateTime.TryParse(
-            timeNode?.GetAttributeValue("datetime", string.Empty),
-            out var parsedDate)
-            ? parsedDate.ToUniversalTime()
-            : DateTime.UtcNow;
+        if (!DateTimeOffset.TryParse(timeNode?.GetAttributeValue("datetime", string.Empty),
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal, out var parsedDate))
+        {
+            return null;
+        }
+        var date = parsedDate.UtcDateTime;
 
         return new TelegramCollectedMessage(
             messageId,

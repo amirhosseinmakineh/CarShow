@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using CarShow.Domain.Models.Telegram;
 
-namespace CarShow.Infrastracture.Telegram;
+namespace CarShow.ApplicationService.Services;
 
 public interface ITelegramListingExtractor
 {
@@ -32,21 +32,26 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             return null;
         }
 
-        var text = NormalizeDigits(message.MessageText);
+        var text = NormalizeDigits(message.MessageText).Replace("ي", "ی").Replace("ك", "ک").Replace("\u200c", " ");
         var priceMatch = PriceRegex.Match(text);
         var price = ParseDecimal(priceMatch.Groups[1].Value);
-        if (price is null || price <= 0)
+        if (price is null || price <= 0 || PriceRegex.Matches(text).Count != 1)
         {
             return null;
         }
 
-        price *= priceMatch.Groups[2].Value switch
+        var multiplier = priceMatch.Groups[2].Value switch
         {
             "میلیارد" => 1_000_000_000m,
             "میلیون" => 1_000_000m,
             "هزار" => 1_000m,
             _ => 1m
         };
+        if (price > 9_999_999_999_999_999.99m / multiplier)
+        {
+            return null;
+        }
+        price *= multiplier;
         var currency = priceMatch.Groups[3].Value.ToUpperInvariant() switch
         {
             "تومان" or "تومن" or "IRT" => "IRT",
@@ -67,6 +72,10 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
 
         return new CarListing
         {
+            RawMessageId = message.Id,
+            PublishedAt = message.MessageDate,
+            ReceivedAt = message.CollectedAt,
+            IsUsed = GetCondition(text, mileage),
             ChannelId = channel.Id,
             SourceChannel = channel.NormalizedIdentifier,
             SourceMessageId = message.ExternalMessageId,
@@ -80,6 +89,17 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             ExtractedAt = DateTime.UtcNow,
             DeduplicationKey = $"{channel.NormalizedIdentifier}:{message.ExternalMessageId}"
         };
+    }
+
+    private static bool? GetCondition(string text, int? mileage)
+    {
+        var isNew = mileage == 0 || Regex.IsMatch(text, @"\b(?:صفر|نو)\b");
+        var isUsed = mileage > 0 || Regex.IsMatch(text, @"دست\s*دوم|کارکرده");
+        if (isNew == isUsed)
+        {
+            return null;
+        }
+        return isUsed;
     }
 
     private static string NormalizeDigits(string value)
