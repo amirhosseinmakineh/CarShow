@@ -1,6 +1,15 @@
 namespace CarShow.Domain.Models.Telegram;
 
-public enum TelegramChannelStatus { Pending, Processing, Active, Paused, Error, AccessRequired, UnsupportedByCurrentCredentials }
+public enum TelegramChannelStatus
+{
+    Pending,
+    Processing,
+    Active,
+    Paused,
+    Error,
+    AccessRequired,
+    UnsupportedByCurrentCredentials
+}
 
 public sealed class TelegramChannel : BaseEntity<long>
 {
@@ -39,6 +48,18 @@ public sealed class TelegramRawMessage : BaseEntity<long>
 
 public sealed class CarListing : BaseEntity<long>
 {
+    public long? CarId { get; set; }
+    public Car? Car { get; set; }
+    public long? RawMessageId { get; set; }
+    public TelegramRawMessage? RawMessage { get; set; }
+    public bool? IsUsed { get; set; }
+    public decimal? NormalizedPrice { get; set; }
+    public DateTime? PublishedAt { get; set; }
+    public DateTime? ReceivedAt { get; set; }
+    public DateOnly? PriceDay { get; set; }
+    public string MatchStatus { get; set; } = "Pending";
+    public string? MatchReason { get; set; }
+    public string? Fingerprint { get; set; }
     public string? Brand { get; set; }
     public string? Model { get; set; }
     public string? Trim { get; set; }

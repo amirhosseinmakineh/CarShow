@@ -1,3 +1,5 @@
+using CarShow.Domain.Telegram;
+using CarShow.BackgroundServices;
 using System.Net;
 using CarShow.ApplicationService.Contract.Dtos.Telegram;
 using CarShow.ApplicationService.Contract.IService;
@@ -254,6 +256,9 @@ public sealed class TelegramCollectionTests
             services.AddSingleton<ITelegramCollectionQueue, TelegramCollectionQueue>();
             services.AddSingleton<ITelegramCollector, TelegramCollector>();
             services.AddScoped<ITelegramListingExtractor, TelegramListingExtractor>();
+            services.AddScoped<ITelegramProcessingStore, TelegramProcessingStore>();
+            services.AddScoped<TelegramCollectionService>();
+            services.AddScoped<TelegramPricingService>();
             services.AddSingleton<TelegramCollectionWorker>();
             services.AddSingleton<IHttpClientFactory>(new FixtureHttpClientFactory(preview, inaccessibleUsername));
             var provider = services.BuildServiceProvider();

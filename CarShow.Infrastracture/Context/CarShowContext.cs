@@ -26,6 +26,8 @@ namespace CarShow.Infrastracture.Context
         public DbSet<CarListing> CarListings { get; set; } = null!;
         public DbSet<TelegramCollectionJob> TelegramCollectionJobs { get; set; } = null!;
 
+        public DbSet<TelegramPricingState> TelegramPricingStates { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -66,11 +68,24 @@ namespace CarShow.Infrastracture.Context
                 entity.HasMany(x => x.RawMessages).WithOne(x => x.Channel).HasForeignKey(x => x.ChannelId).OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<TelegramRawMessage>(entity => entity.HasIndex(x => new { x.ChannelId, x.ExternalMessageId }).IsUnique());
-            modelBuilder.Entity<CarListing>(entity => entity.HasIndex(x => new { x.ChannelId, x.SourceMessageId }).IsUnique());
+            modelBuilder.Entity<CarListing>(entity =>
+            {
+                entity.HasIndex(x => new { x.ChannelId, x.SourceMessageId }).IsUnique();
+                entity.HasIndex(x => x.RawMessageId).IsUnique().HasFilter("[RawMessageId] IS NOT NULL");
+                entity.HasIndex(x => new { x.CarId, x.PriceDay });
+                entity.Property(x => x.MatchStatus).HasMaxLength(32);
+                entity.Property(x => x.Fingerprint).HasMaxLength(64);
+                entity.Property(x => x.Price).HasPrecision(18, 2);
+                entity.Property(x => x.NormalizedPrice).HasPrecision(18, 2);
+                entity.HasOne(x => x.Car).WithMany().HasForeignKey(x => x.CarId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.RawMessage).WithMany().HasForeignKey(x => x.RawMessageId).OnDelete(DeleteBehavior.Restrict);
+            });
             modelBuilder.Entity<TelegramCollectionJob>(entity =>
             {
                 entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(64);
                 entity.HasIndex(x => new { x.ChannelId, x.CreatedAt });
+                entity.HasIndex(x => x.ChannelId).IsUnique()
+                    .HasFilter("[Status] IN ('Queued', 'Processing')");
                 entity.HasOne(x => x.Channel).WithMany().HasForeignKey(x => x.ChannelId).OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -78,6 +93,7 @@ namespace CarShow.Infrastracture.Context
             {
                 entity.Property(x => x.MarketPrice).HasColumnType("decimal(18,2)");
                 entity.Property(x => x.FactoryPrice).HasColumnType("decimal(18,2)");
+                entity.HasIndex(x => new { x.CarId, x.PriceDay }).IsUnique().HasFilter("[PriceDay] IS NOT NULL");
 
                 entity.HasOne(x => x.Car)
                     .WithMany()
