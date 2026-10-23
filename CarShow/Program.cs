@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args.Contains("--telegram-probe") ? [] : args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
@@ -20,7 +20,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("Frontend", policy =>
+    {
+        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        if (origins.Length > 0) policy.WithOrigins(origins).AllowAnyMethod().AllowAnyHeader();
+    });
 });
 builder.Services.AddDbContext<CarShowContext>(options =>
 {
@@ -35,8 +39,11 @@ builder.Services.AddSingleton<ITelegramCollectionQueue, TelegramCollectionQueue>
 builder.Services.AddScoped<ITelegramChannelService, TelegramChannelService>();
 builder.Services.AddSingleton<ITelegramCollector, TelegramCollector>();
 builder.Services.AddScoped<ITelegramListingExtractor, TelegramListingExtractor>();
-builder.Services.AddHostedService<TelegramCollectionWorker>();
-builder.Services.AddHostedService<TelegramPricingWorker>();
+if (builder.Configuration.GetValue("Telegram:WorkersEnabled", true))
+{
+    builder.Services.AddHostedService<TelegramCollectionWorker>();
+    builder.Services.AddHostedService<TelegramPricingWorker>();
+}
 builder.Services.AddScoped<ITelegramProcessingStore, TelegramProcessingStore>();
 builder.Services.AddScoped<TelegramCollectionService>();
 builder.Services.AddScoped<TelegramPricingService>();
@@ -53,6 +60,18 @@ builder.Services.AddScoped<IInstallmentCalculator, InstallmentCalculator>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
+builder.Services.AddScoped<TelegramPreviewService>();
+if (args.Contains("--telegram-probe"))
+{
+    await using var probeApp = builder.Build();
+    await using var probeScope = probeApp.Services.CreateAsyncScope();
+    var channels = args.Where(x => x.StartsWith('@')).ToArray();
+    if (channels.Length == 0) channels = ["@foroshekhodro", "@Baravard"];
+    var report = await probeScope.ServiceProvider.GetRequiredService<TelegramPreviewService>()
+        .CollectAsync(new(channels, 500), CancellationToken.None);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(report, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+    return;
+}
 var jwtSetting = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSetting["SecretKey"] ?? throw new InvalidOperationException("Jwt SecretKey is missing!"));
 builder.Services.AddAuthentication(options =>
@@ -72,8 +91,11 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(secretKey)
     };
 });
+if (secretKey.Length < 32) throw new InvalidOperationException("JwtSettings:SecretKey must be set to at least 32 UTF-8 bytes using environment variables.");
+builder.Services.AddHealthChecks().AddDbContextCheck<CarShowContext>("sqlserver");
 builder.Services.AddAuthorization();
 var app = builder.Build();
+if (builder.Configuration.GetValue("Database:ApplyMigrationsOnStartup", false))
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
@@ -87,10 +109,12 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1");
     options.RoutePrefix = "swagger";
 });
-app.UseCors("AllowAll");
 app.UseStaticFiles();
 app.UseRouting();
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnonymous();
+app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapControllers();
 app.Run();

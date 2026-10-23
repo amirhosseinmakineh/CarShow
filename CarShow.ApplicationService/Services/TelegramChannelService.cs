@@ -159,23 +159,9 @@ public sealed class TelegramChannelService(
 
     public Task<TelegramCapabilityDto> GetCapabilitiesAsync(CancellationToken cancellationToken)
     {
-        var provider = configuration["Telegram:Provider"]?.ToLowerInvariant() ?? "auto";
-        var hasApiCredentials = long.TryParse(configuration["Telegram:ApiId"], out _)
-            && !string.IsNullOrWhiteSpace(configuration["Telegram:ApiHash"]);
-
-        var effectiveProvider = provider == "auto"
-            ? hasApiCredentials ? "mtproto" : "web-preview"
-            : provider;
-        var message = effectiveProvider == "web-preview"
-            ? "دریافت پیام‌های قابل مشاهده در پیش‌نمایش عمومی، بدون Bot Admin و ApiId/ApiHash؛ دسترسی کامل به تاریخچه تضمین نمی‌شود."
-            : "دریافت با MTProto به ApiId/ApiHash و Session معتبر نیاز دارد؛ اتصال هنگام اجرای Job بررسی می‌شود.";
         var result = new TelegramCapabilityDto(
-            effectiveProvider,
-            effectiveProvider == "web-preview",
-            effectiveProvider == "mtproto",
-            true,
-            effectiveProvider == "mtproto",
-            message);
+            "web-preview", true, false, true, false,
+            "دریافت صفحه‌بندی‌شده پیام‌های عمومی بدون ApiId/ApiHash؛ حداکثر ۵۰۰ پیام در هر درخواست. دسترسی کامل به تاریخچه تضمین نمی‌شود و تعداد واقعی گزارش می‌شود.");
         return Task.FromResult(result);
     }
 
@@ -201,10 +187,6 @@ public sealed class TelegramChannelService(
             value = uri.AbsolutePath.Trim('/');
         }
         value = value.TrimStart('@');
-        if (value.StartsWith("-100") && value.Length > 5 && value[1..].All(char.IsDigit))
-        {
-            return (value, string.Empty, string.Empty);
-        }
         if (!Username.IsMatch(value))
         {
             return null;
