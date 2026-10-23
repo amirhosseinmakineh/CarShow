@@ -46,6 +46,9 @@ public sealed class TelegramEndpointTests
                 ValidAudience = "telegram-tests",
                 IssuerSigningKey = key
             });
+        services.AddSingleton(scope.ServiceProvider.GetRequiredService<ITelegramCollector>());
+        services.AddSingleton(scope.ServiceProvider.GetRequiredService<ITelegramListingExtractor>());
+        services.AddScoped<TelegramPreviewService>();
         services.AddAuthorization();
         await using var app = builder.Build();
         app.UseRouting();
@@ -77,6 +80,12 @@ public sealed class TelegramEndpointTests
 
         var invalid = await client.PostAsJsonAsync(baseUrl + "/import", new { input = "" });
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync(baseUrl + "/preview", new { channels = new[] { "@example" }, messageLimit = 501 })).StatusCode);
+        var preview = await client.PostAsJsonAsync(baseUrl + "/preview", new { channels = new[] { "@example" }, messageLimit = 20 });
+        preview.EnsureSuccessStatusCode();
+        var reports = await preview.Content.ReadFromJsonAsync<List<TelegramPreviewReport>>();
+        Assert.False(Assert.Single(reports!).Success);
+        Assert.Equal(0, reports![0].Received);
         var imported = await client.PostAsJsonAsync(baseUrl + "/import", new { input = "@example" });
         imported.EnsureSuccessStatusCode();
         var result = await imported.Content.ReadFromJsonAsync<BulkTelegramChannelImportResult>();

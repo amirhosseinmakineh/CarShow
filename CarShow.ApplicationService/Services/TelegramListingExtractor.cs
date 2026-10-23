@@ -13,7 +13,7 @@ public interface ITelegramListingExtractor
 public sealed class TelegramListingExtractor : ITelegramListingExtractor
 {
     private static readonly Regex PriceRegex = new(
-        @"(?:قیمت|price)\s*[:：]?\s*([0-9,٬]+(?:[.٫][0-9]+)?)\s*(میلیارد|میلیون|هزار)?\s*(تومان|ریال|تومن|IRR|IRT)?",
+        @"(?:قیمت(?:\s+(?:فروش|نقدی|کل))?|price)\s*[:：=💰💵💶💸🔴🟢]*\s*([0-9,٬]+(?:[.٫][0-9]+)?)\s*(میلیارد|میلیون|هزار)?\s*(تومان|ریال|تومن|IRR|IRT)?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex MileageRegex = new(
         @"(?:کارکرد|کیلومتر|km)\s*[:：]?\s*([0-9,٬]+)\s*(هزار)?",
@@ -69,6 +69,11 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
         var yearValue = ParseDecimal(YearRegex.Match(text).Groups[1].Value);
         var year = yearValue is >= 1300 and <= 2100 ? (int?)yearValue : null;
         var modelMatch = ModelRegex.Match(text);
+        var carName = modelMatch.Success ? modelMatch.Groups[1].Value.Trim() : KnownCarName(text);
+        var trimMatch = Regex.Match(text, @"(?:تیپ|تریم)\s*[:：]\s*([^\r\n]+)");
+        var trim = trimMatch.Success ? trimMatch.Groups[1].Value.Trim() :
+            string.Join(" ", new[] { "توربو", "اتومات", "دنده ای", "هیبرید" }.Where(x => text.Contains(x, StringComparison.Ordinal)));
+        if (mileage is null && Regex.IsMatch(text, @"(?:کارکرد\s*[:：]?\s*صفر|صفر\s*کیلومتر)")) mileage = 0;
 
         return new CarListing
         {
@@ -81,7 +86,8 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             SourceMessageId = message.ExternalMessageId,
             SourceUrl = message.SourceUrl,
             RawText = message.MessageText,
-            Model = modelMatch.Success ? modelMatch.Groups[1].Value.Trim() : null,
+            Model = carName,
+            Trim = string.IsNullOrEmpty(trim) ? null : trim,
             Price = price,
             Currency = currency,
             Mileage = mileage,
@@ -89,6 +95,14 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             ExtractedAt = DateTime.UtcNow,
             DeduplicationKey = $"{channel.NormalizedIdentifier}:{message.ExternalMessageId}"
         };
+    }
+
+    private static string? KnownCarName(string text)
+    {
+        // Prefer the longest known name; unknown names remain null for manual matching.
+        string[] names = ["دنا پلاس", "پژو پارس", "پژو 207", "پژو 206", "پژو 405", "تارا", "شاهین", "کوییک", "ساینا", "سمند", "رانا پلاس", "رانا", "دنا", "تیبا", "پراید", "هایما S7", "هایما S5", "جک S5", "جک J4", "کی ام سی", "فیدلیتی", "دیگنیتی", "لاماری", "ریسپکت", "کمری", "کرولا", "توسان", "سانتافه", "اسپورتیج", "سراتو", "النترا"];
+        return names.Where(name => text.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(name => name.Length).FirstOrDefault();
     }
 
     private static bool? GetCondition(string text, int? mileage)
