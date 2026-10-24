@@ -1,0 +1,101 @@
+{
+  "testedAt": "2026-10-23",
+  "deployedCodeCommit": "6848f2affdb3a32db0e539f93eb93b5b2350702b",
+  "backendUrl": "https://carshowapi-z6t-carshowde1023.runflare.cloud",
+  "environment": "Runflare Hetzner Germany, project 36879, service 85729",
+  "httpChecks": {
+    "live": 200,
+    "ready": 503,
+    "anonymousAdmin": 401,
+    "stagingAdminCapabilities": 200,
+    "invalidMessageLimit": 400,
+    "frontendCorsPreflight": 204
+  },
+  "database": "Not connected. Existing mayadb pod is in Error with PAL initialization failure 101. No restore or schema modification performed.",
+  "authentication": "Only isolated staging JWT validation tested. Existing-user Login and production signing-key continuity are NOT verified.",
+  "frontend": "Foreign and production builds passed. Production routing remains unchanged; no staging frontend was deployed.",
+  "reports": [
+    {
+      "channelId": "@foroshekhodro",
+      "requested": 500,
+      "received": 500,
+      "carAds": 14,
+      "pricesExtracted": 44,
+      "pagesFetched": 34,
+      "nextBefore": 42782,
+      "stopReason": "RequestedLimitReached",
+      "durationMilliseconds": 23001,
+      "success": true,
+      "error": null,
+      "samples": [
+        {
+          "channelId": "@foroshekhodro",
+          "messageId": "43473",
+          "carName": "النترا",
+          "trim": null,
+          "year": 2026,
+          "mileage": null,
+          "price": 7950000000.0,
+          "currency": "Toman",
+          "messageUrl": "https://t.me/foroshekhodro/43473"
+        },
+        {
+          "channelId": "@foroshekhodro",
+          "messageId": "43251",
+          "carName": "پراید",
+          "trim": null,
+          "year": null,
+          "mileage": null,
+          "price": 868000000,
+          "currency": "Toman",
+          "messageUrl": "https://t.me/foroshekhodro/43251"
+        }
+      ]
+    },
+    {
+      "channelId": "@Baravard",
+      "requested": 500,
+      "received": 500,
+      "carAds": 167,
+      "pricesExtracted": 206,
+      "pagesFetched": 25,
+      "nextBefore": 10330,
+      "stopReason": "RequestedLimitReached",
+      "durationMilliseconds": 14099,
+      "success": true,
+      "error": null,
+      "samples": [
+        {
+          "channelId": "@Baravard",
+          "messageId": "10816",
+          "carName": "دنا پلاس",
+          "trim": "توربو اتومات",
+          "year": 1404,
+          "mileage": 1,
+          "price": 3750000000.0,
+          "currency": "Toman",
+          "messageUrl": "https://t.me/Baravard/10816"
+        },
+        {
+          "channelId": "@Baravard",
+          "messageId": "10810",
+          "carName": "کی ام سی",
+          "trim": "دنده ای",
+          "year": 1402,
+          "mileage": 20000,
+          "price": 4800000000.0,
+          "currency": "Toman",
+          "messageUrl": "https://t.me/Baravard/10810"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "CarAds counts only price-bearing messages whose car name could be recognized by the current extractor. It is not a count of all car advertisements.",
+    "Extracted prices are unverified asking prices from channel messages, not confirmed sales or market valuations.",
+    "A 500-message successful preview retrieval on these channels does not guarantee complete history or future availability.",
+    "Backup listing showed 146-149 byte files. Backup integrity was not verified; automated review blocked generating a database backup download link.",
+    "Images/uploads, database read/write, existing-user login and production cutover remain pending."
+  ]
+}
+
