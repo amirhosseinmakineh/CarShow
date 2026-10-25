@@ -7,6 +7,8 @@ using CarShow.Infrastracture.Context;
 using CarShow.Infrastracture.Repository;
 using CarShow.Infrastracture.Telegram;
 using CarShow.Security.Token;
+using CarShow.Infrastructure;
+using CarShow.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -103,6 +105,12 @@ await using (var scope = app.Services.CreateAsyncScope())
     await db.Database.MigrateAsync();
     logger.LogInformation("Database migrations applied successfully.");
 }
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("AdminBootstrap");
+    await AdminBootstrapper.EnsureAsync(db, builder.Configuration, logger);
+}
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
@@ -118,3 +126,4 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnony
 app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapControllers();
 app.Run();
+
