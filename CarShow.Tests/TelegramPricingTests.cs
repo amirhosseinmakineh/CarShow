@@ -19,6 +19,8 @@ public sealed class TelegramPricingTests
             Id = used ? 2 : 1,
             Name = "پژو 207 " + trim,
             IsUsed = used,
+            Year = 1403,
+            TelegramIdentityKey = CarListingMatcher.BuildComparisonKey("پژو", "207", trim, 1403, "Jalali", used),
             Company = new Company { Name = "پژو" },
             CarModel = new CarModel { Name = "207" },
             TipId = 1,
@@ -38,8 +40,8 @@ public sealed class TelegramPricingTests
     }
 
     [Theory]
-    [InlineData("پژو ۲۰۷ اتومات صفر قیمت: ۸۵۰ میلیون تومان", 850000000)]
-    [InlineData("پژو ٢٠٧ اتومات صفر قیمت: ٨٥٠٠ میلیون ریال", 850000000)]
+    [InlineData("پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون تومان", 850000000)]
+    [InlineData("پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریال", 850000000)]
     public void MatchesCompanyModelTrimAndNormalizesMoney(string text, decimal expected)
     {
         var listing = Extract(text);
@@ -52,14 +54,14 @@ public sealed class TelegramPricingTests
     [Fact]
     public void SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim()
     {
-        var listing = Extract("پژو 207 اتومات کارکرد: 2000 قیمت: 850 میلیون تومان");
+        var listing = Extract("پژو 207 اتومات مدل: 1403 کارکرد: 2000 قیمت: 850 میلیون تومان");
         CarListingMatcher.Match(listing, [Car(), Car(true)]);
         Assert.Equal(2, listing.CarId);
         CarListingMatcher.Match(listing, [Car()]);
         Assert.Equal("Unmatched", listing.MatchStatus);
         CarListingMatcher.Match(listing, [Car(true), Car(true)]);
         Assert.Equal("Ambiguous", listing.MatchStatus);
-        listing = Extract("پژو 207 دستی صفر قیمت: 850 میلیون تومان");
+        listing = Extract("پژو 207 دستی مدل: 1403 صفر قیمت: 850 میلیون تومان");
         CarListingMatcher.Match(listing, [Car()]);
         Assert.Equal("Unmatched", listing.MatchStatus);
     }
@@ -89,7 +91,7 @@ public sealed class TelegramPricingTests
     {
         var listing = Extract(text);
         CarListingMatcher.Match(listing, [Car()]);
-        Assert.Equal("Unmatched", listing.MatchStatus);
+        Assert.NotEqual("Matched", listing.MatchStatus);
         Assert.Null(listing.CarId);
     }
 
@@ -116,25 +118,26 @@ public sealed class TelegramPricingTests
             var car = Car();
             car.TipId = 0;
             db.Cars.Add(car);
-            var channel = new TelegramChannel { NormalizedIdentifier = "@prices" };
-            var other = new TelegramChannel { NormalizedIdentifier = "@other" };
-            db.TelegramChannels.AddRange(channel, other);
+            var channels = Enumerable.Range(0, 6).Select(i => new TelegramChannel { NormalizedIdentifier = $"@price_{i}" }).ToArray();
+            db.TelegramChannels.AddRange(channels);
             await db.SaveChangesAsync();
-            AddMessage(db, channel, "1", "پژو 207 اتومات صفر قیمت: 800 میلیون تومان");
-            AddMessage(db, channel, "2", "پژو 207 اتومات صفر قیمت: 1000 میلیون تومان");
-            AddMessage(db, other, "3", "پژو 207 اتومات صفر قیمت: 800 میلیون تومان");
-            AddMessage(db, channel, "4", "پژو 207 اتومات صفر قیمت: 0 تومان");
-            AddMessage(db, channel, "5", "پژو 207 اتومات صفر قیمت: 900 میلیون");
+            var prices = new[] { 800, 1000, 850, 900, 950, 900 };
+            for (var i = 0; i < channels.Length; i++)
+                AddMessage(db, channels[i], $"{i + 1}", $"پژو 207 اتومات مدل: 1403 صفر قیمت: {prices[i]} میلیون تومان");
+            AddMessage(db, channels[0], "7", "پژو 207 اتومات مدل: 1403 صفر قیمت: 0 تومان");
+            AddMessage(db, channels[0], "8", "پژو 207 اتومات مدل: 1403 صفر قیمت: 850 میلیون");
             await db.SaveChangesAsync();
             await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
             var history = await db.CarPriceHistories.SingleAsync();
             Assert.Equal(900000000m, history.MarketPrice);
-            Assert.Equal(2, history.SampleCount);
+            Assert.Equal(6, history.SampleCount);
             Assert.Equal(77m, car.FactoryPrice);
             Assert.Equal(900000000m, car.MarketPrice);
             Assert.Equal(new DateOnly(2026, 10, 19), history.PriceDay);
-            Assert.Equal(5, await db.CarListings.CountAsync());
-            Assert.Equal(2, await db.CarListings.CountAsync(x => x.MatchStatus == "Invalid"));
+            Assert.Equal(8, await db.CarListings.CountAsync());
+            Assert.Equal(2, await db.CarListings.CountAsync(x => x.MatchStatus == "NeedsReview"));
+            Assert.All(await db.CarListings.Where(x => x.ProcessingStatus == "Published").ToListAsync(),
+                listing => Assert.Equal(5, listing.ComparedChannelCount));
         }
 
         // Fresh scope models a restart; SQL is sufficient to recover the result.
@@ -144,16 +147,16 @@ public sealed class TelegramPricingTests
             var service = scope.ServiceProvider.GetRequiredService<TelegramPricingService>();
             await service.CalculateAsync(Now.AddMinutes(5), default);
             Assert.Equal(1, await db.CarPriceHistories.CountAsync());
-            Assert.Equal(5, await db.CarListings.CountAsync());
-            var channel = await db.TelegramChannels.FirstAsync();
-            AddMessage(db, channel, "6", "پژو 207 اتومات صفر قیمت: 1200 میلیون تومان");
+            Assert.Equal(8, await db.CarListings.CountAsync());
+            var channel = await db.TelegramChannels.OrderBy(x => x.Id).LastAsync();
+            AddMessage(db, channel, "9", "پژو 207 اتومات مدل: 1403 صفر قیمت: 1200 میلیون تومان", Now.AddMinutes(1));
             await db.SaveChangesAsync();
             await service.CalculateAsync(Now.AddMinutes(10), default);
-            Assert.Equal(1000000000m, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
-            Assert.Equal(3, (await db.CarPriceHistories.SingleAsync()).SampleCount);
+            Assert.Equal(966666666.67m, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
+            Assert.Equal(6, (await db.CarPriceHistories.SingleAsync()).SampleCount);
             await service.CalculateAsync(Now.AddDays(1), default);
             Assert.Equal(1, await db.CarPriceHistories.CountAsync());
-            Assert.Equal(1000000000m, (await db.Cars.SingleAsync()).MarketPrice);
+            Assert.Equal(966666666.67m, (await db.Cars.SingleAsync()).MarketPrice);
         }
     }
 
@@ -173,7 +176,7 @@ public sealed class TelegramPricingTests
         await service.CalculateAsync(Now, default);
         Assert.Equal(100, car.MarketPrice);
         Assert.Empty(await db.CarPriceHistories.ToListAsync());
-        AddMessage(db, channel, "1", "پژو 207 اتومات صفر قیمت: 800 میلیون تومان", Now.AddDays(-10));
+        AddMessage(db, channel, "1", "پژو 207 اتومات مدل: 1403 صفر قیمت: 800 میلیون تومان", Now.AddDays(-10));
         await db.SaveChangesAsync();
         await service.CalculateAsync(Now, default);
         Assert.Equal("Late", (await db.CarListings.SingleAsync()).MatchStatus);
@@ -213,7 +216,7 @@ public sealed class TelegramPricingTests
             var channel = new TelegramChannel { NormalizedIdentifier = "@prices" };
             db.TelegramChannels.Add(channel);
             await db.SaveChangesAsync();
-            AddMessage(db, channel, "1", "پژو 207 اتومات صفر قیمت: 800 میلیون تومان");
+            AddMessage(db, channel, "1", "پژو 207 اتومات مدل: 1403 صفر قیمت: 800 میلیون تومان");
             await db.SaveChangesAsync();
         }
         async Task Calculate()
@@ -224,9 +227,41 @@ public sealed class TelegramPricingTests
         await Task.WhenAll(Task.Run(Calculate), Task.Run(Calculate));
         await using var verification = fixture.Services.CreateAsyncScope();
         var persisted = verification.ServiceProvider.GetRequiredService<CarShow.Infrastracture.Context.CarShowContext>();
-        Assert.Equal(1, await persisted.CarPriceHistories.CountAsync());
+        Assert.Empty(await persisted.CarPriceHistories.ToListAsync());
         Assert.Equal(1, await persisted.CarListings.CountAsync());
+        Assert.Equal("WaitingForComparableChannels", (await persisted.CarListings.SingleAsync()).MatchStatus);
         Assert.Equal(1, await persisted.TelegramPricingStates.CountAsync());
+    }
+
+    [Fact]
+    public async Task SixMessagesFromOneChannelDoNotCreateCarOrMarketPrice()
+    {
+        await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<CarShow.Infrastracture.Context.CarShowContext>();
+        var channel = new TelegramChannel { NormalizedIdentifier = "@only_one" };
+        db.TelegramChannels.Add(channel);
+        await db.SaveChangesAsync();
+        for (var i = 0; i < 6; i++)
+            AddMessage(db, channel, $"{i + 1}", $"پژو 207 اتومات مدل: 1403 صفر قیمت: {800 + i * 10} میلیون تومان");
+        await db.SaveChangesAsync();
+
+        await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
+
+        Assert.Empty(await db.Cars.ToListAsync());
+        Assert.Empty(await db.CarPriceHistories.ToListAsync());
+        Assert.Equal(6, await db.CarListings.CountAsync(x => x.MatchStatus == "WaitingForComparableChannels"));
+        Assert.All(await db.CarListings.ToListAsync(), listing => Assert.Equal(0, listing.ComparedChannelCount));
+    }
+
+    [Fact]
+    public void KeepsRecognizedVehicleCandidateWhenPriceIsMissing()
+    {
+        var listing = Extract("پژو 207 اتومات مدل: 1403 صفر");
+        Assert.Equal("PRICE_MISSING", listing.ReasonCode);
+        CarListingMatcher.Match(listing, []);
+        Assert.Equal("NeedsReview", listing.MatchStatus);
+        Assert.Null(listing.NormalizedPrice);
     }
 
     [Fact]
@@ -238,21 +273,23 @@ public sealed class TelegramPricingTests
         var car = Car();
         car.TipId = 0;
         db.Cars.Add(car);
-        var channel = new TelegramChannel { NormalizedIdentifier = "@prices" };
-        db.TelegramChannels.Add(channel);
+        var channels = Enumerable.Range(0, 6).Select(i => new TelegramChannel { NormalizedIdentifier = $"@history_{i}" }).ToArray();
+        db.TelegramChannels.AddRange(channels);
         await db.SaveChangesAsync();
-        AddMessage(db, channel, "1", "پژو 207 اتومات صفر قیمت: 800 میلیون تومان", Now.AddDays(-1));
+        for (var i = 0; i < channels.Length; i++)
+            AddMessage(db, channels[i], $"{i + 1}", $"پژو 207 اتومات مدل: 1403 صفر قیمت: {800 + i * 100} میلیون تومان", Now.AddDays(-1));
         await db.SaveChangesAsync();
         var service = scope.ServiceProvider.GetRequiredService<TelegramPricingService>();
         await service.CalculateAsync(Now, default);
         Assert.Equal(new DateOnly(2026, 10, 18), (await db.CarPriceHistories.SingleAsync()).PriceDay);
+        Assert.Equal(6, (await db.CarPriceHistories.SingleAsync()).SampleCount);
         await service.CalculateAsync(Now.AddDays(3), default);
         Assert.True((await db.CarPriceHistories.SingleAsync()).IsFinal);
-        AddMessage(db, channel, "2", "پژو 207 اتومات صفر قیمت: 1000 میلیون تومان", Now.AddDays(-1));
+        AddMessage(db, channels[0], "7", "پژو 207 اتومات مدل: 1403 صفر قیمت: 1000 میلیون تومان", Now.AddDays(-1));
         await db.SaveChangesAsync();
         await service.CalculateAsync(Now.AddDays(3), default);
-        Assert.Equal(800000000, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
-        Assert.Equal(1, (await db.CarPriceHistories.SingleAsync()).SampleCount);
+        Assert.Equal(1050000000m, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
+        Assert.Equal(6, (await db.CarPriceHistories.SingleAsync()).SampleCount);
         Assert.Equal(1, await db.CarListings.CountAsync(x => x.MatchStatus == "Late"));
     }
 
@@ -265,7 +302,9 @@ public sealed class TelegramPricingTests
             ExternalMessageId = id,
             MessageText = text,
             MessageDate = published ?? Now,
-            CollectedAt = Now
+            CollectedAt = Now,
+            SourceUrl = $"https://t.me/{channel.NormalizedIdentifier.TrimStart('@')}/{id}",
+            MediaMetadata = "https://example.test/car.jpg"
         });
     }
 }

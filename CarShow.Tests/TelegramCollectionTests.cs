@@ -224,7 +224,8 @@ public sealed class TelegramCollectionTests
             var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
             Assert.Equal(1, await db.TelegramCollectionJobs.CountAsync(x => x.Status == TelegramCollectionJobStatus.AccessRequired));
             Assert.Equal(199, await db.TelegramRawMessages.CountAsync());
-            Assert.Equal(199, await db.CarListings.CountAsync());
+            Assert.Equal(0, await db.CarListings.CountAsync());
+            Assert.Equal(199, await db.TelegramRawMessages.CountAsync(x => x.ProcessingStatus == "Ignored"));
             Assert.Equal(200, await db.TelegramCollectionJobs.CountAsync());
             Console.WriteLine($"200 jobs drained in {stopwatch.Elapsed.TotalSeconds:F2}s; managed memory before={memoryBefore}, after={GC.GetTotalMemory(true)} bytes.");
         }

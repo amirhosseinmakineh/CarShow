@@ -19,19 +19,22 @@ namespace CarShow.ApplicationService.Services
         private readonly IBaseRepository<long, CarModel> carModelRepository;
         private readonly IBaseRepository<long, Category> categoryRepository;
         private readonly IBaseRepository<long, Company> companyRepository;
+        private readonly ITelegramProcessingStore processingStore;
 
         public CarService(
             IBaseRepository<long, Car> carRepository,
             IBaseRepository<long, Tip> tipRepository,
             IBaseRepository<long, CarModel> carModelRepository,
             IBaseRepository<long, Category> categoryRepository,
-            IBaseRepository<long, Company> companyRepository)
+            IBaseRepository<long, Company> companyRepository,
+            ITelegramProcessingStore processingStore)
         {
             this.carRepository = carRepository;
             this.tipRepository = tipRepository;
             this.carModelRepository = carModelRepository;
             this.categoryRepository = categoryRepository;
             this.companyRepository = companyRepository;
+            this.processingStore = processingStore;
         }
 
         public async Task<Result<object>> CreateCar(CreateCarDto dto)
@@ -87,13 +90,22 @@ namespace CarShow.ApplicationService.Services
             return Result<string>.Success("اتوموبیل با موفقیت حذف شد");
         }
 
-        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, bool isUsed = false, int? pageSize = 10, int? pageNumber = 0)
+        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, bool isUsed = false, int? pageSize = 10, int? pageNumber = 0, string? model = null, string? trim = null, int? year = null, int? minMileage = null, int? maxMileage = null, string? sort = null)
         {
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
-            var query = carRepository.GetAll()
-                .Where(car => car.IsUsed == isUsed);
+            var query = carRepository.GetAll().Where(car => car.IsUsed == isUsed);
+            var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && x.IsUsed == isUsed);
+            if (!string.IsNullOrWhiteSpace(model)) query = query.Where(c => c.Name.Contains(model) || c.CarModel.Name.Contains(model));
+            if (!string.IsNullOrWhiteSpace(trim)) query = query.Where(c => c.Tip != null && c.Tip.Name.Contains(trim));
+            if (year.HasValue)
+            {
+                query = query.Where(c => c.Year == year || (c.Year == null && listings.Any(l => l.CarId == c.Id && l.Year == year)));
+                listings = listings.Where(l => l.Year == year);
+            }
+            if (minMileage.HasValue) query = query.Where(c => listings.Any(l => l.CarId == c.Id && l.Mileage >= minMileage));
+            if (maxMileage.HasValue) query = query.Where(c => listings.Any(l => l.CarId == c.Id && l.Mileage <= maxMileage));
 
             if (minPrice.HasValue)
                 query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
@@ -114,8 +126,13 @@ namespace CarShow.ApplicationService.Services
                 query = query.Where(c => companyIds.Contains(c.CompanyId));
             }
 
+            query = sort switch
+            {
+                "priceAsc" => query.OrderBy(c => c.MarketPrice),
+                "priceDesc" => query.OrderByDescending(c => c.MarketPrice),
+                _ => query.OrderByDescending(c => c.LastUpdated)
+            };
             var rows = await query
-                .OrderBy(c => c.Id)
                 .Skip(page * size)
                 .Take(size)
                 .Select(c => new
@@ -123,6 +140,7 @@ namespace CarShow.ApplicationService.Services
                     c.Id,
                     c.IsUsed,
                     c.Name,
+                    c.YearCalendar,
                     c.Description,
                     c.ImageName,
                     c.MarketPrice,
@@ -134,7 +152,11 @@ namespace CarShow.ApplicationService.Services
                     c.LastUpdated,
                     c.CompanyId,
                     c.CarModelId,
-                    c.TipId
+                    c.TipId,
+                    Year = c.Year ?? listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.Year).FirstOrDefault(),
+                    Mileage = listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.Mileage).FirstOrDefault(),
+                    ComparisonAveragePrice = listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.ComparisonAveragePrice).FirstOrDefault(),
+                    ComparisonStatus = listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.ComparisonStatus).FirstOrDefault()
                 })
                 .ToListAsync();
 
@@ -159,6 +181,11 @@ namespace CarShow.ApplicationService.Services
             {
                 Id = c.Id,
                 IsUsed = c.IsUsed,
+                Year = c.Year,
+                YearCalendar = c.YearCalendar,
+                Mileage = c.Mileage,
+                ComparisonAveragePrice = c.ComparisonAveragePrice,
+                ComparisonStatus = c.ComparisonStatus,
                 CategoryName = string.Empty,
                 Name = c.Name,
                 Description = c.Description,

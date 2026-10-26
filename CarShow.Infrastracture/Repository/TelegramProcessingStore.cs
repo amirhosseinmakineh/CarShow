@@ -16,6 +16,9 @@ public sealed class TelegramProcessingStore(CarShowContext db) : ITelegramProces
     public IQueryable<CarListing> Listings => db.CarListings;
     public IQueryable<TelegramPricingState> PricingStates => db.Set<TelegramPricingState>();
     public IQueryable<Car> Cars => db.Cars.Include(x => x.Company).Include(x => x.CarModel).Include(x => x.Tip);
+    public IQueryable<Company> Companies => db.Companies;
+    public IQueryable<CarModel> CarModels => db.CarModels;
+    public IQueryable<Tip> Tips => db.Tips;
     public IQueryable<CarPriceHistory> History => db.CarPriceHistories;
 
     public void Add<T>(T entity) where T : class

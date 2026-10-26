@@ -4,6 +4,11 @@ namespace CarShow.ApplicationService.Contract.Dtos.CarDto
     {
         public long Id { get; set; }
         public bool IsUsed { get; set; }
+        public int? Year { get; set; }
+        public string? YearCalendar { get; set; }
+        public int? Mileage { get; set; }
+        public decimal? ComparisonAveragePrice { get; set; }
+        public string? ComparisonStatus { get; set; }
         public string Name { get; set; } = string.Empty;
         public string carModeName { get; set; } = string.Empty;
         public string StartDate { get; set; } = string.Empty;

@@ -19,7 +19,9 @@ public sealed record TelegramChannelDto(
     string? LastError,
     int MessagesCollected,
     int ListingsExtracted,
-    int RetryCount);
+    int RetryCount,
+    int ProcessedListings = 0,
+    int FailedListings = 0);
 public sealed record TelegramChannelSummaryDto(
     int TotalChannels,
     int Active,
@@ -29,7 +31,14 @@ public sealed record TelegramChannelSummaryDto(
     int Processing,
     int MessagesCollected,
     int ListingsExtracted,
-    DateTime? LastCollection);
+    DateTime? LastCollection,
+    int NewCars = 0,
+    int UsedCars = 0,
+    int ComparedCars = 0,
+    int PendingListings = 0,
+    int RejectedListings = 0,
+    int MissingImageListings = 0,
+    int MissingManufacturerListings = 0);
 public sealed record BulkTelegramChannelImportResult(
     int Total,
     int Created,
