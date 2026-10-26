@@ -42,6 +42,10 @@ namespace CarShow.Infrastracture.Context
             {
                 entity.Property(x => x.MarketPrice).HasColumnType("decimal(18,2)");
                 entity.Property(x => x.FactoryPrice).HasColumnType("decimal(18,2)");
+                entity.Property(x => x.TelegramIdentityKey).HasMaxLength(256);
+                entity.Property(x => x.YearCalendar).HasMaxLength(16);
+                entity.HasIndex(x => x.TelegramIdentityKey).IsUnique()
+                    .HasFilter("[TelegramIdentityKey] IS NOT NULL");
 
                 entity.HasOne(x => x.Company)
                     .WithMany(x => x.Cars)
@@ -77,6 +81,11 @@ namespace CarShow.Infrastracture.Context
                 entity.Property(x => x.ProcessingStatus).HasMaxLength(32);
                 entity.Property(x => x.ComparisonStatus).HasMaxLength(32);
                 entity.Property(x => x.Manufacturer).HasMaxLength(128);
+                entity.Property(x => x.ReasonCode).HasMaxLength(64);
+                entity.Property(x => x.ComparisonKey).HasMaxLength(256);
+                entity.Property(x => x.YearCalendar).HasMaxLength(16);
+                entity.Property(x => x.PriceText).HasMaxLength(64);
+                entity.HasIndex(x => x.ComparisonKey);
                 entity.HasIndex(x => x.ProcessingStatus);
                 entity.HasIndex(x => x.ComparisonStatus);
                 entity.Property(x => x.Fingerprint).HasMaxLength(64);

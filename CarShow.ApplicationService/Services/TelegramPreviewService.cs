@@ -28,7 +28,8 @@ public sealed class TelegramPreviewService(ITelegramCollector collector, ITelegr
                 ExternalMessageId = message.ExternalMessageId, MessageText = message.Text,
                 MessageDate = message.MessageDate, SourceUrl = message.SourceUrl, CollectedAt = DateTime.UtcNow
             })).Where(x => x is not null).Select(x => new TelegramPreviewListing("@" + username, x!.SourceMessageId,
-                x.Model, x.Trim, x.Year, x.Mileage, x.Price, x.Currency switch { "IRT" => "Toman", "IRR" => "Rial", _ => null }, x.SourceUrl)).ToList();
+                x.Model, x.Trim, x.Year, x.YearCalendar, x.Mileage, x.Price,
+                x.Currency switch { "IRT" => "Toman", "IRR" => "Rial", _ => null }, x.SourceUrl)).ToList();
             reports.Add(new("@" + username, request.MessageLimit, result.Messages.Count,
                 listings.Count(x => !string.IsNullOrWhiteSpace(x.CarName)), listings.Count,
                 result.PagesFetched, result.NextBefore, result.StopReason, watch.ElapsedMilliseconds,

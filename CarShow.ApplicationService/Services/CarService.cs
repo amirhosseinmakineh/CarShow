@@ -99,7 +99,11 @@ namespace CarShow.ApplicationService.Services
             var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && x.IsUsed == isUsed);
             if (!string.IsNullOrWhiteSpace(model)) query = query.Where(c => c.Name.Contains(model) || c.CarModel.Name.Contains(model));
             if (!string.IsNullOrWhiteSpace(trim)) query = query.Where(c => c.Tip != null && c.Tip.Name.Contains(trim));
-            if (year.HasValue) query = query.Where(c => listings.Any(l => l.CarId == c.Id && l.Year == year));
+            if (year.HasValue)
+            {
+                query = query.Where(c => c.Year == year || (c.Year == null && listings.Any(l => l.CarId == c.Id && l.Year == year)));
+                listings = listings.Where(l => l.Year == year);
+            }
             if (minMileage.HasValue) query = query.Where(c => listings.Any(l => l.CarId == c.Id && l.Mileage >= minMileage));
             if (maxMileage.HasValue) query = query.Where(c => listings.Any(l => l.CarId == c.Id && l.Mileage <= maxMileage));
 
@@ -136,6 +140,7 @@ namespace CarShow.ApplicationService.Services
                     c.Id,
                     c.IsUsed,
                     c.Name,
+                    c.YearCalendar,
                     c.Description,
                     c.ImageName,
                     c.MarketPrice,
@@ -148,7 +153,7 @@ namespace CarShow.ApplicationService.Services
                     c.CompanyId,
                     c.CarModelId,
                     c.TipId,
-                    Year = listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.Year).FirstOrDefault(),
+                    Year = c.Year ?? listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.Year).FirstOrDefault(),
                     Mileage = listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.Mileage).FirstOrDefault(),
                     ComparisonAveragePrice = listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.ComparisonAveragePrice).FirstOrDefault(),
                     ComparisonStatus = listings.Where(l => l.CarId == c.Id).OrderByDescending(l => l.PublishedAt).Select(l => l.ComparisonStatus).FirstOrDefault()
@@ -177,6 +182,7 @@ namespace CarShow.ApplicationService.Services
                 Id = c.Id,
                 IsUsed = c.IsUsed,
                 Year = c.Year,
+                YearCalendar = c.YearCalendar,
                 Mileage = c.Mileage,
                 ComparisonAveragePrice = c.ComparisonAveragePrice,
                 ComparisonStatus = c.ComparisonStatus,

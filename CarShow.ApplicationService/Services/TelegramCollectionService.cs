@@ -271,6 +271,7 @@ public sealed class TelegramCollectionService(
             else
             {
                 rawMessage.ProcessingStatus = "Ignored";
+                rawMessage.ProcessingError = "پیام خام نگهداری شد، اما نام یک مدل خودرو برای ساخت Candidate قابل‌تأیید نبود.";
             }
         }
 

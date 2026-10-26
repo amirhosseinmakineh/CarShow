@@ -59,22 +59,28 @@ public sealed class CarListing : BaseEntity<long>
     public DateOnly? PriceDay { get; set; }
     public string MatchStatus { get; set; } = "Pending";
     public string? MatchReason { get; set; }
+    public string? ReasonCode { get; set; }
+    public DateTime? ValidatedAt { get; set; }
     public string? Manufacturer { get; set; }
     public string ProcessingStatus { get; set; } = "Pending";
     public string? ComparisonStatus { get; set; }
     public string? ComparisonReason { get; set; }
+    public DateTime? ComparedAt { get; set; }
     public decimal? ComparisonAveragePrice { get; set; }
     public int ComparedChannelCount { get; set; }
     public int ValidPriceSourceCount { get; set; }
     public string? PrimaryImageUrl { get; set; }
     public string? ImageUrls { get; set; }
     public string? Fingerprint { get; set; }
+    public string? ComparisonKey { get; set; }
     public string? Brand { get; set; }
     public string? Model { get; set; }
     public string? Trim { get; set; }
     public int? Year { get; set; }
+    public string? YearCalendar { get; set; }
     public int? Mileage { get; set; }
     public decimal? Price { get; set; }
+    public string? PriceText { get; set; }
     public string? Currency { get; set; }
     public string? City { get; set; }
     public string? BodyCondition { get; set; }
@@ -87,5 +93,6 @@ public sealed class CarListing : BaseEntity<long>
     public string? SourceUrl { get; set; }
     public string RawText { get; set; } = string.Empty;
     public DateTime ExtractedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? StoredAt { get; set; }
     public string DeduplicationKey { get; set; } = string.Empty;
 }

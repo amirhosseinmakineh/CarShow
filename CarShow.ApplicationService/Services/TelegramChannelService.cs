@@ -21,7 +21,7 @@ public sealed class TelegramChannelService(
     {
         var channels = await channelRepository.GetAll().AsNoTracking().OrderByDescending(x => x.CreatedAt).Select(ToDto).ToListAsync(cancellationToken);
         var stats = await processingStore.Listings.AsNoTracking().Where(x => !x.IsDelete)
-            .GroupBy(x => x.ChannelId).Select(x => new { x.Key, Processed = x.Count(y => y.ProcessingStatus == "Published"), Failed = x.Count(y => y.ProcessingStatus == "Rejected" || y.ProcessingStatus == "Failed") }).ToListAsync(cancellationToken);
+            .GroupBy(x => x.ChannelId).Select(x => new { x.Key, Processed = x.Count(y => y.ProcessingStatus == "Published"), Failed = x.Count(y => y.ProcessingStatus == "Rejected" || y.ProcessingStatus == "Failed" || y.ProcessingStatus == "NeedsReview") }).ToListAsync(cancellationToken);
         return channels.Select(channel => { var stat = stats.FirstOrDefault(x => x.Key == channel.Id); return channel with { ProcessedListings = stat?.Processed ?? 0, FailedListings = stat?.Failed ?? 0 }; }).ToList();
     }
 
@@ -36,10 +36,12 @@ public sealed class TelegramChannelService(
             channels.Count(x => x.Status is TelegramChannelStatus.Error or TelegramChannelStatus.AccessRequired or TelegramChannelStatus.UnsupportedByCurrentCredentials),
             channels.Count(x => x.Status == TelegramChannelStatus.Pending), channels.Count(x => x.Status == TelegramChannelStatus.Processing),
             channels.Sum(x => x.MessagesCollected), channels.Sum(x => x.ListingsExtracted), channels.Count == 0 ? null : channels.Max(x => x.LastSuccessAt),
-            await listings.CountAsync(x => x.IsUsed == false, cancellationToken), await listings.CountAsync(x => x.IsUsed == true, cancellationToken),
-            await listings.CountAsync(x => x.ComparisonStatus == "Compared", cancellationToken), await listings.CountAsync(x => x.ProcessingStatus is "Pending" or "Processing", cancellationToken),
-            await listings.CountAsync(x => x.ProcessingStatus == "Rejected", cancellationToken), await listings.CountAsync(x => x.PrimaryImageUrl == null, cancellationToken),
-            await listings.CountAsync(x => x.Manufacturer == null && x.MatchStatus != "Matched", cancellationToken));
+            await listings.Where(x => x.IsUsed == false && x.MatchStatus == "Matched" && x.CarId != null).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
+            await listings.Where(x => x.IsUsed == true && x.MatchStatus == "Matched" && x.CarId != null).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
+            await listings.Where(x => x.ComparisonStatus == "Compared" && x.ComparedChannelCount >= 5).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
+            await listings.CountAsync(x => x.ProcessingStatus is "Pending" or "Processing" or "NeedsReview" or "WaitingForComparableChannels", cancellationToken),
+            await listings.CountAsync(x => x.ProcessingStatus == "Rejected" || x.ProcessingStatus == "Failed", cancellationToken), await listings.CountAsync(x => x.PrimaryImageUrl == null, cancellationToken),
+            await listings.CountAsync(x => (x.Manufacturer == null || x.Manufacturer == "") && x.MatchStatus != "Matched", cancellationToken));
     }
 
     public async Task<BulkTelegramChannelImportResult> ImportAsync(BulkTelegramChannelImportRequest request, CancellationToken cancellationToken)
