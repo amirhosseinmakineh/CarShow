@@ -1,12 +1,9 @@
 using Microsoft.EntityFrameworkCore.Migrations;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
 namespace CarShow.Infrastracture.Migrations;
 
-[DbContext(typeof(CarShow.Infrastracture.Context.CarShowContext))]
-[Migration("20261026120000_TelegramStrictComparisons")]
 public partial class TelegramStrictComparisons : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
