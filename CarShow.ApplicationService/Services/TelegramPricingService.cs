@@ -47,7 +47,7 @@ public sealed class TelegramPricingService(
             var catalog = await store.Cars.Where(x => !x.IsDelete).ToListAsync(cancellationToken);
             await ProcessMessagesAsync(catalog, nowUtc, cancellationToken);
             await store.SaveAsync(cancellationToken);
-            catalog = await UpdateComparisonsAsync(nowUtc, cancellationToken);
+            catalog = (await UpdateComparisonsAsync(nowUtc, cancellationToken)).ToList();
             await CalculateDaysAsync(catalog, nowUtc, cancellationToken);
             state.LastSuccessAt = nowUtc;
             state.LastError = null;
