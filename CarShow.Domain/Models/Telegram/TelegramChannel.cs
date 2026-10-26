@@ -59,6 +59,15 @@ public sealed class CarListing : BaseEntity<long>
     public DateOnly? PriceDay { get; set; }
     public string MatchStatus { get; set; } = "Pending";
     public string? MatchReason { get; set; }
+    public string? Manufacturer { get; set; }
+    public string ProcessingStatus { get; set; } = "Pending";
+    public string? ComparisonStatus { get; set; }
+    public string? ComparisonReason { get; set; }
+    public decimal? ComparisonAveragePrice { get; set; }
+    public int ComparedChannelCount { get; set; }
+    public int ValidPriceSourceCount { get; set; }
+    public string? PrimaryImageUrl { get; set; }
+    public string? ImageUrls { get; set; }
     public string? Fingerprint { get; set; }
     public string? Brand { get; set; }
     public string? Model { get; set; }

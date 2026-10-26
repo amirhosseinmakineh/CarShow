@@ -105,12 +105,17 @@ public sealed class TelegramCollector(IConfiguration configuration, IHttpClientF
     private static TelegramCollectedMessage? ParseMessage(HtmlNode node, string username, long id)
     {
         var textNode = node.SelectSingleNode(".//*[contains(concat(' ',normalize-space(@class),' '),' tgme_widget_message_text ')]");
-        if (textNode is null) return null;
-        foreach (var br in textNode.SelectNodes(".//br")?.ToList() ?? [])
+        var mediaUrls = node.SelectNodes(".//*[contains(@class,'tgme_widget_message_photo_wrap') or contains(@class,'tgme_widget_message_video_player')]")?
+            .Select(x => x.GetAttributeValue("style", ""))
+            .SelectMany(x => Regex.Matches(x, "url\\([\'\"]?(?<url>[^\'\")]+)").Select(m => m.Groups["url"].Value))
+            .Concat(node.SelectNodes(".//img[@src]")?.Select(x => x.GetAttributeValue("src", "")) ?? [])
+            .Where(x => Uri.TryCreate(x, UriKind.Absolute, out _)).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        if (textNode is null && mediaUrls.Count == 0) return null;
+        foreach (var br in textNode?.SelectNodes(".//br")?.ToList() ?? [])
             br.ParentNode.ReplaceChild(HtmlNode.CreateNode("&#10;"), br);
-        var text = HtmlEntity.DeEntitize(textNode.InnerText).Trim();
+        var text = textNode is null ? string.Empty : HtmlEntity.DeEntitize(textNode.InnerText).Trim();
         var time = node.SelectSingleNode(".//time[@datetime]")?.GetAttributeValue("datetime", "");
-        if (text.Length == 0 || !DateTimeOffset.TryParse(time, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)) return null;
-        return new(id.ToString(CultureInfo.InvariantCulture), text, date.UtcDateTime, $"https://t.me/{username}/{id}", null);
+        if (!DateTimeOffset.TryParse(time, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)) return null;
+        return new(id.ToString(CultureInfo.InvariantCulture), text, date.UtcDateTime, $"https://t.me/{username}/{id}", string.Join("\n", mediaUrls));
     }
 }

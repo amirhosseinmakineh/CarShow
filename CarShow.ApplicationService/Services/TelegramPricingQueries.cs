@@ -24,7 +24,8 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
         return await query.OrderByDescending(x => x.Id).Skip(Math.Clamp(page, 0, 100000) * 100).Take(100)
             .Select(x => new TelegramObservationDto(x.Id, x.CarId, x.RawMessageId, x.SourceChannel,
                 x.SourceMessageId, x.SourceUrl, x.Price, x.Currency, x.NormalizedPrice,
-                x.PublishedAt, x.ReceivedAt, x.PriceDay, x.MatchStatus, x.MatchReason))
+                x.PublishedAt, x.ReceivedAt, x.PriceDay, x.MatchStatus, x.MatchReason, x.Manufacturer, x.PrimaryImageUrl,
+                x.ComparisonStatus, x.ComparisonAveragePrice, x.ComparedChannelCount, x.ValidPriceSourceCount, x.ProcessingStatus))
             .ToListAsync(cancellationToken);
     }
 

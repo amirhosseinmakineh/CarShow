@@ -38,15 +38,18 @@ public static class CarListingMatcher
         listing.CarId = null;
         listing.NormalizedPrice = null;
         listing.MatchStatus = "Invalid";
+        listing.ProcessingStatus = "Processing";
         if (listing.Price is null or <= 0 || listing.Currency is not ("IRT" or "IRR"))
         {
             listing.MatchReason = "Price or explicit currency is missing or invalid.";
+            listing.ProcessingStatus = "Rejected";
             return;
         }
 
         if (listing.IsUsed is null)
         {
             listing.MatchReason = "New/used condition must be explicit (zero mileage, used, or mileage).";
+            listing.ProcessingStatus = "Rejected";
             return;
         }
 
@@ -72,8 +75,9 @@ public static class CarListingMatcher
             _ => "Ambiguous"
         };
         listing.MatchReason = candidates.Count == 1
-            ? "Exact company, model, trim and condition tokens. Catalog has no year dimension."
-            : $"{candidates.Count} catalog candidates; no automatic car creation.";
+            ? "Exact manufacturer, model, trim and condition tokens."
+            : $"{candidates.Count} catalog candidates; manufacturer/model/trim could not be uniquely verified.";
+        listing.ProcessingStatus = candidates.Count == 1 ? "Compared" : "Rejected";
         if (candidates.Count != 1)
         {
             return;

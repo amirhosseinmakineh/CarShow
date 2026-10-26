@@ -12,34 +12,34 @@ public sealed class TelegramChannelService(
     IBaseRepository<long, TelegramChannel> channelRepository,
     IBaseRepository<long, TelegramCollectionJob> jobRepository,
     ITelegramCollectionQueue queue,
-    IConfiguration configuration) : ITelegramChannelService
+    IConfiguration configuration,
+    ITelegramProcessingStore processingStore) : ITelegramChannelService
 {
     private static readonly Regex Username = new("^[A-Za-z][A-Za-z0-9_]{4,31}$", RegexOptions.Compiled);
 
     public async Task<IReadOnlyList<TelegramChannelDto>> GetChannelsAsync(CancellationToken cancellationToken)
     {
-        return await channelRepository.GetAll()
-            .AsNoTracking()
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(ToDto)
-            .ToListAsync(cancellationToken);
+        var channels = await channelRepository.GetAll().AsNoTracking().OrderByDescending(x => x.CreatedAt).Select(ToDto).ToListAsync(cancellationToken);
+        var stats = await processingStore.Listings.AsNoTracking().Where(x => !x.IsDelete)
+            .GroupBy(x => x.ChannelId).Select(x => new { x.Key, Processed = x.Count(y => y.ProcessingStatus == "Published"), Failed = x.Count(y => y.ProcessingStatus == "Rejected" || y.ProcessingStatus == "Failed") }).ToListAsync(cancellationToken);
+        return channels.Select(channel => { var stat = stats.FirstOrDefault(x => x.Key == channel.Id); return channel with { ProcessedListings = stat?.Processed ?? 0, FailedListings = stat?.Failed ?? 0 }; }).ToList();
     }
 
     public async Task<TelegramChannelSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
     {
         var channels = await channelRepository.GetAll().AsNoTracking().ToListAsync(cancellationToken);
+        var listings = processingStore.Listings.AsNoTracking().Where(x => !x.IsDelete);
         return new TelegramChannelSummaryDto(
             channels.Count,
             channels.Count(x => x.Status == TelegramChannelStatus.Active),
             channels.Count(x => x.Status == TelegramChannelStatus.Paused),
-            channels.Count(x => x.Status is TelegramChannelStatus.Error
-                or TelegramChannelStatus.AccessRequired
-                or TelegramChannelStatus.UnsupportedByCurrentCredentials),
-            channels.Count(x => x.Status == TelegramChannelStatus.Pending),
-            channels.Count(x => x.Status == TelegramChannelStatus.Processing),
-            channels.Sum(x => x.MessagesCollected),
-            channels.Sum(x => x.ListingsExtracted),
-            channels.Count == 0 ? null : channels.Max(x => x.LastSuccessAt));
+            channels.Count(x => x.Status is TelegramChannelStatus.Error or TelegramChannelStatus.AccessRequired or TelegramChannelStatus.UnsupportedByCurrentCredentials),
+            channels.Count(x => x.Status == TelegramChannelStatus.Pending), channels.Count(x => x.Status == TelegramChannelStatus.Processing),
+            channels.Sum(x => x.MessagesCollected), channels.Sum(x => x.ListingsExtracted), channels.Count == 0 ? null : channels.Max(x => x.LastSuccessAt),
+            await listings.CountAsync(x => x.IsUsed == false, cancellationToken), await listings.CountAsync(x => x.IsUsed == true, cancellationToken),
+            await listings.CountAsync(x => x.ComparisonStatus == "Compared", cancellationToken), await listings.CountAsync(x => x.ProcessingStatus is "Pending" or "Processing", cancellationToken),
+            await listings.CountAsync(x => x.ProcessingStatus == "Rejected", cancellationToken), await listings.CountAsync(x => x.PrimaryImageUrl == null, cancellationToken),
+            await listings.CountAsync(x => x.Manufacturer == null && x.MatchStatus != "Matched", cancellationToken));
     }
 
     public async Task<BulkTelegramChannelImportResult> ImportAsync(BulkTelegramChannelImportRequest request, CancellationToken cancellationToken)

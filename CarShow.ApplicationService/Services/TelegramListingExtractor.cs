@@ -70,6 +70,8 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
         var year = yearValue is >= 1300 and <= 2100 ? (int?)yearValue : null;
         var modelMatch = ModelRegex.Match(text);
         var carName = modelMatch.Success ? modelMatch.Groups[1].Value.Trim() : KnownCarName(text);
+        var imageUrls = ParseImageUrls(message.MediaMetadata);
+        var manufacturer = ExtractManufacturer(text);
         var trimMatch = Regex.Match(text, @"(?:تیپ|تریم)\s*[:：]\s*([^\r\n]+)");
         var trim = trimMatch.Success ? trimMatch.Groups[1].Value.Trim() :
             string.Join(" ", new[] { "توربو", "اتومات", "دنده ای", "هیبرید" }.Where(x => text.Contains(x, StringComparison.Ordinal)));
@@ -87,6 +89,9 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             SourceUrl = message.SourceUrl,
             RawText = message.MessageText,
             Model = carName,
+            Manufacturer = manufacturer,
+            PrimaryImageUrl = imageUrls.FirstOrDefault(),
+            ImageUrls = imageUrls.Count == 0 ? null : string.Join("\n", imageUrls),
             Trim = string.IsNullOrEmpty(trim) ? null : trim,
             Price = price,
             Currency = currency,
@@ -95,6 +100,20 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             ExtractedAt = DateTime.UtcNow,
             DeduplicationKey = $"{channel.NormalizedIdentifier}:{message.ExternalMessageId}"
         };
+    }
+
+    private static List<string> ParseImageUrls(string? metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata)) return [];
+        return metadata.Split(['\n', '\r', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => Uri.TryCreate(x, UriKind.Absolute, out var uri) && (uri.Scheme == "http" || uri.Scheme == "https"))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToList();
+    }
+
+    private static string? ExtractManufacturer(string text)
+    {
+        string[] manufacturers = ["ایران خودرو", "سایپا", "پژو", "رنو", "کیا", "هیوندای", "تویوتا", "بنز", "بی ام و", "جک", "چری", "فونیکس", "ام وی ام", "کرمان موتور", "مدیران خودرو", "لاماری", "فردا موتور"];
+        return manufacturers.Where(x => text.Contains(x, StringComparison.OrdinalIgnoreCase)).OrderByDescending(x => x.Length).FirstOrDefault();
     }
 
     private static string? KnownCarName(string text)

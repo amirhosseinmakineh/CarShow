@@ -47,6 +47,7 @@ public sealed class TelegramPricingService(
             var catalog = await store.Cars.Where(x => !x.IsDelete).ToListAsync(cancellationToken);
             await ProcessMessagesAsync(catalog, nowUtc, cancellationToken);
             await store.SaveAsync(cancellationToken);
+            await UpdateComparisonsAsync(nowUtc, cancellationToken);
             await CalculateDaysAsync(catalog, nowUtc, cancellationToken);
             state.LastSuccessAt = nowUtc;
             state.LastError = null;
@@ -154,6 +155,31 @@ public sealed class TelegramPricingService(
             day = day.AddDays(-1);
         }
         return day.AddDays(-Math.Clamp(configuration.GetValue("Telegram:LateArrivalDays", 2), 1, 30));
+    }
+
+    private async Task UpdateComparisonsAsync(DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var listings = await store.Listings.Where(x => !x.IsDelete && x.MatchStatus == "Matched" && x.CarId != null && x.NormalizedPrice > 0)
+            .OrderByDescending(x => x.PublishedAt).Take(10000).ToListAsync(cancellationToken);
+        foreach (var listing in listings)
+        {
+            var peers = listings.Where(x => x.Id != listing.Id && x.CarId == listing.CarId && x.IsUsed == listing.IsUsed
+                    && x.ChannelId != listing.ChannelId && x.PublishedAt <= nowUtc.AddMinutes(5))
+                .GroupBy(x => x.ChannelId).Select(x => x.OrderByDescending(y => y.PublishedAt).First()).Take(5).ToList();
+            listing.ComparedChannelCount = peers.Count;
+            listing.ValidPriceSourceCount = peers.Count(x => x.NormalizedPrice is > 0);
+            listing.ComparisonAveragePrice = peers.Count == 0 ? null : decimal.Round(peers.Average(x => x.NormalizedPrice!.Value), 2, MidpointRounding.AwayFromZero);
+            listing.ComparisonStatus = peers.Count >= 1 ? "Compared" : "InsufficientComparisonData";
+            listing.ComparisonReason = peers.Count >= 1
+                ? $"{peers.Count} independent channel(s), {listing.ValidPriceSourceCount} valid price source(s)."
+                : "No valid comparable listing was found in another channel.";
+            if (listing.ComparisonStatus == "Compared" && listing.PrimaryImageUrl is not null)
+                listing.ProcessingStatus = "Published";
+            else if (listing.ComparisonStatus != "Compared")
+                listing.ProcessingStatus = "InsufficientComparisonData";
+            else
+                listing.ProcessingStatus = "Rejected";
+        }
     }
 
     private async Task CalculateDaysAsync(IReadOnlyList<Car> catalog, DateTime nowUtc, CancellationToken cancellationToken)
