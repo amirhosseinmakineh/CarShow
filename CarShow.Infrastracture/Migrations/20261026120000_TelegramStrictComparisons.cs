@@ -19,6 +19,10 @@ public partial class TelegramStrictComparisons : Migration
             IF COL_LENGTH('dbo.CarListings', 'ComparisonKey') IS NULL ALTER TABLE dbo.CarListings ADD ComparisonKey nvarchar(256) NULL;
             IF COL_LENGTH('dbo.CarListings', 'YearCalendar') IS NULL ALTER TABLE dbo.CarListings ADD YearCalendar nvarchar(16) NULL;
             IF COL_LENGTH('dbo.CarListings', 'PriceText') IS NULL ALTER TABLE dbo.CarListings ADD PriceText nvarchar(64) NULL;
+            """);
+        // SQL Server compiles filtered-index predicates before executing a batch.
+        // Resolve the new columns in a separate command after the ALTER TABLE batch.
+        migrationBuilder.Sql("""
             IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Cars_TelegramIdentityKey' AND object_id = OBJECT_ID('dbo.Cars'))
                 CREATE UNIQUE INDEX IX_Cars_TelegramIdentityKey ON dbo.Cars(TelegramIdentityKey) WHERE TelegramIdentityKey IS NOT NULL;
             IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_CarListings_ComparisonKey' AND object_id = OBJECT_ID('dbo.CarListings'))

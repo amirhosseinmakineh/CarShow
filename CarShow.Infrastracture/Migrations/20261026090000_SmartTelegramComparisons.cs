@@ -18,6 +18,10 @@ public partial class SmartTelegramComparisons : Migration
             IF COL_LENGTH('dbo.CarListings', 'ValidPriceSourceCount') IS NULL ALTER TABLE dbo.CarListings ADD ValidPriceSourceCount int NOT NULL CONSTRAINT DF_CarListings_ValidPriceSourceCount DEFAULT 0;
             IF COL_LENGTH('dbo.CarListings', 'PrimaryImageUrl') IS NULL ALTER TABLE dbo.CarListings ADD PrimaryImageUrl nvarchar(max) NULL;
             IF COL_LENGTH('dbo.CarListings', 'ImageUrls') IS NULL ALTER TABLE dbo.CarListings ADD ImageUrls nvarchar(max) NULL;
+            """);
+        // SQL Server compiles filtered-index predicates before executing a batch.
+        // Resolve the new columns in a separate command after the ALTER TABLE batch.
+        migrationBuilder.Sql("""
             IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_CarListings_ProcessingStatus' AND object_id = OBJECT_ID('dbo.CarListings'))
                 CREATE INDEX IX_CarListings_ProcessingStatus ON dbo.CarListings(ProcessingStatus);
             IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_CarListings_ComparisonStatus' AND object_id = OBJECT_ID('dbo.CarListings'))
