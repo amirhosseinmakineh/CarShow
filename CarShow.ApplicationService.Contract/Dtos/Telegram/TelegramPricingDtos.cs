@@ -7,7 +7,9 @@ public sealed record TelegramObservationDto(
     string MatchStatus, string? MatchReason, string? Manufacturer = null, string? PrimaryImageUrl = null,
     string? ComparisonStatus = null, decimal? ComparisonAveragePrice = null, int ComparedChannelCount = 0,
     int ValidPriceSourceCount = 0, string ProcessingStatus = "Pending", string? ReasonCode = null,
-    int? Year = null, int? Mileage = null, bool? IsUsed = null, string? Trim = null);
+    int? Year = null, int? Mileage = null, bool? IsUsed = null, string? Trim = null,
+    string? Model = null, string? PriceText = null, string? YearCalendar = null,
+    string? ComparisonReason = null, int ExtractionVersion = 0);
 
 public sealed record DailyCarPriceDto(
     long CarId, string Name, decimal MarketPrice, decimal FactoryPrice,

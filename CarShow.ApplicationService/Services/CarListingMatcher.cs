@@ -55,7 +55,6 @@ public static class CarListingMatcher
         listing.MatchStatus = "Invalid";
         listing.ProcessingStatus = "Processing";
         listing.ValidatedAt = DateTime.UtcNow;
-        listing.ReasonCode = null;
         listing.ComparisonKey ??= listing.Manufacturer is not null && listing.Model is not null && listing.Trim is not null
             && listing.Year is not null && listing.YearCalendar is not null && listing.IsUsed is not null
                 ? BuildComparisonKey(listing.Manufacturer, listing.Model, listing.Trim, listing.Year.Value, listing.YearCalendar, listing.IsUsed.Value)
@@ -63,28 +62,39 @@ public static class CarListingMatcher
         if (listing.Price is null or <= 0 || listing.Currency is not ("IRT" or "IRR"))
         {
             listing.MatchStatus = "NeedsReview";
-            listing.MatchReason ??= "Price or explicit currency is missing, ambiguous, or invalid.";
-            listing.ReasonCode ??= "INVALID_PRICE_OR_CURRENCY";
+            listing.ReasonCode ??= listing.Price is null or <= 0 ? "PRICE_MISSING_OR_INVALID" : "CURRENCY_MISSING";
+            listing.MatchReason ??= listing.Price is null or <= 0
+                ? "قیمت روشن و قابل استفاده از پیام استخراج نشده است."
+                : "عدد قیمت وجود دارد، اما واحد تومان یا ریال مشخص نیست.";
             listing.ProcessingStatus = "NeedsReview";
             return;
         }
 
+        listing.ReasonCode = null;
+        listing.NormalizedPrice = listing.Currency == "IRR" ? listing.Price / 10m : listing.Price;
+
         if (listing.IsUsed is null)
         {
-            listing.MatchReason = "New/used condition must be explicit (zero mileage, used, or mileage).";
+            listing.MatchReason = "قیمت استخراج شده است، اما صفر یا کارکرده بودن خودرو روشن نیست.";
             listing.ReasonCode = "CONDITION_UNCLEAR";
             listing.MatchStatus = "NeedsReview";
             listing.ProcessingStatus = "NeedsReview";
             return;
         }
 
-        listing.NormalizedPrice = listing.Currency == "IRR" ? listing.Price / 10m : listing.Price;
-
         if (listing.ComparisonKey is null)
         {
             listing.MatchStatus = "NeedsReview";
-            listing.MatchReason = "Company, model, trim, year, or condition is not fully verified.";
-            listing.ReasonCode = "IDENTITY_INCOMPLETE";
+            listing.ReasonCode = string.IsNullOrWhiteSpace(listing.Manufacturer) ? "MANUFACTURER_MISSING"
+                : string.IsNullOrWhiteSpace(listing.Model) ? "MODEL_MISSING"
+                : string.IsNullOrWhiteSpace(listing.Trim) ? "TRIM_MISSING" : "YEAR_MISSING";
+            listing.MatchReason = listing.ReasonCode switch
+            {
+                "MANUFACTURER_MISSING" => "شرکت سازنده از متن یا نام معتبر شناسایی نشده است.",
+                "MODEL_MISSING" => "مدل خودرو مشخص نیست.",
+                "TRIM_MISSING" => "تیپ خودرو مشخص نیست؛ برای جلوگیری از مقایسه خودروهای متفاوت کنار گذاشته شد.",
+                _ => "سال ساخت شمسی یا میلادی به‌طور روشن مشخص نشده است."
+            };
             listing.ProcessingStatus = "NeedsReview";
             return;
         }

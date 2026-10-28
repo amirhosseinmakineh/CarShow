@@ -34,6 +34,7 @@ public sealed class TelegramChannel : BaseEntity<long>
 
 public sealed class TelegramRawMessage : BaseEntity<long>
 {
+    public int ExtractionVersion { get; set; }
     public long ChannelId { get; set; }
     public string ExternalMessageId { get; set; } = string.Empty;
     public string MessageText { get; set; } = string.Empty;
@@ -48,6 +49,7 @@ public sealed class TelegramRawMessage : BaseEntity<long>
 
 public sealed class CarListing : BaseEntity<long>
 {
+    public int ExtractionVersion { get; set; }
     public long? CarId { get; set; }
     public Car? Car { get; set; }
     public long? RawMessageId { get; set; }

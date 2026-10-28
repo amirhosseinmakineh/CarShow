@@ -21,12 +21,17 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
         {
             query = query.Where(x => x.MatchStatus == status);
         }
+        else
+        {
+            query = query.Where(x => x.MatchStatus != "Ignored");
+        }
         return await query.OrderByDescending(x => x.Id).Skip(Math.Clamp(page, 0, 100000) * 100).Take(100)
             .Select(x => new TelegramObservationDto(x.Id, x.CarId, x.RawMessageId, x.SourceChannel,
                 x.SourceMessageId, x.SourceUrl, x.Price, x.Currency, x.NormalizedPrice,
                 x.PublishedAt, x.ReceivedAt, x.PriceDay, x.MatchStatus, x.MatchReason, x.Manufacturer, x.PrimaryImageUrl,
                 x.ComparisonStatus, x.ComparisonAveragePrice, x.ComparedChannelCount, x.ValidPriceSourceCount,
-                x.ProcessingStatus, x.ReasonCode, x.Year, x.Mileage, x.IsUsed, x.Trim))
+                x.ProcessingStatus, x.ReasonCode, x.Year, x.Mileage, x.IsUsed, x.Trim,
+                x.Model, x.PriceText, x.YearCalendar, x.ComparisonReason, x.ExtractionVersion))
             .ToListAsync(cancellationToken);
     }
 

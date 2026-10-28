@@ -243,6 +243,7 @@ public sealed class TelegramCollectionService(
 
             var rawMessage = new TelegramRawMessage
             {
+                ExtractionVersion = TelegramListingExtractor.CurrentVersion,
                 ChannelId = channel.Id,
                 ExternalMessageId = item.ExternalMessageId,
                 MessageText = item.Text,

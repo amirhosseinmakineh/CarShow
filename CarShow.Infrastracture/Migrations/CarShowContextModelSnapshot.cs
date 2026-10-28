@@ -376,6 +376,9 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<DateTime>("ExtractedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("ExtractionVersion")
+                        .HasColumnType("int");
+
                     b.Property<string>("Fingerprint")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -668,6 +671,9 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<string>("ExternalMessageId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("ExtractionVersion")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");

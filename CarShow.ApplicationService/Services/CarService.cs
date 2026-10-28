@@ -95,7 +95,8 @@ namespace CarShow.ApplicationService.Services
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
-            var query = carRepository.GetAll().Where(car => car.IsUsed == isUsed);
+            var query = carRepository.GetAll().Where(car => car.IsUsed == isUsed
+                && (car.TelegramIdentityKey == null || (car.MarketPrice > 0 && car.PriceSampleCount >= 6)));
             var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && x.IsUsed == isUsed);
             if (!string.IsNullOrWhiteSpace(model)) query = query.Where(c => c.Name.Contains(model) || c.CarModel.Name.Contains(model));
             if (!string.IsNullOrWhiteSpace(trim)) query = query.Where(c => c.Tip != null && c.Tip.Name.Contains(trim));

@@ -101,7 +101,8 @@ public sealed class TelegramCollectionTests
             Assert.Equal("IRT", listing.Currency);
             Assert.Equal(20_000, listing.Mileage);
             Assert.Equal(1402, listing.Year);
-            Assert.Equal("پژو 207", listing.Model);
+            Assert.Equal("207", listing.Model);
+            Assert.Equal("پژو", listing.Manufacturer);
         }
         finally
         {
