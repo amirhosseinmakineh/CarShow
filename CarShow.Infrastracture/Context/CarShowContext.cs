@@ -91,6 +91,7 @@ namespace CarShow.Infrastracture.Context
                 entity.Property(x => x.Fingerprint).HasMaxLength(64);
                 entity.Property(x => x.Price).HasPrecision(18, 2);
                 entity.Property(x => x.NormalizedPrice).HasPrecision(18, 2);
+                entity.Property(x => x.ComparisonAveragePrice).HasPrecision(18, 2);
                 entity.HasOne(x => x.Car).WithMany().HasForeignKey(x => x.CarId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(x => x.RawMessage).WithMany().HasForeignKey(x => x.RawMessageId).OnDelete(DeleteBehavior.Restrict);
             });
@@ -113,6 +114,13 @@ namespace CarShow.Infrastracture.Context
                     .WithMany()
                     .HasForeignKey(x => x.CarId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<OrderItem>(entity =>
+            {
+                entity.Property(x => x.CarPrice).HasPrecision(18, 2);
+                entity.Property(x => x.PrePayment).HasPrecision(18, 2);
+                entity.Property(x => x.Price).HasPrecision(18, 2);
             });
         }
     }
