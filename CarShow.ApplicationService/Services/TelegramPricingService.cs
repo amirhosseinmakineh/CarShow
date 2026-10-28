@@ -47,7 +47,7 @@ public sealed class TelegramPricingService(
             var catalog = await store.Cars.Where(x => !x.IsDelete).ToListAsync(cancellationToken);
             await ProcessMessagesAsync(catalog, nowUtc, cancellationToken);
             await store.SaveAsync(cancellationToken);
-            catalog = (await UpdateComparisonsAsync(nowUtc, cancellationToken)).ToList();
+            catalog = (await UpdateComparisonsAsync(catalog, nowUtc, cancellationToken)).ToList();
             await store.SaveAsync(cancellationToken);
             await CalculateDaysAsync(catalog, nowUtc, cancellationToken);
             state.LastSuccessAt = nowUtc;
@@ -200,124 +200,107 @@ public sealed class TelegramPricingService(
         return day.AddDays(-Math.Clamp(configuration.GetValue("Telegram:LateArrivalDays", 2), 1, 30));
     }
 
-    private async Task<IReadOnlyList<Car>> UpdateComparisonsAsync(DateTime nowUtc, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Car>> UpdateComparisonsAsync(IReadOnlyList<Car> existingCars, DateTime nowUtc, CancellationToken cancellationToken)
     {
-        var listings = await store.Listings.Where(x => !x.IsDelete && x.ComparisonKey != null
-                && x.NormalizedPrice > 0 && x.Currency != null && x.IsUsed != null && x.Year != null
-                && x.Manufacturer != null && x.Model != null && x.Trim != null)
-            .OrderByDescending(x => x.PublishedAt).Take(10000).ToListAsync(cancellationToken);
-        var rawById = new Dictionary<long, TelegramRawMessage>();
-        foreach (var rawIds in listings.Where(x => x.RawMessageId.HasValue).Select(x => x.RawMessageId!.Value).Distinct().Chunk(1000))
-        {
-            var batch = rawIds.ToArray();
-            var rawRows = await store.Messages.Where(x => batch.Contains(x.Id)).ToListAsync(cancellationToken);
-            foreach (var raw in rawRows) rawById[raw.Id] = raw;
-        }
+        var cutoff = OpenWindowStart(nowUtc);
+        var registeredChannels = store.Channels.Where(channel => !channel.IsDelete).Select(channel => channel.Id);
+        var listings = await store.Listings
+            .Where(listing => !listing.IsDelete && listing.ComparisonKey != null
+                && listing.NormalizedPrice > 0 && listing.Currency != null && listing.IsUsed != null
+                && listing.Year != null && listing.YearCalendar != null && listing.Manufacturer != null
+                && listing.Model != null && listing.Trim != null && registeredChannels.Contains(listing.ChannelId)
+                && (listing.PriceDay >= cutoff || listing.ProcessingStatus == "Published"))
+            .ToListAsync(cancellationToken);
+        var rawById = await LoadRawMessagesAsync(listings, cancellationToken);
+        var eligible = new List<CarListing>(listings.Count);
+
         foreach (var listing in listings)
         {
-            listing.ComparedChannelCount = 0;
-            listing.ValidPriceSourceCount = 0;
-            listing.ComparisonAveragePrice = null;
-            listing.ComparisonStatus = "WaitingForComparableChannels";
-            listing.ComparedAt = null;
-        }
-
-        // Same normalized ad text is one observation, even if copied into another channel.
-        foreach (var duplicates in listings.Where(x => !string.IsNullOrWhiteSpace(x.Fingerprint))
-                     .GroupBy(x => x.Fingerprint!, StringComparer.Ordinal))
-        {
-            foreach (var duplicate in duplicates.OrderBy(x => x.Id).Skip(1))
+            var reason = TelegramMarketPriceCalculator.ValidationFailure(listing, nowUtc, cutoff);
+            if (reason is not null)
             {
-                duplicate.MatchStatus = "Rejected";
-                duplicate.ProcessingStatus = "Rejected";
-                duplicate.ReasonCode = "DUPLICATE_AD";
-                duplicate.MatchReason = "The same normalized advertisement was already received; this copy is excluded from comparison.";
-                SetRawStatus(rawById, duplicate, "Rejected", duplicate.MatchReason);
-            }
-        }
-
-        var eligible = listings.Where(x => x.MatchStatus != "Rejected" && x.PrimaryImageUrl is not null
-                && (x.IsUsed != true || x.Mileage is > 0) && x.SourceUrl is not null
-                && x.Price is > 0 && x.NormalizedPrice is > 0 && x.PriceDay >= OpenWindowStart(nowUtc)
-                && x.PublishedAt <= nowUtc.AddMinutes(5))
-            .ToList();
-
-        foreach (var listing in listings.Except(eligible))
-        {
-            if (listing.MatchStatus == "Rejected") continue;
-            if (listing.PriceDay is not null && listing.PriceDay < OpenWindowStart(nowUtc))
-            {
-                listing.MatchStatus = "Late";
-                listing.ProcessingStatus = "Late";
-                listing.ReasonCode = "OUTSIDE_PRICE_WINDOW";
-                listing.MatchReason = "Received outside the configured price calculation window; retained for audit.";
-                SetRawStatus(rawById, listing, "Late", listing.MatchReason);
+                MarkExcluded(listing, reason.Value.Code, reason.Value.Message, cutoff);
+                SetRawStatus(rawById, listing, listing.ProcessingStatus, listing.MatchReason);
                 continue;
             }
-            listing.MatchStatus = "NeedsReview";
-            listing.ProcessingStatus = "NeedsReview";
-            listing.ComparisonStatus = "WaitingForComparableChannels";
-            listing.ReasonCode = listing.PrimaryImageUrl is null ? "MISSING_VERIFIABLE_IMAGE"
-                : listing.IsUsed == true && listing.Mileage is null ? "MISSING_MILEAGE"
-                : listing.SourceUrl is null ? "MISSING_SOURCE_LINK"
-                : "COMPARISON_FIELDS_INCOMPLETE";
-            listing.MatchReason = listing.ReasonCode switch
-            {
-                "MISSING_VERIFIABLE_IMAGE" => "No verifiable original image was available from this public post.",
-                "MISSING_MILEAGE" => "Used-car mileage is missing, so this listing cannot enter market pricing.",
-                "MISSING_SOURCE_LINK" => "The original Telegram message link is missing.",
-                _ => "A required identity, condition, or valid price field is incomplete."
-            };
-            listing.ComparisonReason = listing.MatchReason;
-            SetRawStatus(rawById, listing, "NeedsReview", listing.MatchReason);
+
+            eligible.Add(listing);
         }
 
-        foreach (var group in eligible.GroupBy(x => new { x.ComparisonKey, x.PriceDay }))
+        var catalog = await TelegramVehicleCatalog.LoadAsync(store, existingCars, cancellationToken);
+        var assignments = new List<(TelegramMarketPriceGroup Group, Car Car)>();
+        foreach (var group in TelegramMarketPriceCalculator.Compare(eligible))
         {
-            var channelSamples = group.GroupBy(x => x.ChannelId)
-                .Select(g => g.OrderByDescending(x => x.PublishedAt).First()).ToList();
-            foreach (var listing in group)
+            foreach (var duplicate in group.Duplicates)
             {
-                var peers = channelSamples.Where(x => x.ChannelId != listing.ChannelId).Take(5).ToList();
-                listing.ComparedChannelCount = peers.Count;
-                listing.ValidPriceSourceCount = peers.Count + 1;
-                listing.ComparisonAveragePrice = null;
-                listing.ComparisonStatus = peers.Count >= 5 ? "Compared" : "WaitingForComparableChannels";
-                listing.ComparedAt = peers.Count >= 5 ? nowUtc : null;
-                listing.ComparisonReason = peers.Count >= 5
-                    ? "Compared against five other independent public channels using verified identity, year, condition, and normalized prices."
-                    : $"اطلاعات معتبر از {peers.Count} کانال دیگر موجود است؛ برای مقایسه نهایی {5 - peers.Count} کانال دیگر لازم است.";
-                if (peers.Count < 5)
-                {
-                    listing.MatchStatus = "WaitingForComparableChannels";
-                    listing.ProcessingStatus = "WaitingForComparableChannels";
-                    listing.ReasonCode = "INSUFFICIENT_INDEPENDENT_CHANNELS";
-                }
-                SetRawStatus(rawById, listing, listing.ProcessingStatus, listing.ComparisonReason);
+                MarkExcluded(duplicate, "DUPLICATE_AD", "همین آگهی قبلاً دریافت شده است و دوباره وارد میانگین نمی‌شود.", cutoff);
+                SetRawStatus(rawById, duplicate, duplicate.ProcessingStatus, duplicate.MatchReason);
             }
 
-            if (channelSamples.Select(x => x.ChannelId).Distinct().Count() < 6)
-                continue;
+            var representative = group.Samples[0];
+            var car = catalog.GetOrCreate(representative, nowUtc);
+            assignments.Add((group, car));
+        }
 
-            var representative = channelSamples.OrderByDescending(x => x.PublishedAt).First();
-            var car = await UpsertTelegramCarAsync(representative, group.Key.ComparisonKey!, nowUtc, cancellationToken);
-            await store.SaveAsync(cancellationToken);
-            foreach (var listing in group.Where(x => x.ComparedChannelCount >= 5))
+        // One flush assigns generated vehicle IDs for every group, without a query/save per vehicle.
+        await store.SaveAsync(cancellationToken);
+        foreach (var (group, car) in assignments)
+        {
+            var sampleIds = group.Samples.Select(sample => sample.Id).ToHashSet();
+            foreach (var listing in group.Observations)
             {
-                var peers = channelSamples.Where(x => x.ChannelId != listing.ChannelId).Take(5).ToList();
-                var compared = peers.Append(listing).ToList();
+                var included = sampleIds.Contains(listing.Id);
                 listing.CarId = car.Id;
+                listing.ComparedChannelCount = group.Samples.Count - 1;
+                listing.ValidPriceSourceCount = group.Samples.Count;
+                listing.ComparisonAveragePrice = group.Average;
+                listing.ComparisonStatus = included ? "Compared" : "Superseded";
+                listing.ComparisonReason = $"میانگین آخرین قیمت معتبر {group.Samples.Count} کانال ثبت‌شده برای همین خودرو و روز؛ هر کانال یک سهم دارد.";
+                listing.ComparedAt = nowUtc;
                 listing.MatchStatus = "Matched";
-                listing.MatchReason = "Stored after comparison with five independent channels.";
-                listing.ReasonCode = null;
-                listing.ComparisonAveragePrice = decimal.Round(compared.Average(x => x.NormalizedPrice!.Value), 2, MidpointRounding.AwayFromZero);
-                listing.ProcessingStatus = "Published";
-                listing.StoredAt = nowUtc;
-                SetRawStatus(rawById, listing, "Stored", null);
+                listing.MatchReason = included ? "قیمت معتبر در میانگین روزانه وارد شد."
+                    : "از این کانال آگهی معتبر جدیدتری برای همین خودرو و روز وجود دارد.";
+                listing.ReasonCode = included ? null : "NEWER_CHANNEL_SAMPLE";
+                listing.ProcessingStatus = included ? "Published" : "Stored";
+                listing.StoredAt ??= nowUtc;
+                SetRawStatus(rawById, listing, "Stored", included ? null : listing.MatchReason);
             }
         }
 
-        return await store.Cars.Where(x => !x.IsDelete).ToListAsync(cancellationToken);
+        return catalog.Cars;
+    }
+
+    private async Task<Dictionary<long, TelegramRawMessage>> LoadRawMessagesAsync(
+        IReadOnlyList<CarListing> listings, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<long, TelegramRawMessage>();
+        var ids = listings.Where(listing => listing.RawMessageId.HasValue)
+            .Select(listing => listing.RawMessageId!.Value).Distinct();
+        foreach (var chunk in ids.Chunk(1000))
+        {
+            var rows = await store.Messages.Where(message => chunk.Contains(message.Id)).ToListAsync(cancellationToken);
+            foreach (var row in rows)
+            {
+                result.Add(row.Id, row);
+            }
+        }
+
+        return result;
+    }
+
+    private static void MarkExcluded(CarListing listing, string code, string reason, DateOnly cutoff)
+    {
+        var expired = listing.PriceDay < cutoff;
+        listing.MatchStatus = expired ? "Late" : code == "DUPLICATE_AD" ? "Rejected" : "NeedsReview";
+        listing.ProcessingStatus = listing.MatchStatus;
+        listing.ReasonCode = code;
+        listing.MatchReason = reason;
+        listing.ComparisonStatus = "Excluded";
+        listing.ComparisonReason = reason;
+        listing.ComparedAt = null;
+        listing.ComparedChannelCount = 0;
+        listing.ValidPriceSourceCount = 0;
+        listing.ComparisonAveragePrice = null;
     }
 
     private static void SetRawStatus(IReadOnlyDictionary<long, TelegramRawMessage> rawById,
@@ -330,69 +313,28 @@ public sealed class TelegramPricingService(
         }
     }
 
-    private async Task<Car> UpsertTelegramCarAsync(CarListing listing, string identityKey, DateTime nowUtc, CancellationToken cancellationToken)
-    {
-        var existing = await store.Cars.FirstOrDefaultAsync(x => x.TelegramIdentityKey == identityKey, cancellationToken);
-        if (existing is not null) return existing;
-
-        var companyName = listing.Manufacturer!.Trim();
-        var modelName = listing.Model!.Trim();
-        var trimName = listing.Trim!.Trim();
-        var company = await store.Companies.FirstOrDefaultAsync(x => !x.IsDelete && x.Name == companyName, cancellationToken);
-        if (company is null)
-        {
-            company = new Company { Name = companyName, IsDelete = false };
-            store.Add(company);
-        }
-        var model = await store.CarModels.FirstOrDefaultAsync(x => !x.IsDelete && x.Name == modelName, cancellationToken);
-        if (model is null)
-        {
-            model = new CarModel { Name = modelName, IsDelete = false };
-            store.Add(model);
-        }
-        var tip = await store.Tips.FirstOrDefaultAsync(x => !x.IsDelete && x.Name == trimName, cancellationToken);
-        if (tip is null)
-        {
-            tip = new Tip { Name = trimName, IsDelete = false };
-            store.Add(tip);
-        }
-
-        var digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(identityKey)))[..16].ToLowerInvariant();
-        var car = new Car
-        {
-            Company = company, CarModel = model, Tip = tip,
-            CompanyId = company.Id, CarModelId = model.Id, TipId = tip.Id,
-            IsUsed = listing.IsUsed!.Value, Year = listing.Year, YearCalendar = listing.YearCalendar,
-            TelegramIdentityKey = identityKey,
-            Name = $"{companyName} {modelName} {trimName} {listing.Year}",
-            Slug = $"telegram-{digest}",
-            ImageName = listing.PrimaryImageUrl!, SourceUrl = listing.SourceUrl!,
-            LastUpdated = nowUtc, MarketPrice = 0, FactoryPrice = 0,
-            PriceSampleCount = 0, IsDelete = false
-        };
-        store.Add(car);
-        return car;
-    }
-
     private async Task CalculateDaysAsync(IReadOnlyList<Car> catalog, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var cutoff = OpenWindowStart(nowUtc);
         var observations = await store.Listings.Where(x => !x.IsDelete && x.MatchStatus == "Matched"
-            && x.ComparisonStatus == "Compared" && x.ComparedChannelCount >= 5 && x.ValidPriceSourceCount >= 6
-            && x.ComparisonKey != null && x.CarId != null && x.PriceDay >= cutoff && x.NormalizedPrice > 0)
+            && x.ComparisonStatus == "Compared" && x.ValidPriceSourceCount > 0
+            && x.ComparisonKey != null && x.CarId != null && x.PriceDay >= cutoff && x.NormalizedPrice > 0
+            && store.Channels.Any(channel => channel.Id == x.ChannelId && !channel.IsDelete))
             .ToListAsync(cancellationToken);
         var histories = await store.History.Where(x => x.PriceDay != null && (!x.IsFinal || x.PriceDay >= cutoff))
             .ToListAsync(cancellationToken);
-        foreach (var group in observations.GroupBy(x => new { x.CarId, x.PriceDay }))
+        var carsById = catalog.ToDictionary(car => car.Id);
+        var historiesByDay = histories.ToDictionary(history => (history.CarId, history.PriceDay));
+        foreach (var group in observations.GroupBy(x => new { x.CarId, x.PriceDay }).OrderBy(group => group.Key.PriceDay))
         {
-            var car = catalog.FirstOrDefault(x => x.Id == group.Key.CarId);
-            if (car is null)
+            if (!carsById.TryGetValue(group.Key.CarId!.Value, out var car))
             {
                 continue;
             }
             try
             {
-                UpdateDay(car, group.Key.PriceDay!.Value, group.ToList(), histories, nowUtc, cutoff);
+                historiesByDay.TryGetValue((car.Id, group.Key.PriceDay), out var history);
+                UpdateDay(car, group.Key.PriceDay!.Value, group.ToList(), history, nowUtc, cutoff);
             }
             catch (Exception exception)
             {
@@ -414,15 +356,14 @@ public sealed class TelegramPricingService(
     }
 
     private void UpdateDay(Car car, DateOnly day, IReadOnlyList<CarListing> observations,
-        IReadOnlyList<CarPriceHistory> histories, DateTime nowUtc, DateOnly cutoff)
+        CarPriceHistory? history, DateTime nowUtc, DateOnly cutoff)
     {
-        var history = histories.SingleOrDefault(x => x.CarId == car.Id && x.PriceDay == day);
         if (history?.IsFinal == true)
         {
             return;
         }
         var distinct = observations.GroupBy(x => x.ChannelId)
-            .Select(x => x.OrderByDescending(y => y.PublishedAt).First())
+            .Select(x => x.OrderByDescending(y => y.PublishedAt).ThenByDescending(y => y.Id).First())
             .GroupBy(x => x.Fingerprint ?? $"message:{x.ChannelId}:{x.SourceMessageId}")
             .Select(x => x.First()).ToList();
         var average = decimal.Round(distinct.Average(x => x.NormalizedPrice!.Value), 2, MidpointRounding.AwayFromZero);

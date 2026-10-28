@@ -61,7 +61,7 @@ public sealed class TelegramChannelService(
             await processingStore.Messages.CountAsync(x => !x.IsDelete, cancellationToken), await listings.CountAsync(cancellationToken), channels.Count == 0 ? null : channels.Max(x => x.LastSuccessAt),
             await listings.Where(x => x.IsUsed == false && x.MatchStatus == "Matched" && x.CarId != null).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
             await listings.Where(x => x.IsUsed == true && x.MatchStatus == "Matched" && x.CarId != null).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
-            await listings.Where(x => x.ComparisonStatus == "Compared" && x.ComparedChannelCount >= 5).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
+            await listings.Where(x => x.ComparisonStatus == "Compared" && x.ValidPriceSourceCount > 0 && x.CarId != null).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
             await listings.CountAsync(x => x.ProcessingStatus == "Pending" || x.ProcessingStatus == "Processing" || x.ProcessingStatus == "NeedsReview" || x.ProcessingStatus == "WaitingForComparableChannels", cancellationToken),
             await listings.CountAsync(x => x.ProcessingStatus == "Rejected" || x.ProcessingStatus == "Failed", cancellationToken), await listings.CountAsync(x => x.PrimaryImageUrl == null, cancellationToken),
             await listings.CountAsync(x => (x.Manufacturer == null || x.Manufacturer == "") && x.MatchStatus != "Matched", cancellationToken),

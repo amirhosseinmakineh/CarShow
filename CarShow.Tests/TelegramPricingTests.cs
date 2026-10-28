@@ -225,14 +225,14 @@ public sealed class TelegramPricingTests
         await Task.WhenAll(Task.Run(Calculate), Task.Run(Calculate));
         await using var verification = fixture.Services.CreateAsyncScope();
         var persisted = verification.ServiceProvider.GetRequiredService<CarShow.Infrastracture.Context.CarShowContext>();
-        Assert.Empty(await persisted.CarPriceHistories.ToListAsync());
+        Assert.Single(await persisted.CarPriceHistories.ToListAsync());
         Assert.Equal(1, await persisted.CarListings.CountAsync());
-        Assert.Equal("WaitingForComparableChannels", (await persisted.CarListings.SingleAsync()).MatchStatus);
+        Assert.Equal("Matched", (await persisted.CarListings.SingleAsync()).MatchStatus);
         Assert.Equal(1, await persisted.TelegramPricingStates.CountAsync());
     }
 
     [Fact]
-    public async Task SixMessagesFromOneChannelDoNotCreateCarOrMarketPrice()
+    public async Task SixMessagesFromOneChannelUseOneLatestSampleWithoutInflatingWeight()
     {
         await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
         await using var scope = fixture.Services.CreateAsyncScope();
@@ -246,9 +246,10 @@ public sealed class TelegramPricingTests
 
         await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
 
-        Assert.Empty(await db.Cars.ToListAsync());
-        Assert.Empty(await db.CarPriceHistories.ToListAsync());
-        Assert.Equal(6, await db.CarListings.CountAsync(x => x.MatchStatus == "WaitingForComparableChannels"));
+        Assert.Equal(850000000m, (await db.Cars.SingleAsync()).MarketPrice);
+        Assert.Equal(1, (await db.CarPriceHistories.SingleAsync()).SampleCount);
+        Assert.Equal(5, await db.CarListings.CountAsync(x => x.ComparisonStatus == "Superseded"));
+        Assert.Equal(1, await db.CarListings.CountAsync(x => x.ComparisonStatus == "Compared"));
         Assert.All(await db.CarListings.ToListAsync(), listing => Assert.Equal(0, listing.ComparedChannelCount));
     }
 
