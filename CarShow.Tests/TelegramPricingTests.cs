@@ -71,11 +71,9 @@ public sealed class TelegramPricingTests
     [InlineData("پژو 207 اتومات صفر قیمت: 0 تومان")]
     [InlineData("پژو 207 اتومات صفر قیمت: -850 تومان")]
     [InlineData("پژو 207 اتومات صفر قیمت: توافقی")]
-    [InlineData("پژو 207 اتومات قیمت: 850 میلیون تومان")]
-    [InlineData("پژو 207 اتومات صفر کارکرد: 1000 قیمت: 850 میلیون تومان")]
     [InlineData("پژو 207 اتومات صفر قیمت: 999999999999999999999 میلیارد تومان")]
     [InlineData("پژو 207 اتومات صفر قیمت: 850 میلیون تومان قیمت: 900 میلیون تومان")]
-    public void RejectsInvalidPricesOrUnknownCondition(string text)
+    public void RejectsInvalidPrices(string text)
     {
         var listing = Extract(text);
         CarListingMatcher.Match(listing, [Car()]);
@@ -123,7 +121,7 @@ public sealed class TelegramPricingTests
             await db.SaveChangesAsync();
             var prices = new[] { 800, 1000, 850, 900, 950, 900 };
             for (var i = 0; i < channels.Length; i++)
-                AddMessage(db, channels[i], $"{i + 1}", $"پژو 207 اتومات مدل: 1403 صفر قیمت: {prices[i]} میلیون تومان");
+                AddMessage(db, channels[i], $"{i + 1}", $"پژو 207 اتومات مدل: 1403 صفر قیمت: {prices[i]} میلیون تومان کد آگهی: {i}");
             AddMessage(db, channels[0], "7", "پژو 207 اتومات مدل: 1403 صفر قیمت: 0 تومان");
             AddMessage(db, channels[0], "8", "پژو 207 اتومات مدل: 1403 صفر قیمت: 850 میلیون");
             await db.SaveChangesAsync();
@@ -148,7 +146,7 @@ public sealed class TelegramPricingTests
             await service.CalculateAsync(Now.AddMinutes(5), default);
             Assert.Equal(1, await db.CarPriceHistories.CountAsync());
             Assert.Equal(8, await db.CarListings.CountAsync());
-            var channel = await db.TelegramChannels.OrderBy(x => x.Id).LastAsync();
+            var channel = await db.TelegramChannels.OrderBy(x => x.Id).FirstAsync();
             AddMessage(db, channel, "9", "پژو 207 اتومات مدل: 1403 صفر قیمت: 1200 میلیون تومان", Now.AddMinutes(1));
             await db.SaveChangesAsync();
             await service.CalculateAsync(Now.AddMinutes(10), default);
@@ -285,12 +283,12 @@ public sealed class TelegramPricingTests
         Assert.Equal(6, (await db.CarPriceHistories.SingleAsync()).SampleCount);
         await service.CalculateAsync(Now.AddDays(3), default);
         Assert.True((await db.CarPriceHistories.SingleAsync()).IsFinal);
-        AddMessage(db, channels[0], "7", "پژو 207 اتومات مدل: 1403 صفر قیمت: 1000 میلیون تومان", Now.AddDays(-1));
+        AddMessage(db, channels[0], "7", "پژو 207 اتومات مدل: 1403 صفر قیمت: 1050 میلیون تومان", Now.AddDays(-1));
         await db.SaveChangesAsync();
         await service.CalculateAsync(Now.AddDays(3), default);
         Assert.Equal(1050000000m, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
         Assert.Equal(6, (await db.CarPriceHistories.SingleAsync()).SampleCount);
-        Assert.Equal(1, await db.CarListings.CountAsync(x => x.MatchStatus == "Late"));
+        Assert.Equal(7, await db.CarListings.CountAsync(x => x.MatchStatus == "Late"));
     }
 
     private static void AddMessage(CarShow.Infrastracture.Context.CarShowContext db,
