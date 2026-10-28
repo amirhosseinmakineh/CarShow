@@ -41,7 +41,7 @@ public sealed class TelegramReprocessingTests
         Assert.Equal(850000000m, old.NormalizedPrice);
         Assert.Equal("پژو", old.Manufacturer);
         Assert.Equal("207", old.Model);
-        Assert.Equal("WaitingForComparableChannels", old.MatchStatus);
+        Assert.Equal("Matched", old.MatchStatus);
         Assert.Equal(TelegramListingExtractor.CurrentVersion, old.ExtractionVersion);
         Assert.Equal(raw.MessageText, old.RawText);
         Assert.Equal(raw.SourceUrl, old.SourceUrl);
@@ -50,8 +50,8 @@ public sealed class TelegramReprocessingTests
         await service.CalculateAsync(Now.AddMinutes(1), default);
         Assert.Equal(extractedAt, old.ExtractedAt);
         Assert.Equal(1, await db.CarListings.CountAsync());
-        Assert.Empty(await db.Cars.ToListAsync());
-        Assert.Empty(await db.CarPriceHistories.ToListAsync());
+        Assert.Single(await db.Cars.ToListAsync());
+        Assert.Equal(850000000m, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
     }
 
     [Fact]

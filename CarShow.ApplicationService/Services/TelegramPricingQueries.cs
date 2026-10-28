@@ -16,6 +16,7 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
 
     public async Task<IReadOnlyList<TelegramObservationDto>> ObservationsAsync(string? status, int page, CancellationToken cancellationToken)
     {
+        var registeredChannelCount = await store.Channels.CountAsync(channel => !channel.IsDelete, cancellationToken);
         var query = store.Listings.AsNoTracking().Where(x => !x.IsDelete);
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -31,7 +32,7 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 x.PublishedAt, x.ReceivedAt, x.PriceDay, x.MatchStatus, x.MatchReason, x.Manufacturer, x.PrimaryImageUrl,
                 x.ComparisonStatus, x.ComparisonAveragePrice, x.ComparedChannelCount, x.ValidPriceSourceCount,
                 x.ProcessingStatus, x.ReasonCode, x.Year, x.Mileage, x.IsUsed, x.Trim,
-                x.Model, x.PriceText, x.YearCalendar, x.ComparisonReason, x.ExtractionVersion))
+                x.Model, x.PriceText, x.YearCalendar, x.ComparisonReason, x.ExtractionVersion, registeredChannelCount))
             .ToListAsync(cancellationToken);
     }
 

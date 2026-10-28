@@ -4,9 +4,9 @@ Extraction version 2 replays raw messages in bounded batches (default 2000 per p
 
 Legacy non-ad rows remain auditable with `Ignored` / `NON_VEHICLE_MESSAGE`; the default observation list excludes them, and `status=Ignored` exposes them explicitly. A new non-ad message only needs its raw record. Candidate, ignored-message and valid-price counts come from persisted records rather than cumulative extraction counters.
 
-Explicit prices are normalized independently of vehicle condition. Missing currency, missing price, unknown condition, identity gaps, image/source gaps and insufficient independent channels have separate reason codes. The paired Angular admin maps these reasons to Persian and uses cards on mobile so reasons are not clipped by a wide table. News text after `خودرو:` is not accepted as an arbitrary long model name.
+Explicit prices are normalized independently of vehicle condition. Missing currency, missing price, unknown condition, identity gaps, image/source gaps have separate reason codes. The paired Angular admin maps these reasons to Persian and uses cards on mobile so reasons are not clipped by a wide table. News text after `خودرو:` is not accepted as an arbitrary long model name.
 
-Comparison for daily history uses the same identity and Tehran publication day. The source channel plus five other distinct channels are required; one newest observation per channel enters a daily mean. Telegram-derived cars with no valid daily price are not returned as published inventory. Comparison assignments are persisted before calculating the day's price, including the first successful cycle with an empty catalog.
+Comparison for daily history uses the same identity and Tehran publication day. All registered, non-deleted channels are considered. One newest valid, non-copied observation per channel enters the daily arithmetic mean; there is no five-peer requirement or upper channel cap. A single complete source can create a vehicle and its daily history, with its source count reported explicitly. Channels without valid comparable data do not block publication. Telegram-derived cars with no valid daily price are not returned as published inventory. Comparison assignments are persisted before calculating the day's price, including the first successful cycle with an empty catalog.
 
 ## Migration and rollout
 
@@ -16,7 +16,7 @@ Rollback uses the previous application image and keeps additive columns and all 
 
 ## Validation
 
-- 47 backend tests passed, including legacy candidate repair, news retention/exclusion, no replay duplicates, published-row preservation, missing-price real-message fixture, price/condition separation, Unicode/thousands units and six-channel car/history upsert.
+- 47 backend tests passed, including legacy candidate repair, news retention/exclusion, no replay duplicates, published-row preservation, missing-price real-message fixture, price/condition separation, Unicode/thousands units and car/history upsert. See `telegram-all-channel-pricing.md` for the subsequent all-channel policy and its validation.
 - SQL Server model matches the latest generated migration snapshot; incremental SQL contains no destructive operation.
 - Angular production build and spec TypeScript compilation passed. Local Chrome test execution was blocked by sandbox Unix-socket restrictions, so runtime UI test success is not claimed.
-- Unit/integration fixtures do not establish six real comparable Telegram sources; production counts must be measured separately after deployment.
+- Unit/integration fixtures do not establish a live comparable Telegram dataset; production counts must be measured separately after deployment.
