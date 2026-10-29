@@ -22,7 +22,7 @@ public static class TelegramMarketPriceCalculator
             return ("OUTSIDE_PRICE_WINDOW", "پیام قدیمی است و در محاسبه قیمت روز وارد نمی‌شود.");
         }
         if (string.IsNullOrWhiteSpace(listing.Manufacturer) || string.IsNullOrWhiteSpace(listing.Model)
-            || string.IsNullOrWhiteSpace(listing.Trim) || listing.Year is null || listing.YearCalendar is null
+            || listing.Year is null || listing.YearCalendar is null
             || listing.IsUsed is null || listing.ComparisonKey is null)
         {
             return ("COMPARISON_FIELDS_INCOMPLETE", "مشخصات لازم برای مقایسه خودرو کامل نیست.");
@@ -34,10 +34,6 @@ public static class TelegramMarketPriceCalculator
         if (listing.IsUsed == true && listing.Mileage is null or <= 0)
         {
             return ("MISSING_MILEAGE", "کارکرد خودرو برای مقایسه مشخص نشده است.");
-        }
-        if (string.IsNullOrWhiteSpace(listing.PrimaryImageUrl))
-        {
-            return ("MISSING_VERIFIABLE_IMAGE", "تصویر اصلی آگهی در دسترس نیست.");
         }
         if (string.IsNullOrWhiteSpace(listing.SourceUrl))
         {
@@ -67,21 +63,18 @@ public static class TelegramMarketPriceCalculator
                 }
             }
 
-            var latestByChannel = new Dictionary<long, CarListing>();
-            foreach (var listing in originals.Values)
-            {
-                if (!latestByChannel.TryGetValue(listing.ChannelId, out var previous)
-                    || listing.PublishedAt > previous.PublishedAt
-                    || (listing.PublishedAt == previous.PublishedAt && listing.Id > previous.Id))
-                {
-                    latestByChannel[listing.ChannelId] = listing;
-                }
-            }
-
-            var samples = latestByChannel.Values.OrderBy(listing => listing.ChannelId).ToArray();
-            var average = decimal.Round(samples.Average(listing => listing.NormalizedPrice!.Value),
-                2, MidpointRounding.AwayFromZero);
+            var samples = originals.Values.OrderBy(listing => listing.Id).ToArray();
+            var average = ReferencePrice(samples.Select(listing => listing.NormalizedPrice!.Value));
             yield return new TelegramMarketPriceGroup(originals.Values.ToArray(), samples, duplicates, average);
         }
+    }
+
+    public static decimal ReferencePrice(IEnumerable<decimal> prices)
+    {
+        var ordered = prices.OrderBy(price => price).ToArray();
+        if (ordered.Length == 0) throw new ArgumentException("At least one valid price is required.", nameof(prices));
+        var middle = ordered.Length / 2;
+        return decimal.Round(ordered.Length % 2 == 1 ? ordered[middle]
+            : (ordered[middle - 1] + ordered[middle]) / 2m, 2, MidpointRounding.AwayFromZero);
     }
 }

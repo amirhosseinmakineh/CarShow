@@ -4,6 +4,8 @@ namespace CarShow.Domain.Models
     {
         public DateOnly? PriceDay { get; set; }
         public int SampleCount { get; set; }
+        public int IndependentSourceCount { get; set; }
+        public string ConfidenceLevel { get; set; } = "Low";
         public DateTime? CalculatedAt { get; set; }
         public bool IsFinal { get; set; }
         public long CarId { get; set; }
