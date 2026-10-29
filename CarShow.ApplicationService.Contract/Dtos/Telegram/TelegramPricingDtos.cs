@@ -16,3 +16,10 @@ public sealed record DailyCarPriceDto(
     DateOnly? PriceDay, int SampleCount, DateTime? CalculatedAt, bool IsFinal);
 
 public sealed record TelegramPricingStateDto(DateTime? LastSuccessAt, DateTime? LastAttemptAt, string? LastError);
+
+public sealed record TelegramTimelineStageDto(string Code, string Status, DateTime? OccurredAt, int Count);
+public sealed record TelegramJobTimelineDto(long JobId, long ChannelId, string JobStatus,
+    DateTime CreatedAt, DateTime? StartedAt, DateTime? CompletedAt, string? Error,
+    IReadOnlyList<TelegramTimelineStageDto> Stages);
+public sealed record TelegramListingClearRequest(int ExpectedCount);
+public sealed record TelegramListingClearResult(int ClearedCount, int PreservedRawMessages);

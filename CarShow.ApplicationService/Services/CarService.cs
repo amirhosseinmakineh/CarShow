@@ -96,7 +96,9 @@ namespace CarShow.ApplicationService.Services
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
             var query = carRepository.GetAll().Where(car => !car.IsDelete && car.IsUsed == isUsed
-                && (car.TelegramIdentityKey == null || (car.MarketPrice > 0 && car.PriceSampleCount > 0)));
+                && (car.TelegramIdentityKey == null || (car.MarketPrice > 0 && car.PriceSampleCount > 0
+                    && processingStore.Listings.Any(listing => !listing.IsDelete
+                        && listing.CarId == car.Id && listing.ProcessingStatus == "Published"))));
             var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && x.IsUsed == isUsed);
             if (!string.IsNullOrWhiteSpace(model)) query = query.Where(c => c.Name.Contains(model) || c.CarModel.Name.Contains(model));
             if (!string.IsNullOrWhiteSpace(trim)) query = query.Where(c => c.Tip != null && c.Tip.Name.Contains(trim));
@@ -280,7 +282,9 @@ namespace CarShow.ApplicationService.Services
                 .Include(x => x.Tip)
                 .Include(x => x.Company)
                 .Include(x => x.CarModel)
-                .FirstOrDefaultAsync(x => x.Id == carId);
+                .FirstOrDefaultAsync(x => x.Id == carId && !x.IsDelete
+                    && (x.TelegramIdentityKey == null || processingStore.Listings.Any(listing =>
+                        !listing.IsDelete && listing.CarId == x.Id && listing.ProcessingStatus == "Published")));
 
             if (car is null)
                 return Result<CarDto>.Failure("اتومبیلی یافت نشد");
