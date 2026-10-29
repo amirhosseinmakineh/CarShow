@@ -23,3 +23,8 @@ public sealed record TelegramJobTimelineDto(long JobId, long ChannelId, string J
     IReadOnlyList<TelegramTimelineStageDto> Stages);
 public sealed record TelegramListingClearRequest(int ExpectedCount);
 public sealed record TelegramListingClearResult(int ClearedCount, int PreservedRawMessages);
+
+public sealed record TelegramPipelineTimelineDto(
+    string Status, DateTime? StartedAt, DateTime? CompletedAt,
+    int TotalChannels, int CompletedChannels, int FailedChannels,
+    IReadOnlyList<TelegramTimelineStageDto> Stages);

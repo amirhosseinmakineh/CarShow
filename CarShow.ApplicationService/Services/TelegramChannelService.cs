@@ -154,6 +154,18 @@ public sealed class TelegramChannelService(
             channel.RetryCount = 0;
             channel.LastError = null;
         }
+        else
+        {
+            var queuedJobs = await jobRepository.GetAll().AsTracking()
+                .Where(job => job.ChannelId == id && job.Status == TelegramCollectionJobStatus.Queued)
+                .ToListAsync(cancellationToken);
+            foreach (var job in queuedJobs)
+            {
+                job.Status = TelegramCollectionJobStatus.Failed;
+                job.CompletedAt = DateTime.UtcNow;
+                job.Error = "Collection paused before it started.";
+            }
+        }
         await channelRepository.SaveChanges();
         if (enabled)
         {

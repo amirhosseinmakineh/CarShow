@@ -31,6 +31,12 @@ public sealed class TelegramPricingController(ITelegramPricingQueries queries, T
         return timeline is null ? NotFound() : Ok(timeline);
     }
 
+    [HttpGet("pipeline/timeline")]
+    public async Task<IActionResult> PipelineTimeline(CancellationToken cancellationToken)
+    {
+        return Ok(await queries.PipelineTimelineAsync(cancellationToken));
+    }
+
     [HttpDelete("observations")]
     public async Task<IActionResult> ClearListings(
         [FromBody] TelegramListingClearRequest request,

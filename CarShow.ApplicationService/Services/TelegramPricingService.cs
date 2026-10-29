@@ -52,6 +52,19 @@ public sealed class TelegramPricingService(
             await CalculateDaysAsync(catalog, nowUtc, cancellationToken);
             state.LastSuccessAt = nowUtc;
             state.LastError = null;
+            if (state.RunStartedAt is not null && state.RunCompletedAt is null)
+            {
+                var pending = await store.Jobs.AnyAsync(job => job.CreatedAt >= state.RunStartedAt
+                    && (job.Status == TelegramCollectionJobStatus.Queued
+                        || job.Status == TelegramCollectionJobStatus.Processing), cancellationToken);
+                if (!pending)
+                {
+                    state.RunCollectionCompletedAt = await store.Jobs
+                        .Where(job => job.CreatedAt >= state.RunStartedAt && job.CompletedAt != null)
+                        .MaxAsync(job => job.CompletedAt, cancellationToken);
+                    state.RunCompletedAt = DateTime.UtcNow;
+                }
+            }
         }, cancellationToken);
     }
 
