@@ -33,6 +33,8 @@ public sealed class TelegramEndpointTests
         var services = builder.Services;
         services.AddControllers().AddApplicationPart(typeof(TelegramChannelsController).Assembly);
         services.AddSingleton(scope.ServiceProvider.GetRequiredService<ITelegramChannelService>());
+        services.AddSingleton(new TelegramListingManagementService(
+            scope.ServiceProvider.GetRequiredService<CarShow.Domain.IRepository.ITelegramProcessingStore>()));
         services.AddSingleton<ITelegramPricingQueries>(new TelegramPricingQueries(
             scope.ServiceProvider.GetRequiredService<CarShow.Domain.IRepository.ITelegramProcessingStore>()));
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -60,6 +62,14 @@ public sealed class TelegramEndpointTests
         const string baseUrl = "/api/admin/telegram-channels";
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(baseUrl)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/admin/telegram-pricing/prices")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/admin/telegram-pricing/jobs/1/timeline")).StatusCode);
+        using (var unauthenticatedClear = new HttpRequestMessage(HttpMethod.Delete, "/api/admin/telegram-pricing/observations")
+        {
+            Content = JsonContent.Create(new { expectedCount = 0 })
+        })
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(unauthenticatedClear)).StatusCode);
+        }
         var token = new JwtSecurityToken(
             issuer: "telegram-tests",
             audience: "telegram-tests",
@@ -76,6 +86,15 @@ public sealed class TelegramEndpointTests
         foreach (var suffix in new[] { "prices", "observations", "state" })
         {
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/admin/telegram-pricing/" + suffix)).StatusCode);
+        }
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await client.GetAsync("/api/admin/telegram-pricing/jobs/999/timeline")).StatusCode);
+        using (var invalidClear = new HttpRequestMessage(HttpMethod.Delete, "/api/admin/telegram-pricing/observations")
+        {
+            Content = JsonContent.Create(new { expectedCount = -1 })
+        })
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(invalidClear)).StatusCode);
         }
 
         var invalid = await client.PostAsJsonAsync(baseUrl + "/import", new { input = "" });

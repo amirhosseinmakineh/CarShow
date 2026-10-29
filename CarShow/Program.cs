@@ -47,6 +47,7 @@ if (builder.Configuration.GetValue("Telegram:WorkersEnabled", true))
 builder.Services.AddScoped<ITelegramProcessingStore, TelegramProcessingStore>();
 builder.Services.AddScoped<TelegramCollectionService>();
 builder.Services.AddScoped<TelegramPricingService>();
+builder.Services.AddScoped<TelegramListingManagementService>();
 builder.Services.AddScoped<ITelegramPricingQueries, TelegramPricingQueries>();
 builder.Services.AddScoped(typeof(IBaseRepository<,>), typeof(BaseRepository<,>));
 builder.Services.AddScoped<IUserService, UserService>();
