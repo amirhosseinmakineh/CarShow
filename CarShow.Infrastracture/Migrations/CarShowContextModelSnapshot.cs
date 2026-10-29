@@ -649,6 +649,15 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<DateTime?>("LastSuccessAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("RunCollectionCompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RunCompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RunStartedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
                     b.ToTable("TelegramPricingStates");

@@ -1,12 +1,89 @@
 using CarShow.ApplicationService.Contract.Dtos.Telegram;
 using CarShow.ApplicationService.Contract.IService;
 using CarShow.Domain.IRepository;
+using CarShow.Domain.Models.Telegram;
 using Microsoft.EntityFrameworkCore;
 
 namespace CarShow.ApplicationService.Services;
 
 public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITelegramPricingQueries
 {
+    public async Task<TelegramPipelineTimelineDto> PipelineTimelineAsync(CancellationToken cancellationToken)
+    {
+        var state = await store.PricingStates.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        if (state?.RunStartedAt is null)
+        {
+            return new TelegramPipelineTimelineDto("NotStarted", null, null, 0, 0, 0, []);
+        }
+
+        var startedAt = state.RunStartedAt.Value;
+        var end = state.RunCompletedAt ?? DateTime.UtcNow;
+        var jobs = await store.Jobs.AsNoTracking()
+            .Where(job => job.CreatedAt >= startedAt && job.CreatedAt <= end)
+            .Select(job => new { job.ChannelId, job.Status, job.StartedAt, job.CompletedAt })
+            .ToListAsync(cancellationToken);
+        var pending = jobs.Any(job => job.Status is TelegramCollectionJobStatus.Queued
+            or TelegramCollectionJobStatus.Processing);
+        var channels = jobs.GroupBy(job => job.ChannelId).ToArray();
+        var completedChannels = channels.Count(channel => channel.Any(job => job.Status == TelegramCollectionJobStatus.Succeeded));
+        var failedChannels = channels.Count(channel => !channel.Any(job => job.Status == TelegramCollectionJobStatus.Succeeded)
+            && channel.Any(job => job.Status is TelegramCollectionJobStatus.Failed
+                or TelegramCollectionJobStatus.AccessRequired));
+
+        var received = await store.Messages.AsNoTracking()
+            .Where(message => message.CollectedAt >= startedAt && message.CollectedAt <= end)
+            .GroupBy(_ => 1)
+            .Select(group => new { Count = group.Count(), At = group.Max(message => message.CollectedAt) })
+            .SingleOrDefaultAsync(cancellationToken);
+        var candidates = await (from listing in store.Listings.AsNoTracking()
+            join message in store.Messages.AsNoTracking() on listing.RawMessageId equals (long?)message.Id
+            where message.CollectedAt >= startedAt && message.CollectedAt <= end
+            select listing)
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                Parsed = group.Count(listing => listing.MatchStatus != "Ignored"),
+                ParsedAt = group.Max(listing => (DateTime?)listing.ExtractedAt),
+                Validated = group.Count(listing => listing.ValidatedAt != null),
+                ValidatedAt = group.Max(listing => listing.ValidatedAt),
+                Compared = group.Count(listing => listing.ComparedAt != null),
+                ComparedAt = group.Max(listing => listing.ComparedAt),
+                Stored = group.Count(listing => listing.ProcessingStatus == "Published" && listing.StoredAt != null),
+                StoredAt = group.Max(listing => listing.ProcessingStatus == "Published" ? listing.StoredAt : null)
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        var finished = state.RunCompletedAt is not null;
+        var collectionFinished = jobs.Count > 0 && !pending;
+        var stages = new List<TelegramTimelineStageDto>
+        {
+            new("Queued", "Completed", startedAt, jobs.Count),
+            new("Collection", collectionFinished ? failedChannels == channels.Length ? "Failed" : "Completed"
+                : jobs.Count > 0 ? "InProgress" : "Waiting",
+                jobs.Where(job => job.CompletedAt != null).Max(job => job?.CompletedAt)
+                    ?? jobs.Where(job => job.StartedAt != null).Min(job => job?.StartedAt),
+                completedChannels + failedChannels),
+            new("Received", received is not null ? "Completed" : finished ? "NoData" : "Waiting",
+                received?.At, received?.Count ?? 0),
+            new("Parsed", candidates?.Parsed > 0 ? "Completed" : finished ? "NoData" : "Waiting",
+                candidates?.ParsedAt, candidates?.Parsed ?? 0),
+            new("Validated", candidates?.Validated > 0 ? "Completed" : finished ? "NoData" : "Waiting",
+                candidates?.ValidatedAt, candidates?.Validated ?? 0),
+            new("Pricing", finished ? "Completed" : collectionFinished ? "InProgress" : "Waiting",
+                finished ? state.RunCompletedAt : null, candidates?.Validated ?? 0),
+            new("Compared", candidates?.Compared > 0 ? "Completed" : finished ? "NoData" : "Waiting",
+                candidates?.ComparedAt, candidates?.Compared ?? 0),
+            new("Stored", candidates?.Stored > 0 ? "Completed" : finished ? "NoData" : "Waiting",
+                candidates?.StoredAt, candidates?.Stored ?? 0),
+            new("Finished", finished ? "Completed" : "Waiting",
+                state.RunCompletedAt, candidates?.Stored ?? 0)
+        };
+        var status = !finished ? "InProgress" : failedChannels == 0 ? "Completed"
+            : completedChannels == 0 ? "Failed" : "Partial";
+        return new TelegramPipelineTimelineDto(status, startedAt, state.RunCompletedAt,
+            channels.Length, completedChannels, failedChannels, stages);
+    }
+
     public Task<TelegramPricingStateDto?> StateAsync(CancellationToken cancellationToken)
     {
         return store.PricingStates.AsNoTracking()

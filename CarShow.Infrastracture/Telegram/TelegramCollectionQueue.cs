@@ -35,6 +35,18 @@ public sealed class TelegramCollectionQueue(IServiceScopeFactory scopeFactory) :
                     && (job.Status == TelegramCollectionJobStatus.Queued
                         || job.Status == TelegramCollectionJobStatus.Processing),
                 cancellationToken);
+            var state = await db.Set<TelegramPricingState>().SingleOrDefaultAsync(cancellationToken);
+            if (state is null)
+            {
+                state = new TelegramPricingState();
+                db.Add(state);
+            }
+            if (state.RunStartedAt is null || state.RunCompletedAt is not null)
+            {
+                state.RunStartedAt = DateTime.UtcNow;
+                state.RunCollectionCompletedAt = null;
+                state.RunCompletedAt = null;
+            }
             if (!pendingJob)
             {
                 db.TelegramCollectionJobs.Add(new TelegramCollectionJob
@@ -45,8 +57,8 @@ public sealed class TelegramCollectionQueue(IServiceScopeFactory scopeFactory) :
                 });
                 source.Status = TelegramChannelStatus.Pending;
                 source.UpdatedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync(cancellationToken);
             }
+            await db.SaveChangesAsync(cancellationToken);
 
             // SQL is the source of truth; this channel only wakes the single worker.
             await channel.Writer.WriteAsync(channelId, cancellationToken);
