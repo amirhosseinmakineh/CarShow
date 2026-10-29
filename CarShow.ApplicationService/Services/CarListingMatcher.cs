@@ -9,10 +9,22 @@ namespace CarShow.ApplicationService.Services;
 
 public static class CarListingMatcher
 {
-    public static string BuildComparisonKey(string manufacturer, string model, string trim, int year, string yearCalendar, bool isUsed)
+    public static string BuildComparisonKey(string manufacturer, string model, string? trim, int year, string yearCalendar, bool isUsed, int? mileage = null)
     {
-        return string.Join("|", Normalize(manufacturer), Normalize(model), NormalizeTrim(trim), yearCalendar,
+        var mileageRange = !isUsed ? "zero" : mileage switch
+        {
+            >= 1 and <= 50_000 => "1-50000",
+            <= 100_000 and > 50_000 => "50001-100000",
+            <= 200_000 and > 100_000 => "100001-200000",
+            <= 300_000 and > 200_000 => "200001-300000",
+            > 300_000 => "300001+",
+            _ => "unknown"
+        };
+        var identity = string.Join("|", Normalize(manufacturer), Normalize(model),
+            string.IsNullOrWhiteSpace(trim) ? "?" : NormalizeTrim(trim), yearCalendar,
             year.ToString(CultureInfo.InvariantCulture), isUsed ? "used" : "new");
+        // Keep existing new-car identities stable; used cars require the mileage band.
+        return isUsed ? $"{identity}|{mileageRange}" : identity;
     }
 
     public static string NormalizeTrim(string value)
@@ -55,9 +67,10 @@ public static class CarListingMatcher
         listing.MatchStatus = "Invalid";
         listing.ProcessingStatus = "Processing";
         listing.ValidatedAt = DateTime.UtcNow;
-        listing.ComparisonKey ??= listing.Manufacturer is not null && listing.Model is not null && listing.Trim is not null
+        listing.ComparisonKey ??= listing.Manufacturer is not null && listing.Model is not null
             && listing.Year is not null && listing.YearCalendar is not null && listing.IsUsed is not null
-                ? BuildComparisonKey(listing.Manufacturer, listing.Model, listing.Trim, listing.Year.Value, listing.YearCalendar, listing.IsUsed.Value)
+                ? BuildComparisonKey(listing.Manufacturer, listing.Model, listing.Trim, listing.Year.Value,
+                    listing.YearCalendar, listing.IsUsed.Value, listing.Mileage)
                 : null;
         if (listing.Price is null or <= 0 || listing.Currency is not ("IRT" or "IRR"))
         {
@@ -87,12 +100,11 @@ public static class CarListingMatcher
             listing.MatchStatus = "NeedsReview";
             listing.ReasonCode = string.IsNullOrWhiteSpace(listing.Manufacturer) ? "MANUFACTURER_MISSING"
                 : string.IsNullOrWhiteSpace(listing.Model) ? "MODEL_MISSING"
-                : string.IsNullOrWhiteSpace(listing.Trim) ? "TRIM_MISSING" : "YEAR_MISSING";
+                : "YEAR_MISSING";
             listing.MatchReason = listing.ReasonCode switch
             {
                 "MANUFACTURER_MISSING" => "شرکت سازنده از متن یا نام معتبر شناسایی نشده است.",
                 "MODEL_MISSING" => "مدل خودرو مشخص نیست.",
-                "TRIM_MISSING" => "تیپ خودرو مشخص نیست؛ برای جلوگیری از مقایسه خودروهای متفاوت کنار گذاشته شد.",
                 _ => "سال ساخت شمسی یا میلادی به‌طور روشن مشخص نشده است."
             };
             listing.ProcessingStatus = "NeedsReview";

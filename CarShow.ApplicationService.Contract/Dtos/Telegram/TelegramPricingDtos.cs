@@ -13,7 +13,8 @@ public sealed record TelegramObservationDto(
 
 public sealed record DailyCarPriceDto(
     long CarId, string Name, decimal MarketPrice, decimal FactoryPrice,
-    DateOnly? PriceDay, int SampleCount, DateTime? CalculatedAt, bool IsFinal);
+    DateOnly? PriceDay, int SampleCount, DateTime? CalculatedAt, bool IsFinal,
+    int IndependentSourceCount, string ConfidenceLevel);
 
 public sealed record TelegramPricingStateDto(DateTime? LastSuccessAt, DateTime? LastAttemptAt, string? LastError);
 

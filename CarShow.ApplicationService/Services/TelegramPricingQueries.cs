@@ -106,10 +106,8 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 && x.ComparisonStatus == "Compared"
                 && x.NormalizedPrice > 0
                 && x.SourceUrl != null
-                && x.PrimaryImageUrl != null
                 && x.Manufacturer != null
                 && x.Model != null
-                && x.Trim != null
                 && x.Year != null
                 && x.IsUsed != null);
         }
@@ -185,6 +183,7 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
         return await store.History.AsNoTracking().Where(x => x.PriceDay != null && (carId == null || x.CarId == carId))
             .OrderByDescending(x => x.PriceDay).ThenBy(x => x.CarId).Skip(Math.Clamp(page, 0, 100000) * 100).Take(100)
             .Select(x => new DailyCarPriceDto(x.CarId, x.Car.Name, x.MarketPrice, x.FactoryPrice,
-                x.PriceDay, x.SampleCount, x.CalculatedAt, x.IsFinal)).ToListAsync(cancellationToken);
+                x.PriceDay, x.SampleCount, x.CalculatedAt, x.IsFinal,
+                x.IndependentSourceCount, x.ConfidenceLevel)).ToListAsync(cancellationToken);
     }
 }

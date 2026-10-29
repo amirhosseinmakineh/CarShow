@@ -221,7 +221,7 @@ public sealed class TelegramPricingService(
             .Where(listing => !listing.IsDelete && listing.ComparisonKey != null
                 && listing.NormalizedPrice > 0 && listing.Currency != null && listing.IsUsed != null
                 && listing.Year != null && listing.YearCalendar != null && listing.Manufacturer != null
-                && listing.Model != null && listing.Trim != null && registeredChannels.Contains(listing.ChannelId)
+                && listing.Model != null && registeredChannels.Contains(listing.ChannelId)
                 && (listing.PriceDay >= cutoff || listing.ProcessingStatus == "Published"))
             .ToListAsync(cancellationToken);
         var rawById = await LoadRawMessagesAsync(listings, cancellationToken);
@@ -264,11 +264,11 @@ public sealed class TelegramPricingService(
             {
                 var included = sampleIds.Contains(listing.Id);
                 listing.CarId = car.Id;
-                listing.ComparedChannelCount = group.Samples.Count - 1;
+                listing.ComparedChannelCount = group.Samples.Select(sample => sample.ChannelId).Distinct().Count() - 1;
                 listing.ValidPriceSourceCount = group.Samples.Count;
                 listing.ComparisonAveragePrice = group.Average;
                 listing.ComparisonStatus = included ? "Compared" : "Superseded";
-                listing.ComparisonReason = $"میانگین آخرین قیمت معتبر {group.Samples.Count} کانال ثبت‌شده برای همین خودرو و روز؛ هر کانال یک سهم دارد.";
+                listing.ComparisonReason = $"میانهٔ {group.Samples.Count} آگهی معتبر از {group.Samples.Select(sample => sample.ChannelId).Distinct().Count()} کانال برای همین خودرو و روز.";
                 listing.ComparedAt = nowUtc;
                 listing.MatchStatus = "Matched";
                 listing.MatchReason = included ? "قیمت معتبر در میانگین روزانه وارد شد."
@@ -375,11 +375,9 @@ public sealed class TelegramPricingService(
         {
             return;
         }
-        var distinct = observations.GroupBy(x => x.ChannelId)
-            .Select(x => x.OrderByDescending(y => y.PublishedAt).ThenByDescending(y => y.Id).First())
-            .GroupBy(x => x.Fingerprint ?? $"message:{x.ChannelId}:{x.SourceMessageId}")
+        var distinct = observations.GroupBy(x => x.Fingerprint ?? $"message:{x.ChannelId}:{x.SourceMessageId}")
             .Select(x => x.First()).ToList();
-        var average = decimal.Round(distinct.Average(x => x.NormalizedPrice!.Value), 2, MidpointRounding.AwayFromZero);
+        var average = TelegramMarketPriceCalculator.ReferencePrice(distinct.Select(x => x.NormalizedPrice!.Value));
         if (history is null)
         {
             history = new CarPriceHistory
@@ -393,6 +391,10 @@ public sealed class TelegramPricingService(
         }
         history.MarketPrice = average;
         history.SampleCount = distinct.Count;
+        history.IndependentSourceCount = distinct.Select(x => x.ChannelId).Distinct().Count();
+        history.ConfidenceLevel = history.IndependentSourceCount == 1 ? "Low"
+            : history.IndependentSourceCount <= 5 ? "Medium-Low"
+            : history.IndependentSourceCount <= 10 ? "Medium" : "Higher";
         history.CalculatedAt = nowUtc;
         history.IsFinal = day < cutoff;
         if (car.MarketPriceDay is null || car.MarketPriceDay <= day)

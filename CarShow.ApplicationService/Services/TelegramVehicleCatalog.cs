@@ -54,7 +54,7 @@ internal sealed class TelegramVehicleCatalog
 
         var companyName = listing.Manufacturer!.Trim();
         var modelName = listing.Model!.Trim();
-        var trimName = listing.Trim!.Trim();
+        var trimName = listing.Trim?.Trim();
         var companyKey = CarListingMatcher.Normalize(companyName);
         if (!companies.TryGetValue(companyKey, out var company))
         {
@@ -69,12 +69,16 @@ internal sealed class TelegramVehicleCatalog
             models.Add(modelKey, model);
             store.Add(model);
         }
-        var trimKey = CarListingMatcher.NormalizeTrim(trimName);
-        if (!trims.TryGetValue(trimKey, out var trim))
+        Tip? trim = null;
+        if (!string.IsNullOrWhiteSpace(trimName))
         {
-            trim = new Tip { Name = trimName, IsDelete = false };
-            trims.Add(trimKey, trim);
-            store.Add(trim);
+            var trimKey = CarListingMatcher.NormalizeTrim(trimName);
+            if (!trims.TryGetValue(trimKey, out trim))
+            {
+                trim = new Tip { Name = trimName, IsDelete = false };
+                trims.Add(trimKey, trim);
+                store.Add(trim);
+            }
         }
 
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)))[..16].ToLowerInvariant();
@@ -87,9 +91,10 @@ internal sealed class TelegramVehicleCatalog
             Year = listing.Year,
             YearCalendar = listing.YearCalendar,
             TelegramIdentityKey = identity,
-            Name = $"{companyName} {modelName} {trimName} {listing.Year}",
+            Name = string.Join(" ", new[] { companyName, modelName, trimName, listing.Year?.ToString() }
+                .Where(part => !string.IsNullOrWhiteSpace(part))),
             Slug = $"telegram-{digest}",
-            ImageName = listing.PrimaryImageUrl!,
+            ImageName = listing.PrimaryImageUrl ?? string.Empty,
             SourceUrl = listing.SourceUrl!,
             LastUpdated = nowUtc,
             MarketPrice = 0,

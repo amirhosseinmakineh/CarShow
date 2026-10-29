@@ -184,9 +184,9 @@ public sealed class TelegramAllChannelPricingTests
         var timer = Stopwatch.StartNew();
         var result = Assert.Single(TelegramMarketPriceCalculator.Compare(rows));
         timer.Stop();
-        Assert.Equal(200, result.Samples.Count);
+        Assert.Equal(20000, result.Samples.Count);
         Assert.Equal(20000, result.Observations.Count);
-        Assert.Equal(19900500m, result.Average);
+        Assert.Equal(10000500m, result.Average);
         // Diagnostic only: machine timing is not a brittle correctness assertion.
         Console.WriteLine($"Compared {rows.Length} rows across {result.Samples.Count} channels in {timer.ElapsedMilliseconds} ms.");
     }

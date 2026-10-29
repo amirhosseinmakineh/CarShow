@@ -154,6 +154,13 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<decimal>("FactoryPrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("ConfidenceLevel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("IndependentSourceCount")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
 
