@@ -90,7 +90,7 @@ public sealed class TelegramChannelsController(ITelegramChannelService service) 
         }
         catch (Exception exception) when (SqlServerCapacityError.IsTransactionLogFull(exception))
         {
-            return StatusCode(507, new { message = "فضای دیتابیس پر است و حذف کانال ذخیره نشد. ابتدا ظرفیت دیتابیس را افزایش دهید." });
+            return StatusCode(507, new { message = "لاگ تراکنش دیتابیس پر است و حذف کانال ذخیره نشد. مدیر سرویس باید بکاپ لاگ و فضای ذخیره‌سازی را بررسی کند." });
         }
     }
 }

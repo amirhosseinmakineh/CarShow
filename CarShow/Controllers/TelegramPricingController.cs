@@ -57,7 +57,7 @@ public sealed class TelegramPricingController(ITelegramPricingQueries queries, T
         }
         catch (Exception exception) when (SqlServerCapacityError.IsTransactionLogFull(exception))
         {
-            return StatusCode(507, new { message = "فضای دیتابیس پر است و حذف آگهی‌ها ذخیره نشد. ابتدا ظرفیت دیتابیس را افزایش دهید." });
+            return StatusCode(507, new { message = "لاگ تراکنش دیتابیس پر است و حذف آگهی‌ها ذخیره نشد. مدیر سرویس باید بکاپ لاگ و فضای ذخیره‌سازی را بررسی کند." });
         }
         return result is null
             ? Conflict(new { message = "تعداد آگهی‌ها تغییر کرده است. فهرست را دوباره بارگذاری کنید." })
