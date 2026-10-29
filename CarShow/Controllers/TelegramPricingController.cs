@@ -55,6 +55,10 @@ public sealed class TelegramPricingController(ITelegramPricingQueries queries, T
         {
             return Conflict(new { message = "پردازش در حال اجراست. چند لحظه دیگر دوباره تلاش کنید." });
         }
+        catch (Exception exception) when (SqlServerCapacityError.IsTransactionLogFull(exception))
+        {
+            return StatusCode(507, new { message = "فضای دیتابیس پر است و حذف آگهی‌ها ذخیره نشد. ابتدا ظرفیت دیتابیس را افزایش دهید." });
+        }
         return result is null
             ? Conflict(new { message = "تعداد آگهی‌ها تغییر کرده است. فهرست را دوباره بارگذاری کنید." })
             : Ok(result);

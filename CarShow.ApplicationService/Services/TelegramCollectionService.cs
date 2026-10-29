@@ -49,7 +49,8 @@ public sealed class TelegramCollectionService(
         await db.RunExclusiveAsync("TelegramCollection", async () =>
         {
             channels = await db.Channels
-                .Where(x => x.Enabled && (x.Status == TelegramChannelStatus.Pending || x.Status == TelegramChannelStatus.Processing))
+                .Where(x => !x.IsDelete && x.Enabled
+                    && (x.Status == TelegramChannelStatus.Pending || x.Status == TelegramChannelStatus.Processing))
                 .ToListAsync(cancellationToken);
     
             var interruptedJobs = await db.Jobs
@@ -120,7 +121,7 @@ public sealed class TelegramCollectionService(
         var collector = scope.ServiceProvider.GetRequiredService<ITelegramCollector>();
         var extractor = scope.ServiceProvider.GetRequiredService<ITelegramListingExtractor>();
         var channel = await db.Channels.FirstOrDefaultAsync(x => x.Id == channelId, cancellationToken);
-        if (channel is null || !channel.Enabled)
+        if (channel is null || channel.IsDelete || !channel.Enabled)
         {
             return;
         }
@@ -285,7 +286,7 @@ public sealed class TelegramCollectionService(
         var db = scope.ServiceProvider.GetRequiredService<ITelegramProcessingStore>();
         var channel = await db.Channels.FirstOrDefaultAsync(x => x.Id == channelId, cancellationToken);
         var maxRetries = Math.Clamp(configuration.GetValue("Telegram:MaxRetries", 3), 0, 10);
-        if (channel is null || !channel.Enabled || channel.RetryCount > maxRetries)
+        if (channel is null || channel.IsDelete || !channel.Enabled || channel.RetryCount > maxRetries)
         {
             return;
         }

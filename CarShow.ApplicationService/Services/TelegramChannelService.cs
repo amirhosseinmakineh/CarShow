@@ -19,7 +19,8 @@ public sealed class TelegramChannelService(
 
     public async Task<IReadOnlyList<TelegramChannelDto>> GetChannelsAsync(CancellationToken cancellationToken)
     {
-        var channels = await channelRepository.GetAll().AsNoTracking().OrderByDescending(x => x.CreatedAt).Select(ToDto).ToListAsync(cancellationToken);
+        var channels = await channelRepository.GetAll().AsNoTracking().Where(x => !x.IsDelete)
+            .OrderByDescending(x => x.CreatedAt).Select(ToDto).ToListAsync(cancellationToken);
         var stats = await processingStore.Listings.AsNoTracking().Where(x => !x.IsDelete)
             .GroupBy(x => x.ChannelId).Select(x => new
             {
@@ -50,7 +51,8 @@ public sealed class TelegramChannelService(
 
     public async Task<TelegramChannelSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
     {
-        var channels = await channelRepository.GetAll().AsNoTracking().ToListAsync(cancellationToken);
+        var channels = await channelRepository.GetAll().AsNoTracking().Where(x => !x.IsDelete)
+            .ToListAsync(cancellationToken);
         var listings = processingStore.Listings.AsNoTracking().Where(x => !x.IsDelete && x.MatchStatus != "Ignored");
         return new TelegramChannelSummaryDto(
             channels.Count,
@@ -91,15 +93,34 @@ public sealed class TelegramChannelService(
             }
         }
         var ids = normalized.Select(x => x.id).ToList();
-        var existing = await channelRepository.GetAll()
+        var existing = await channelRepository.GetAll().AsTracking()
             .Where(x => ids.Contains(x.NormalizedIdentifier))
-            .Select(x => x.NormalizedIdentifier)
-            .ToHashSetAsync(cancellationToken);
+            .ToDictionaryAsync(x => x.NormalizedIdentifier, cancellationToken);
         var created = 0;
         var queued = 0;
-        foreach (var item in normalized.Where(x => !existing.Contains(x.id)))
+        foreach (var item in normalized)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (existing.TryGetValue(item.id, out var saved))
+            {
+                if (!saved.IsDelete)
+                {
+                    continue;
+                }
+
+                saved.IsDelete = false;
+                saved.Enabled = true;
+                saved.Status = TelegramChannelStatus.Pending;
+                saved.RetryCount = 0;
+                saved.LastError = null;
+                saved.UpdatedAt = DateTime.UtcNow;
+                await channelRepository.SaveChanges();
+                await queue.EnqueueAsync(saved.Id, cancellationToken);
+                created++;
+                queued++;
+                continue;
+            }
+
             var channel = new TelegramChannel
             {
                 TelegramIdentifier = item.id,
@@ -132,7 +153,7 @@ public sealed class TelegramChannelService(
         }
         var identifier = normalized.Value.id;
         return await channelRepository.GetAll()
-            .Where(x => x.NormalizedIdentifier == identifier)
+            .Where(x => x.NormalizedIdentifier == identifier && !x.IsDelete)
             .Select(ToDto)
             .SingleAsync(cancellationToken);
     }
@@ -142,7 +163,7 @@ public sealed class TelegramChannelService(
         var channel = await channelRepository.GetAll()
             .AsTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (channel is null)
+        if (channel is null || channel.IsDelete)
         {
             return false;
         }
@@ -177,12 +198,24 @@ public sealed class TelegramChannelService(
     public async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken)
     {
         var channel = await channelRepository.GetById(id);
-        if (channel is null)
+        if (channel is null || channel.IsDelete)
         {
             return false;
         }
 
-        await channelRepository.Delete(channel);
+        channel.IsDelete = true;
+        channel.Enabled = false;
+        channel.Status = TelegramChannelStatus.Paused;
+        channel.UpdatedAt = DateTime.UtcNow;
+        var queuedJobs = await jobRepository.GetAll().AsTracking()
+            .Where(job => job.ChannelId == id && job.Status == TelegramCollectionJobStatus.Queued)
+            .ToListAsync(cancellationToken);
+        foreach (var job in queuedJobs)
+        {
+            job.Status = TelegramCollectionJobStatus.Failed;
+            job.CompletedAt = DateTime.UtcNow;
+            job.Error = "Channel removed before collection started.";
+        }
         await channelRepository.SaveChanges();
         return true;
     }

@@ -65,6 +65,42 @@ public sealed class TelegramCollectionTests
     }
 
     [Fact]
+    public async Task RemovingChannelHidesItWithoutCascadingStoredMessagesAndCanBeReadded()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITelegramChannelService>();
+        await service.ImportAsync(new("@example"), default);
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        var channel = await db.TelegramChannels.SingleAsync();
+        db.TelegramRawMessages.Add(new TelegramRawMessage
+        {
+            ChannelId = channel.Id,
+            ExternalMessageId = "42",
+            MessageText = "پژو 207",
+            MessageDate = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        Assert.True(await service.DeleteAsync(channel.Id, default));
+        Assert.Empty(await service.GetChannelsAsync(default));
+        Assert.Equal(0, (await service.GetSummaryAsync(default)).TotalChannels);
+        Assert.Equal(1, await db.TelegramRawMessages.CountAsync());
+        Assert.True((await db.TelegramChannels.SingleAsync()).IsDelete);
+        Assert.False((await db.TelegramChannels.SingleAsync()).Enabled);
+        Assert.All(await db.TelegramCollectionJobs.ToListAsync(), job =>
+            Assert.Equal(TelegramCollectionJobStatus.Failed, job.Status));
+        Assert.False(await service.RetryAsync(channel.Id, default));
+
+        var result = await service.ImportAsync(new("@example"), default);
+        Assert.Equal(1, result.Created);
+        Assert.Equal(1, await db.TelegramChannels.CountAsync());
+        Assert.Equal(1, await db.TelegramRawMessages.CountAsync());
+        Assert.False((await db.TelegramChannels.SingleAsync()).IsDelete);
+        Assert.Single(await service.GetChannelsAsync(default));
+    }
+
+    [Fact]
     public async Task WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry()
     {
         const string preview = """
