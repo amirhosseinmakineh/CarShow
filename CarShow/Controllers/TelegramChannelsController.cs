@@ -83,7 +83,14 @@ public sealed class TelegramChannelsController(ITelegramChannelService service) 
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken)
     {
-        var deleted = await service.DeleteAsync(id, cancellationToken);
-        return deleted ? NoContent() : NotFound();
+        try
+        {
+            var deleted = await service.DeleteAsync(id, cancellationToken);
+            return deleted ? NoContent() : NotFound();
+        }
+        catch (Exception exception) when (SqlServerCapacityError.IsTransactionLogFull(exception))
+        {
+            return StatusCode(507, new { message = "لاگ تراکنش دیتابیس پر است و حذف کانال ذخیره نشد. مدیر سرویس باید بکاپ لاگ و فضای ذخیره‌سازی را بررسی کند." });
+        }
     }
 }
