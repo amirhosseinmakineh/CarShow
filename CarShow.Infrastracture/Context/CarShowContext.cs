@@ -50,6 +50,7 @@ namespace CarShow.Infrastracture.Context
                 entity.HasOne(x => x.Company)
                     .WithMany(x => x.Cars)
                     .HasForeignKey(x => x.CompanyId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(x => x.CarModel)
@@ -82,6 +83,10 @@ namespace CarShow.Infrastracture.Context
                 entity.Property(x => x.ComparisonStatus).HasMaxLength(32);
                 entity.Property(x => x.Manufacturer).HasMaxLength(128);
                 entity.Property(x => x.ReasonCode).HasMaxLength(64);
+                entity.Property(x => x.ExtractionStatus).HasMaxLength(32);
+                entity.Property(x => x.NameValidationStatus).HasMaxLength(32);
+                entity.Property(x => x.PriceValidationStatus).HasMaxLength(32);
+                entity.Property(x => x.RawCarName).HasMaxLength(128);
                 entity.Property(x => x.ComparisonKey).HasMaxLength(256);
                 entity.Property(x => x.YearCalendar).HasMaxLength(16);
                 entity.Property(x => x.PriceText).HasMaxLength(64);

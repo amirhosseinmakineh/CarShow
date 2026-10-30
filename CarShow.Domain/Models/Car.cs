@@ -8,7 +8,7 @@ namespace CarShow.Domain.Models
         public int? Year { get; set; }
         public string? YearCalendar { get; set; }
         public string? TelegramIdentityKey { get; set; }
-        public long CompanyId { get; set; }
+        public long? CompanyId { get; set; }
         public long CarModelId { get; set; }
         public long? TipId { get; set; }
 
@@ -26,7 +26,7 @@ namespace CarShow.Domain.Models
         public string SourceUrl { get; set; } = string.Empty;
         public DateTime LastUpdated { get; set; }
 
-        public Company Company { get; set; } = null!;
+        public Company? Company { get; set; }
         public CarModel CarModel { get; set; } = null!;
         public Tip? Tip { get; set; }
     }

@@ -6,6 +6,7 @@ public sealed record TelegramMarketPriceGroup(
     IReadOnlyList<CarListing> Observations,
     IReadOnlyList<CarListing> Samples,
     IReadOnlyList<CarListing> Duplicates,
+    IReadOnlyList<CarListing> Outliers,
     decimal Average);
 
 /// <summary>Pure pricing rules: same identity/day, unique advertisements, one latest sample per channel.</summary>
@@ -21,7 +22,7 @@ public static class TelegramMarketPriceCalculator
         {
             return ("OUTSIDE_PRICE_WINDOW", "پیام قدیمی است و در محاسبه قیمت روز وارد نمی‌شود.");
         }
-        if (string.IsNullOrWhiteSpace(listing.Manufacturer) || string.IsNullOrWhiteSpace(listing.Model)
+        if (string.IsNullOrWhiteSpace(listing.Model)
             || listing.Year is null || listing.YearCalendar is null
             || listing.IsUsed is null || listing.ComparisonKey is null)
         {
@@ -43,6 +44,11 @@ public static class TelegramMarketPriceCalculator
         {
             return ("IDENTITY_AMBIGUOUS", "بیش از یک خودرو با این مشخصات ثبت شده است.");
         }
+        if (System.Text.RegularExpressions.Regex.IsMatch(listing.RawText,
+                @"فروخته\s*شد|فروش\s*رفت|sold", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            return ("SOLD_AD", "این خودرو فروخته شده و در قیمت جاری مشارکت نمی‌کند.");
+        }
 
         return null;
     }
@@ -63,18 +69,30 @@ public static class TelegramMarketPriceCalculator
                 }
             }
 
-            var samples = originals.Values.OrderBy(listing => listing.Id).ToArray();
+            // A channel contributes at most one latest advertisement per vehicle/day.
+            var channelSamples = originals.Values.GroupBy(listing => listing.ChannelId)
+                .Select(channel => channel.OrderByDescending(listing => listing.PublishedAt)
+                    .ThenByDescending(listing => listing.Id).First()).ToArray();
+            // The median is only a robust reference for flagging extreme observations;
+            // the published reference price is always the arithmetic mean.
+            var ordered = channelSamples.Select(listing => listing.NormalizedPrice!.Value).Order().ToArray();
+            var middle = ordered.Length / 2;
+            var median = ordered.Length % 2 == 1 ? ordered[middle] : (ordered[middle - 1] + ordered[middle]) / 2m;
+            var outliers = channelSamples.Length >= 3
+                ? channelSamples.Where(listing => listing.NormalizedPrice < median / 2m
+                    || listing.NormalizedPrice > median * 2m).ToArray() : [];
+            var excludedIds = outliers.Select(listing => listing.Id).ToHashSet();
+            var samples = channelSamples.Where(listing => !excludedIds.Contains(listing.Id)).ToArray();
             var average = ReferencePrice(samples.Select(listing => listing.NormalizedPrice!.Value));
-            yield return new TelegramMarketPriceGroup(originals.Values.ToArray(), samples, duplicates, average);
+            yield return new TelegramMarketPriceGroup(originals.Values.ToArray(), samples, duplicates, outliers, average);
         }
     }
 
     public static decimal ReferencePrice(IEnumerable<decimal> prices)
     {
-        var ordered = prices.OrderBy(price => price).ToArray();
-        if (ordered.Length == 0) throw new ArgumentException("At least one valid price is required.", nameof(prices));
-        var middle = ordered.Length / 2;
-        return decimal.Round(ordered.Length % 2 == 1 ? ordered[middle]
-            : (ordered[middle - 1] + ordered[middle]) / 2m, 2, MidpointRounding.AwayFromZero);
+        var values = prices.ToArray();
+        if (values.Length == 0 || values.Any(price => price <= 0))
+            throw new ArgumentException("At least one positive price is required.", nameof(prices));
+        return decimal.Round(values.Average(), 2, MidpointRounding.AwayFromZero);
     }
 }

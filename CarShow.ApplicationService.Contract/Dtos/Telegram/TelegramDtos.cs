@@ -25,7 +25,11 @@ public sealed record TelegramChannelDto(
     int NeedsReviewListings = 0,
     int WaitingComparisonListings = 0,
     int ValidPriceListings = 0,
-    int IgnoredMessages = 0);
+    int IgnoredMessages = 0,
+    int ValidNameListings = 0,
+    int ComparedListings = 0,
+    int ReferencePriceGroups = 0,
+    DateTime? LastCalculationAt = null);
 public sealed record TelegramChannelSummaryDto(
     int TotalChannels,
     int Active,

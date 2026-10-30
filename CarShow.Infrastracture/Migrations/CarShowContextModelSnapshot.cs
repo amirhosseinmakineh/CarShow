@@ -36,7 +36,7 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<long?>("CategoryId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("CompanyId")
+                    b.Property<long?>("CompanyId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("Description")
@@ -382,6 +382,25 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.Property<DateTime>("ExtractedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("ExtractionStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("NameValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("PriceValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("RawCarName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<int>("ExtractionVersion")
                         .HasColumnType("int");
@@ -817,8 +836,7 @@ namespace CarShow.Infrastracture.Migrations
                     b.HasOne("CarShow.Domain.Models.Company", "Company")
                         .WithMany("Cars")
                         .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CarShow.Domain.Models.Tip", "Tip")
                         .WithMany("Cars")
