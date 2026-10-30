@@ -19,7 +19,7 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
     {
         vehicleNames = new TelegramVehicleNames(configuration);
     }
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
     private static readonly Regex PriceRegex = new(
         @"(?:قیمت(?:\s+(?:فروش|نقدی|کل))?|price)\s*[:：=💰💵💶💸🔴🟢]*\s*([-+]?(?:[0-9]{1,3}(?:[. \u00a0\u202f][0-9]{3}){2,}|[0-9,٬]+(?:[.٫][0-9]+)?))\s*(میلیارد|میلیون|هزار|م(?![\p{L}\p{N}]))?(?:\s*و\s*([0-9,٬]+)\s*(میلیون|هزار))?\s*(تومان|ریال|تومن|IRR|IRT)?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -66,9 +66,9 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             "تومان" or "تومن" or "IRT" => "IRT",
             "ریال" or "IRR" => "IRR",
             // A price explicitly scaled as millions/billions is conventionally in toman.
-            // A full bare amount is accepted only when labelled as a cash/full price.
+            // A full amount labelled as a price uses the local toman convention.
             _ when multiplier >= 1_000_000m => "IRT",
-            _ when priceMatch.Value.Contains("قیمت نقدی", StringComparison.Ordinal) && price >= 100_000_000m => "IRT",
+            _ when price >= 100_000_000m => "IRT",
             _ => null
         };
         if (priceMatches.Count != 1 || Regex.IsMatch(text, @"توافقی|تماس بگیرید|قیمت در دایرکت", RegexOptions.IgnoreCase)
@@ -118,9 +118,8 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
         var normalizedModel = NormalizeModelName(carName, manufacturer);
         var normalizedTrim = string.IsNullOrWhiteSpace(trim) ? null : CarListingMatcher.NormalizeTrim(trim);
         var comparisonKey = normalizedModel is not null
-            && year is not null && GetCondition(text, mileage) is not null
-            ? CarListingMatcher.BuildComparisonKey(manufacturer, normalizedModel, normalizedTrim, year.Value,
-                yearCalendar!, GetCondition(text, mileage)!.Value, mileage)
+            ? CarListingMatcher.BuildComparisonKey(manufacturer, normalizedModel, normalizedTrim, year,
+                yearCalendar, GetCondition(text, mileage), mileage)
             : null;
 
         var listing = new CarListing
@@ -164,9 +163,8 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
         }
         else if (listing.ComparisonKey is null)
         {
-            listing.ReasonCode = ambiguousName ? "CAR_NAME_AMBIGUOUS" : normalizedModel is null ? "CAR_NAME_MISSING"
-                : year is null ? "YEAR_MISSING" : "CONDITION_UNKNOWN";
-            listing.MatchReason = "نام، سال یا وضعیت خودرو به‌طور قابل‌تأیید کامل نیست.";
+            listing.ReasonCode = ambiguousName ? "CAR_NAME_AMBIGUOUS" : "CAR_NAME_MISSING";
+            listing.MatchReason = "نام خودرو به‌طور قابل‌تأیید مشخص نیست.";
         }
         return listing;
     }

@@ -119,9 +119,7 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 && x.ComparisonStatus == "Compared"
                 && x.NormalizedPrice > 0
                 && x.SourceUrl != null
-                && x.Model != null
-                && x.Year != null
-                && x.IsUsed != null);
+                && x.Model != null);
         }
         return await query.OrderByDescending(x => x.Id).Skip(Math.Clamp(page, 0, 100000) * 100).Take(100)
             .Select(x => new TelegramObservationDto(x.Id, x.CarId, x.RawMessageId, x.SourceChannel,

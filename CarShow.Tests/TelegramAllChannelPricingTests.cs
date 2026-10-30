@@ -79,7 +79,7 @@ public sealed class TelegramAllChannelPricingTests
     }
 
     [Fact]
-    public async Task SeparatesConditionYearTrimAndDayAndExcludesIncompleteOrDeletedSources()
+    public async Task SeparatesKnownAndUnknownConditionYearTrimAndDayAndExcludesDeletedSources()
     {
         await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
         await using var scope = fixture.Services.CreateAsyncScope();
@@ -95,12 +95,13 @@ public sealed class TelegramAllChannelPricingTests
         incomplete.MessageText = "پژو 207 اتومات مدل: 1403 قیمت: 850 میلیون تومان";
         await db.SaveChangesAsync();
         await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
-        Assert.Equal(4, await db.Cars.CountAsync());
-        Assert.Equal(5, await db.CarPriceHistories.CountAsync());
-        Assert.Equal(1, await db.Cars.CountAsync(car => car.IsUsed));
+        Assert.Equal(5, await db.Cars.CountAsync());
+        Assert.Equal(6, await db.CarPriceHistories.CountAsync());
+        Assert.Equal(1, await db.Cars.CountAsync(car => car.IsUsed == true));
         Assert.All(await db.CarPriceHistories.ToListAsync(), history => Assert.Equal(1, history.SampleCount));
-        Assert.Equal(800000000m, (await db.Cars.SingleAsync(car => !car.IsUsed && car.Year == 1403 && car.Tip != null && car.Tip.Name == "اتومات")).MarketPrice);
-        Assert.Equal("CONDITION_UNKNOWN", (await db.CarListings.SingleAsync(listing => listing.RawMessageId == incomplete.Id)).ReasonCode);
+        Assert.Equal(800000000m, (await db.Cars.SingleAsync(car => car.IsUsed == false && car.Year == 1403 && car.Tip != null && car.Tip.Name == "اتومات")).MarketPrice);
+        Assert.Equal("Published", (await db.CarListings.SingleAsync(listing => listing.RawMessageId == incomplete.Id)).ProcessingStatus);
+        Assert.Equal(850000000m, (await db.Cars.SingleAsync(car => car.IsUsed == null)).MarketPrice);
     }
 
     [Fact]

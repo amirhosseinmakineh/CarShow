@@ -91,7 +91,7 @@ internal sealed class TelegramVehicleCatalog
             Company = company,
             CarModel = model,
             Tip = trim,
-            IsUsed = listing.IsUsed!.Value,
+            IsUsed = listing.IsUsed,
             Year = listing.Year,
             YearCalendar = listing.YearCalendar,
             TelegramIdentityKey = identity,

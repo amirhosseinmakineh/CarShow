@@ -121,8 +121,9 @@ public sealed class TelegramReprocessingTests
             Message(channel, "2", "پژو 207 اتومات مدل: 1403 قیمت: 850 میلیون تومان"))!;
         CarListingMatcher.Match(candidate, []);
         Assert.Equal(850000000m, candidate.NormalizedPrice);
-        Assert.Equal("CONDITION_UNCLEAR", candidate.ReasonCode);
-        Assert.Equal("NeedsReview", candidate.MatchStatus);
+        Assert.Equal("CATALOG_ENTRY_PENDING", candidate.ReasonCode);
+        Assert.Equal("Unmatched", candidate.MatchStatus);
+        Assert.NotNull(candidate.ComparisonKey);
     }
 
     [Theory]

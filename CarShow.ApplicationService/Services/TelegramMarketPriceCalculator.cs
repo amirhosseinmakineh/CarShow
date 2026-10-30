@@ -22,19 +22,13 @@ public static class TelegramMarketPriceCalculator
         {
             return ("OUTSIDE_PRICE_WINDOW", "پیام قدیمی است و در محاسبه قیمت روز وارد نمی‌شود.");
         }
-        if (string.IsNullOrWhiteSpace(listing.Model)
-            || listing.Year is null || listing.YearCalendar is null
-            || listing.IsUsed is null || listing.ComparisonKey is null)
+        if (string.IsNullOrWhiteSpace(listing.Model) || listing.ComparisonKey is null)
         {
             return ("COMPARISON_FIELDS_INCOMPLETE", "مشخصات لازم برای مقایسه خودرو کامل نیست.");
         }
         if (listing.Price is null or <= 0 || listing.NormalizedPrice is null or <= 0 || listing.Currency is not ("IRT" or "IRR"))
         {
             return ("PRICE_INVALID_OR_AMBIGUOUS", "قیمت و واحد پول معتبر برای مقایسه مشخص نیست.");
-        }
-        if (listing.IsUsed == true && listing.Mileage is null or <= 0)
-        {
-            return ("MISSING_MILEAGE", "کارکرد خودرو برای مقایسه مشخص نشده است.");
         }
         if (string.IsNullOrWhiteSpace(listing.SourceUrl))
         {

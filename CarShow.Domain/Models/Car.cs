@@ -2,7 +2,7 @@ namespace CarShow.Domain.Models
 {
     public class Car : BaseEntity<long>
     {
-        public bool IsUsed { get; set; }
+        public bool? IsUsed { get; set; }
         // Telegram-derived catalog identity is scoped by year to prevent price histories
         // for different model years from being combined. Null is retained for legacy cars.
         public int? Year { get; set; }
