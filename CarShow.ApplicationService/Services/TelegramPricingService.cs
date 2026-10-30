@@ -228,15 +228,14 @@ public sealed class TelegramPricingService(
         var listings = await store.Listings
             .Where(listing => !listing.IsDelete && listing.ComparisonKey != null
                 && listing.NormalizedPrice > 0 && listing.Currency != null
-                && listing.Model != null && registeredChannels.Contains(listing.ChannelId)
-                && (listing.PriceDay >= cutoff || listing.ProcessingStatus == "Published"))
+                && listing.Model != null && registeredChannels.Contains(listing.ChannelId))
             .ToListAsync(cancellationToken);
         var rawById = await LoadRawMessagesAsync(listings, cancellationToken);
         var eligible = new List<CarListing>(listings.Count);
 
         foreach (var listing in listings)
         {
-            var reason = TelegramMarketPriceCalculator.ValidationFailure(listing, nowUtc, cutoff);
+            var reason = TelegramMarketPriceCalculator.ValidationFailure(listing, nowUtc);
             if (reason is not null)
             {
                 MarkExcluded(listing, reason.Value.Code, reason.Value.Message, cutoff);
@@ -354,7 +353,7 @@ public sealed class TelegramPricingService(
         var cutoff = OpenWindowStart(nowUtc);
         var observations = await store.Listings.Where(x => !x.IsDelete && x.Car != null && !x.Car.IsDelete && x.MatchStatus == "Matched"
             && x.ComparisonStatus == "Compared" && x.ValidPriceSourceCount > 0
-            && x.ComparisonKey != null && x.CarId != null && x.PriceDay >= cutoff && x.NormalizedPrice > 0
+            && x.ComparisonKey != null && x.CarId != null && x.NormalizedPrice > 0
             && store.Channels.Any(channel => channel.Id == x.ChannelId && !channel.IsDelete))
             .ToListAsync(cancellationToken);
         var histories = await store.History.Where(x => x.PriceDay != null && (!x.IsFinal || x.PriceDay >= cutoff))

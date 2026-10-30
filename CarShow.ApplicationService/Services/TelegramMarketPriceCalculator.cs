@@ -12,15 +12,11 @@ public sealed record TelegramMarketPriceGroup(
 /// <summary>Pure pricing rules: same identity/day, unique advertisements, one latest sample per channel.</summary>
 public static class TelegramMarketPriceCalculator
 {
-    public static (string Code, string Message)? ValidationFailure(CarListing listing, DateTime nowUtc, DateOnly cutoff)
+    public static (string Code, string Message)? ValidationFailure(CarListing listing, DateTime nowUtc)
     {
         if (listing.PriceDay is null || listing.PublishedAt is null || listing.PublishedAt > nowUtc.AddMinutes(5))
         {
             return ("PUBLICATION_DATE_INVALID", "تاریخ انتشار پیام معتبر نیست.");
-        }
-        if (listing.PriceDay < cutoff)
-        {
-            return ("OUTSIDE_PRICE_WINDOW", "پیام قدیمی است و در محاسبه قیمت روز وارد نمی‌شود.");
         }
         if (string.IsNullOrWhiteSpace(listing.Model) || listing.ComparisonKey is null)
         {
@@ -30,20 +26,6 @@ public static class TelegramMarketPriceCalculator
         {
             return ("PRICE_INVALID_OR_AMBIGUOUS", "قیمت و واحد پول معتبر برای مقایسه مشخص نیست.");
         }
-        if (string.IsNullOrWhiteSpace(listing.SourceUrl))
-        {
-            return ("MISSING_SOURCE_LINK", "لینک پیام اصلی در دسترس نیست.");
-        }
-        if (listing.ReasonCode == "IDENTITY_AMBIGUOUS")
-        {
-            return ("IDENTITY_AMBIGUOUS", "بیش از یک خودرو با این مشخصات ثبت شده است.");
-        }
-        if (System.Text.RegularExpressions.Regex.IsMatch(listing.RawText,
-                @"فروخته\s*شد|فروش\s*رفت|sold", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-        {
-            return ("SOLD_AD", "این خودرو فروخته شده و در قیمت جاری مشارکت نمی‌کند.");
-        }
-
         return null;
     }
 
@@ -67,14 +49,9 @@ public static class TelegramMarketPriceCalculator
             var channelSamples = originals.Values.GroupBy(listing => listing.ChannelId)
                 .Select(channel => channel.OrderByDescending(listing => listing.PublishedAt)
                     .ThenByDescending(listing => listing.Id).First()).ToArray();
-            // The median is only a robust reference for flagging extreme observations;
-            // the published reference price is always the arithmetic mean.
-            var ordered = channelSamples.Select(listing => listing.NormalizedPrice!.Value).Order().ToArray();
-            var middle = ordered.Length / 2;
-            var median = ordered.Length % 2 == 1 ? ordered[middle] : (ordered[middle - 1] + ordered[middle]) / 2m;
-            var outliers = channelSamples.Length >= 3
-                ? channelSamples.Where(listing => listing.NormalizedPrice < median / 2m
-                    || listing.NormalizedPrice > median * 2m).ToArray() : [];
+            // Registration must preserve every listing with a recognized name and valid price.
+            // Price outlier review must not prevent the car or its observed price from being stored.
+            var outliers = Array.Empty<CarListing>();
             var excludedIds = outliers.Select(listing => listing.Id).ToHashSet();
             var samples = channelSamples.Where(listing => !excludedIds.Contains(listing.Id)).ToArray();
             var average = ReferencePrice(samples.Select(listing => listing.NormalizedPrice!.Value));

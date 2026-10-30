@@ -99,7 +99,7 @@ internal sealed class TelegramVehicleCatalog
                 .Where(part => !string.IsNullOrWhiteSpace(part))),
             Slug = $"telegram-{digest}",
             ImageName = listing.PrimaryImageUrl ?? string.Empty,
-            SourceUrl = listing.SourceUrl!,
+            SourceUrl = listing.SourceUrl ?? string.Empty,
             LastUpdated = nowUtc,
             MarketPrice = 0,
             FactoryPrice = 0,
