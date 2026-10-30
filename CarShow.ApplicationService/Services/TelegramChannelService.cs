@@ -21,7 +21,8 @@ public sealed class TelegramChannelService(
     {
         var channels = await channelRepository.GetAll().AsNoTracking().Where(x => !x.IsDelete)
             .OrderByDescending(x => x.CreatedAt).Select(ToDto).ToListAsync(cancellationToken);
-        var stats = await processingStore.Listings.AsNoTracking().Where(x => !x.IsDelete && !x.Channel.IsDelete)
+        var stats = await processingStore.Listings.AsNoTracking().Where(x => !x.IsDelete
+            && processingStore.Channels.Any(channel => channel.Id == x.ChannelId && !channel.IsDelete))
             .GroupBy(x => x.ChannelId).Select(x => new
             {
                 x.Key,
