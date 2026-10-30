@@ -227,8 +227,7 @@ public sealed class TelegramPricingService(
         var registeredChannels = store.Channels.Where(channel => !channel.IsDelete).Select(channel => channel.Id);
         var listings = await store.Listings
             .Where(listing => !listing.IsDelete && listing.ComparisonKey != null
-                && listing.NormalizedPrice > 0 && listing.Currency != null && listing.IsUsed != null
-                && listing.Year != null && listing.YearCalendar != null
+                && listing.NormalizedPrice > 0 && listing.Currency != null
                 && listing.Model != null && registeredChannels.Contains(listing.ChannelId)
                 && (listing.PriceDay >= cutoff || listing.ProcessingStatus == "Published"))
             .ToListAsync(cancellationToken);

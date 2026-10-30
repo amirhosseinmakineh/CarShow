@@ -68,7 +68,6 @@ public sealed class TelegramPricingTests
     }
 
     [Theory]
-    [InlineData("پژو 207 اتومات صفر قیمت: 850 میلیون")]
     [InlineData("پژو 207 اتومات صفر قیمت: 0 تومان")]
     [InlineData("پژو 207 اتومات صفر قیمت: -850 تومان")]
     [InlineData("پژو 207 اتومات صفر قیمت: توافقی")]

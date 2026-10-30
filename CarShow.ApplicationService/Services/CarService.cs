@@ -92,17 +92,17 @@ namespace CarShow.ApplicationService.Services
             return Result<string>.Success("اتوموبیل با موفقیت حذف شد");
         }
 
-        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, bool isUsed = false, int? pageSize = 10, int? pageNumber = 0, string? model = null, string? trim = null, int? year = null, int? minMileage = null, int? maxMileage = null, string? sort = null)
+        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, bool? isUsed = null, int? pageSize = 10, int? pageNumber = 0, string? model = null, string? trim = null, int? year = null, int? minMileage = null, int? maxMileage = null, string? sort = null)
         {
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
-            var query = carRepository.GetAll().Where(car => !car.IsDelete && car.IsUsed == isUsed
+            var query = carRepository.GetAll().Where(car => !car.IsDelete && (isUsed == null || car.IsUsed == isUsed)
                 && (car.TelegramIdentityKey == null || (car.MarketPrice > 0 && car.PriceSampleCount > 0
                     && processingStore.Listings.Any(listing => !listing.IsDelete
                         && processingStore.Channels.Any(channel => channel.Id == listing.ChannelId && !channel.IsDelete)
                         && listing.CarId == car.Id && listing.ProcessingStatus == "Published"))));
-            var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && x.IsUsed == isUsed);
+            var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && (isUsed == null || x.IsUsed == isUsed));
             if (!string.IsNullOrWhiteSpace(model)) query = query.Where(c => c.Name.Contains(model) || c.CarModel.Name.Contains(model));
             if (!string.IsNullOrWhiteSpace(trim)) query = query.Where(c => c.Tip != null && c.Tip.Name.Contains(trim));
             if (year.HasValue)

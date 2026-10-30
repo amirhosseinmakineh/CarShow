@@ -53,7 +53,7 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsUsed")
+                    b.Property<bool?>("IsUsed")
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("LastUpdated")
