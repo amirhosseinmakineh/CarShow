@@ -148,15 +148,15 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<long>("CarId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ConfidenceLevel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("FactoryPrice")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ConfidenceLevel")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("IndependentSourceCount")
                         .HasColumnType("int");
@@ -388,20 +388,6 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
-                    b.Property<string>("NameValidationStatus")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("PriceValidationStatus")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("RawCarName")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
                     b.Property<int>("ExtractionVersion")
                         .HasColumnType("int");
 
@@ -439,6 +425,11 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<string>("Model")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("NameValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<decimal?>("NormalizedPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -454,6 +445,11 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("PriceValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("PrimaryImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -464,6 +460,10 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("RawCarName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<long?>("RawMessageId")
                         .HasColumnType("bigint");
@@ -821,6 +821,266 @@ namespace CarShow.Infrastracture.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleImportRun", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Accepted")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("Before")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Duplicates")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<int>("MessageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("NextBefore")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("PagesFetched")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PriceGroups")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rejected")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RejectionCounts")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("Scanned")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("StopReason")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("Stored")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Channel", "Status");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("ZeroVehicleImportRuns", (string)null);
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleListing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ExternalMessageId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("ModelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("PriceToman")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PricingStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RawText")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<long>("TrimId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublishedAt");
+
+                    b.HasIndex("Channel", "ExternalMessageId")
+                        .IsUnique();
+
+                    b.HasIndex("TrimId", "ModelId");
+
+                    b.HasIndex("ModelId", "TrimId", "PublishedAt");
+
+                    b.ToTable("ZeroVehicleListings", (string)null);
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Aliases")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("ZeroVehicleModels", (string)null);
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehiclePriceGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CalculatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<decimal>("MaxPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MinPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("ModelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("ReferencePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SampleCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SourceCount")
+                        .HasColumnType("int");
+
+                    b.Property<long>("TrimId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelId", "TrimId")
+                        .IsUnique();
+
+                    b.HasIndex("TrimId", "ModelId");
+
+                    b.ToTable("ZeroVehiclePriceGroups", (string)null);
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleTrim", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Aliases")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<long>("ModelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ZeroVehicleTrims", (string)null);
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.Car", b =>
                 {
                     b.HasOne("CarShow.Domain.Models.CarModel", "CarModel")
@@ -957,6 +1217,57 @@ namespace CarShow.Infrastracture.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleListing", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleModel", "Model")
+                        .WithMany()
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleTrim", "Trim")
+                        .WithMany()
+                        .HasForeignKey("TrimId", "ModelId")
+                        .HasPrincipalKey("Id", "ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Model");
+
+                    b.Navigation("Trim");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehiclePriceGroup", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleModel", "Model")
+                        .WithMany()
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleTrim", "Trim")
+                        .WithMany()
+                        .HasForeignKey("TrimId", "ModelId")
+                        .HasPrincipalKey("Id", "ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Model");
+
+                    b.Navigation("Trim");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleTrim", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleModel", "Model")
+                        .WithMany("Trims")
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Model");
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.CarModel", b =>
                 {
                     b.Navigation("Cars");
@@ -995,6 +1306,11 @@ namespace CarShow.Infrastracture.Migrations
             modelBuilder.Entity("CarShow.Domain.Models.User", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleModel", b =>
+                {
+                    b.Navigation("Trims");
                 });
 #pragma warning restore 612, 618
         }

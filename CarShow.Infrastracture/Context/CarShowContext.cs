@@ -31,6 +31,7 @@ namespace CarShow.Infrastracture.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            ZeroVehicleConfiguration.Configure(modelBuilder);
 
             // The initial database migration created this column as TipName.
             // Keep the CLR property named Name while targeting the existing schema.
