@@ -36,10 +36,11 @@ namespace CarShow.Controllers
             return Ok(dto);
         }
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCar(long id)
         {
            var result = await servicce.DeleteCar(id);
-            return Ok(result);
+            return result.IsSuccess ? NoContent() : NotFound(result);
         }
         [HttpGet("GetCarDetail/{carId}")] // حذف /{carId} از اینجا
         public async Task<IActionResult> GetCarDetail(long carId) // اضافه کردن FromQuery

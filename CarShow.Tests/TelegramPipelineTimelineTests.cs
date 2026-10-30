@@ -12,6 +12,60 @@ namespace CarShow.Tests;
 public sealed class TelegramPipelineTimelineTests
 {
     [Fact]
+    public async Task RemovingLastChannelHidesHistoricalCountersAndTimelineWithoutErasingAuditRows()
+    {
+        await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITelegramChannelService>();
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        await service.ImportAsync(new("@reset_channel"), default);
+        var channel = Assert.Single(await service.GetChannelsAsync(default));
+        db.TelegramRawMessages.Add(new TelegramRawMessage
+        {
+            ChannelId = channel.Id, ExternalMessageId = "1", MessageText = "test",
+            MessageDate = DateTime.UtcNow, ProcessingStatus = "Ignored"
+        });
+        db.CarListings.Add(new CarListing
+        {
+            ChannelId = channel.Id, SourceChannel = channel.Identifier,
+            SourceMessageId = "1", MatchStatus = "NeedsReview"
+        });
+        await db.SaveChangesAsync();
+
+        Assert.Equal(1, (await service.GetSummaryAsync(default)).MessagesCollected);
+        Assert.Equal(1, (await service.GetSummaryAsync(default)).ListingsExtracted);
+        Assert.True(await service.DeleteAsync(channel.Id, default));
+
+        var summary = await service.GetSummaryAsync(default);
+        Assert.Equal(0, summary.TotalChannels);
+        Assert.Equal(0, summary.MessagesCollected);
+        Assert.Equal(0, summary.ListingsExtracted);
+        Assert.Equal(1, summary.StoredListingsIncludingRemovedChannels);
+        Assert.Equal(0, summary.IgnoredMessages);
+        var queries = new TelegramPricingQueries(scope.ServiceProvider.GetRequiredService<ITelegramProcessingStore>());
+        Assert.Equal("NotStarted", (await queries.PipelineTimelineAsync(default)).Status);
+        Assert.Empty(await queries.ObservationsAsync("NeedsReview", 0, default));
+        Assert.Single(await db.TelegramRawMessages.ToListAsync());
+        Assert.Single(await db.CarListings.ToListAsync());
+    }
+
+    [Fact]
+    public async Task TimelineCountsOnlyChannelsStillRegisteredInTheCurrentRun()
+    {
+        await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITelegramChannelService>();
+        await service.ImportAsync(new("@first_channel @other_channel"), default);
+        var channels = await service.GetChannelsAsync(default);
+        Assert.True(await service.DeleteAsync(channels[0].Id, default));
+
+        var queries = new TelegramPricingQueries(scope.ServiceProvider.GetRequiredService<ITelegramProcessingStore>());
+        var timeline = await queries.PipelineTimelineAsync(default);
+        Assert.Equal(1, timeline.TotalChannels);
+        Assert.Equal("InProgress", timeline.Status);
+    }
+
+    [Fact]
     public async Task TimelineWaitsForEveryChannelAndPricingBeforeFinishing()
     {
         await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();

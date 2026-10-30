@@ -69,4 +69,18 @@ public sealed class TelegramPricingController(ITelegramPricingQueries queries, T
     {
         return Ok(await queries.PricesAsync(carId, page, cancellationToken));
     }
+
+    [HttpDelete("state")]
+    public async Task<IActionResult> ClearLastCalculation(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await management.ClearLastCalculationAsync(cancellationToken);
+        }
+        catch (TelegramProcessingBusyException)
+        {
+            return Conflict(new { message = "پردازش در حال اجراست. چند لحظه دیگر دوباره تلاش کنید." });
+        }
+        return NoContent();
+    }
 }
