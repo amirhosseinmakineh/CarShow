@@ -118,7 +118,6 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 && x.ProcessingStatus == "Published"
                 && x.ComparisonStatus == "Compared"
                 && x.NormalizedPrice > 0
-                && x.SourceUrl != null
                 && x.Model != null);
         }
         return await query.OrderByDescending(x => x.Id).Skip(Math.Clamp(page, 0, 100000) * 100).Take(100)
