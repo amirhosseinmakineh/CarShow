@@ -100,7 +100,7 @@ public sealed class TelegramAllChannelPricingTests
         Assert.Equal(1, await db.Cars.CountAsync(car => car.IsUsed));
         Assert.All(await db.CarPriceHistories.ToListAsync(), history => Assert.Equal(1, history.SampleCount));
         Assert.Equal(800000000m, (await db.Cars.SingleAsync(car => !car.IsUsed && car.Year == 1403 && car.Tip != null && car.Tip.Name == "اتومات")).MarketPrice);
-        Assert.Equal("CONDITION_UNCLEAR", (await db.CarListings.SingleAsync(listing => listing.RawMessageId == incomplete.Id)).ReasonCode);
+        Assert.Equal("CONDITION_UNKNOWN", (await db.CarListings.SingleAsync(listing => listing.RawMessageId == incomplete.Id)).ReasonCode);
     }
 
     [Fact]

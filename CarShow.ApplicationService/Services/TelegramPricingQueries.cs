@@ -46,8 +46,8 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
             {
                 Parsed = group.Count(listing => listing.MatchStatus != "Ignored"),
                 ParsedAt = group.Max(listing => (DateTime?)listing.ExtractedAt),
-                Validated = group.Count(listing => listing.ValidatedAt != null),
-                ValidatedAt = group.Max(listing => listing.ValidatedAt),
+                Validated = group.Count(listing => listing.ExtractionStatus == "Validated"),
+                ValidatedAt = group.Max(listing => listing.ExtractionStatus == "Validated" ? listing.ValidatedAt : null),
                 Compared = group.Count(listing => listing.ComparedAt != null),
                 ComparedAt = group.Max(listing => listing.ComparedAt),
                 Stored = group.Count(listing => listing.ProcessingStatus == "Published" && listing.StoredAt != null),
@@ -75,9 +75,9 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 candidates?.ParsedAt, candidates?.Parsed ?? 0),
             new("Validated", candidates?.Validated > 0 ? "Completed" : finished ? "NoData" : "Waiting",
                 candidates?.ValidatedAt, candidates?.Validated ?? 0),
-            new("Pricing", finished ? candidates?.Validated > 0 ? "Completed" : "NoData"
+            new("Pricing", finished ? candidates?.Compared > 0 ? "Completed" : "NoData"
                 : collectionFinished ? "InProgress" : "Waiting",
-                finished ? state.RunCompletedAt : null, candidates?.Validated ?? 0),
+                finished ? state.RunCompletedAt : null, candidates?.Compared ?? 0),
             new("Compared", candidates?.Compared > 0 ? "Completed" : finished ? "NoData" : "Waiting",
                 candidates?.ComparedAt, candidates?.Compared ?? 0),
             new("Stored", candidates?.Stored > 0 ? "Completed" : finished ? "NoData" : "Waiting",
@@ -119,7 +119,6 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 && x.ComparisonStatus == "Compared"
                 && x.NormalizedPrice > 0
                 && x.SourceUrl != null
-                && x.Manufacturer != null
                 && x.Model != null
                 && x.Year != null
                 && x.IsUsed != null);
@@ -130,7 +129,8 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 x.PublishedAt, x.ReceivedAt, x.PriceDay, x.MatchStatus, x.MatchReason, x.Manufacturer, x.PrimaryImageUrl,
                 x.ComparisonStatus, x.ComparisonAveragePrice, x.ComparedChannelCount, x.ValidPriceSourceCount,
                 x.ProcessingStatus, x.ReasonCode, x.Year, x.Mileage, x.IsUsed, x.Trim,
-                x.Model, x.PriceText, x.YearCalendar, x.ComparisonReason, x.ExtractionVersion, registeredChannelCount))
+                x.Model, x.PriceText, x.YearCalendar, x.ComparisonReason, x.ExtractionVersion, registeredChannelCount,
+                x.RawCarName, x.ExtractionStatus, x.NameValidationStatus, x.PriceValidationStatus))
             .ToListAsync(cancellationToken);
     }
 

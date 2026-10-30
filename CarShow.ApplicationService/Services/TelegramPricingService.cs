@@ -126,6 +126,10 @@ public sealed class TelegramPricingService(
                     listing.RawMessageId = message.Id;
                     listing.ValidatedAt = nowUtc;
                     listing.MatchStatus = listing.ProcessingStatus = "Ignored";
+                    listing.ExtractionStatus = "Rejected";
+                    listing.NameValidationStatus = "NeedsReview";
+                    listing.PriceValidationStatus = "NeedsReview";
+                    listing.RawCarName = null;
                     listing.ReasonCode = "NON_VEHICLE_MESSAGE";
                     listing.MatchReason = message.ProcessingError;
                     listing.Model = listing.Manufacturer = listing.Trim = null;
@@ -157,6 +161,10 @@ public sealed class TelegramPricingService(
     private static void CopyExtraction(CarListing source, CarListing target)
     {
         target.Model = source.Model;
+        target.RawCarName = source.RawCarName;
+        target.ExtractionStatus = source.ExtractionStatus;
+        target.NameValidationStatus = source.NameValidationStatus;
+        target.PriceValidationStatus = source.PriceValidationStatus;
         target.Brand = source.Brand;
         target.Manufacturer = source.Manufacturer;
         target.Trim = source.Trim;
@@ -220,7 +228,7 @@ public sealed class TelegramPricingService(
         var listings = await store.Listings
             .Where(listing => !listing.IsDelete && listing.ComparisonKey != null
                 && listing.NormalizedPrice > 0 && listing.Currency != null && listing.IsUsed != null
-                && listing.Year != null && listing.YearCalendar != null && listing.Manufacturer != null
+                && listing.Year != null && listing.YearCalendar != null
                 && listing.Model != null && registeredChannels.Contains(listing.ChannelId)
                 && (listing.PriceDay >= cutoff || listing.ProcessingStatus == "Published"))
             .ToListAsync(cancellationToken);
@@ -252,6 +260,12 @@ public sealed class TelegramPricingService(
                 SetRawStatus(rawById, duplicate, duplicate.ProcessingStatus, duplicate.MatchReason);
             }
 
+            foreach (var outlier in group.Outliers)
+            {
+                MarkExcluded(outlier, "PRICE_OUTLIER", "قیمت نسبت به نمونه‌های همین خودرو و روز غیرعادی است و نیاز به بررسی دارد.", cutoff);
+                SetRawStatus(rawById, outlier, outlier.ProcessingStatus, outlier.MatchReason);
+            }
+
             var representative = group.Samples[0];
             if (removedIdentities.Contains(representative.ComparisonKey!))
             {
@@ -270,7 +284,7 @@ public sealed class TelegramPricingService(
         foreach (var (group, car) in assignments)
         {
             var sampleIds = group.Samples.Select(sample => sample.Id).ToHashSet();
-            foreach (var listing in group.Observations)
+            foreach (var listing in group.Observations.Except(group.Outliers))
             {
                 var included = sampleIds.Contains(listing.Id);
                 listing.CarId = car.Id;
@@ -278,7 +292,7 @@ public sealed class TelegramPricingService(
                 listing.ValidPriceSourceCount = group.Samples.Count;
                 listing.ComparisonAveragePrice = group.Average;
                 listing.ComparisonStatus = included ? "Compared" : "Superseded";
-                listing.ComparisonReason = $"میانهٔ {group.Samples.Count} آگهی معتبر از {group.Samples.Select(sample => sample.ChannelId).Distinct().Count()} کانال برای همین خودرو و روز.";
+                listing.ComparisonReason = $"میانگین حسابی {group.Samples.Count} آگهی معتبر از {group.Samples.Select(sample => sample.ChannelId).Distinct().Count()} کانال برای همین خودرو و روز.";
                 listing.ComparedAt = nowUtc;
                 listing.MatchStatus = "Matched";
                 listing.MatchReason = included ? "قیمت معتبر در میانگین روزانه وارد شد."
@@ -386,7 +400,8 @@ public sealed class TelegramPricingService(
             return;
         }
         var distinct = observations.GroupBy(x => x.Fingerprint ?? $"message:{x.ChannelId}:{x.SourceMessageId}")
-            .Select(x => x.First()).ToList();
+            .Select(x => x.First()).GroupBy(x => x.ChannelId)
+            .Select(channel => channel.OrderByDescending(x => x.PublishedAt).ThenByDescending(x => x.Id).First()).ToList();
         var average = TelegramMarketPriceCalculator.ReferencePrice(distinct.Select(x => x.NormalizedPrice!.Value));
         if (history is null)
         {

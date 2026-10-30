@@ -64,6 +64,10 @@ public sealed class CarListing : BaseEntity<long>
     public string? ReasonCode { get; set; }
     public DateTime? ValidatedAt { get; set; }
     public string? Manufacturer { get; set; }
+    public string? RawCarName { get; set; }
+    public string ExtractionStatus { get; set; } = "Extracted";
+    public string NameValidationStatus { get; set; } = "NeedsReview";
+    public string PriceValidationStatus { get; set; } = "NeedsReview";
     public string ProcessingStatus { get; set; } = "Pending";
     public string? ComparisonStatus { get; set; }
     public string? ComparisonReason { get; set; }

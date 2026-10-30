@@ -52,15 +52,19 @@ internal sealed class TelegramVehicleCatalog
             return existing;
         }
 
-        var companyName = listing.Manufacturer!.Trim();
+        var companyName = listing.Manufacturer?.Trim();
         var modelName = listing.Model!.Trim();
         var trimName = listing.Trim?.Trim();
-        var companyKey = CarListingMatcher.Normalize(companyName);
-        if (!companies.TryGetValue(companyKey, out var company))
+        Company? company = null;
+        if (!string.IsNullOrWhiteSpace(companyName))
         {
-            company = new Company { Name = companyName, IsDelete = false };
-            companies.Add(companyKey, company);
-            store.Add(company);
+            var companyKey = CarListingMatcher.Normalize(companyName);
+            if (!companies.TryGetValue(companyKey, out company))
+            {
+                company = new Company { Name = companyName, IsDelete = false };
+                companies.Add(companyKey, company);
+                store.Add(company);
+            }
         }
         var modelKey = CarListingMatcher.Normalize(modelName);
         if (!models.TryGetValue(modelKey, out var model))

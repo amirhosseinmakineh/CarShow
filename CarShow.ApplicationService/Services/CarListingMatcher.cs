@@ -9,7 +9,7 @@ namespace CarShow.ApplicationService.Services;
 
 public static class CarListingMatcher
 {
-    public static string BuildComparisonKey(string manufacturer, string model, string? trim, int year, string yearCalendar, bool isUsed, int? mileage = null)
+    public static string BuildComparisonKey(string? manufacturer, string model, string? trim, int year, string yearCalendar, bool isUsed, int? mileage = null)
     {
         var mileageRange = !isUsed ? "zero" : mileage switch
         {
@@ -20,7 +20,35 @@ public static class CarListingMatcher
             > 300_000 => "300001+",
             _ => "unknown"
         };
-        var identity = string.Join("|", Normalize(manufacturer), Normalize(model),
+        // Preserve the existing key format for known vehicles so old cars and
+        // histories remain reusable after the manufacturer becomes optional.
+        var canonical = Normalize(model);
+        var inferred = canonical.StartsWith("پژو ", StringComparison.Ordinal) ? "پژو"
+            : canonical.StartsWith("دنا", StringComparison.Ordinal)
+                || canonical.StartsWith("تارا", StringComparison.Ordinal)
+                || canonical.StartsWith("سمند", StringComparison.Ordinal)
+                || canonical.StartsWith("رانا", StringComparison.Ordinal)
+                || canonical.StartsWith("هایما", StringComparison.Ordinal) ? "ایران خودرو"
+            : canonical.StartsWith("kmc ", StringComparison.Ordinal) ? "کرمان موتور"
+            : canonical.StartsWith("شاهین", StringComparison.Ordinal)
+                || canonical.StartsWith("کوییک", StringComparison.Ordinal)
+                || canonical.StartsWith("ساینا", StringComparison.Ordinal)
+                || canonical.StartsWith("تیبا", StringComparison.Ordinal)
+                || canonical.StartsWith("پراید", StringComparison.Ordinal) ? "سایپا"
+            : canonical.StartsWith("جک ", StringComparison.Ordinal) ? "جک"
+            : canonical.StartsWith("کمری", StringComparison.Ordinal)
+                || canonical.StartsWith("کرولا", StringComparison.Ordinal) ? "تویوتا"
+            : canonical.StartsWith("توسان", StringComparison.Ordinal)
+                || canonical.StartsWith("سانتافه", StringComparison.Ordinal)
+                || canonical.StartsWith("النترا", StringComparison.Ordinal) ? "هیوندای"
+            : canonical.StartsWith("اسپورتیج", StringComparison.Ordinal)
+                || canonical.StartsWith("سراتو", StringComparison.Ordinal) ? "کیا" : null;
+        // Configured models without an established legacy brand use a neutral
+        // component whether or not a manufacturer was mentioned in the ad.
+        var brand = inferred ?? "?";
+        var name = canonical.StartsWith(brand + " ", StringComparison.Ordinal)
+            ? canonical[(brand.Length + 1)..] : canonical;
+        var identity = string.Join("|", brand, name,
             string.IsNullOrWhiteSpace(trim) ? "?" : NormalizeTrim(trim), yearCalendar,
             year.ToString(CultureInfo.InvariantCulture), isUsed ? "used" : "new");
         // Keep existing new-car identities stable; used cars require the mileage band.
@@ -67,7 +95,7 @@ public static class CarListingMatcher
         listing.MatchStatus = "Invalid";
         listing.ProcessingStatus = "Processing";
         listing.ValidatedAt = DateTime.UtcNow;
-        listing.ComparisonKey ??= listing.Manufacturer is not null && listing.Model is not null
+        listing.ComparisonKey ??= listing.Model is not null
             && listing.Year is not null && listing.YearCalendar is not null && listing.IsUsed is not null
                 ? BuildComparisonKey(listing.Manufacturer, listing.Model, listing.Trim, listing.Year.Value,
                     listing.YearCalendar, listing.IsUsed.Value, listing.Mileage)
@@ -83,13 +111,14 @@ public static class CarListingMatcher
             return;
         }
 
+        var extractionReason = listing.ReasonCode;
         listing.ReasonCode = null;
         listing.NormalizedPrice = listing.Currency == "IRR" ? listing.Price / 10m : listing.Price;
 
         if (listing.IsUsed is null)
         {
             listing.MatchReason = "قیمت استخراج شده است، اما صفر یا کارکرده بودن خودرو روشن نیست.";
-            listing.ReasonCode = "CONDITION_UNCLEAR";
+            listing.ReasonCode = "CONDITION_UNKNOWN";
             listing.MatchStatus = "NeedsReview";
             listing.ProcessingStatus = "NeedsReview";
             return;
@@ -98,13 +127,13 @@ public static class CarListingMatcher
         if (listing.ComparisonKey is null)
         {
             listing.MatchStatus = "NeedsReview";
-            listing.ReasonCode = string.IsNullOrWhiteSpace(listing.Manufacturer) ? "MANUFACTURER_MISSING"
-                : string.IsNullOrWhiteSpace(listing.Model) ? "MODEL_MISSING"
+            listing.ReasonCode = extractionReason == "CAR_NAME_AMBIGUOUS" ? extractionReason
+                : string.IsNullOrWhiteSpace(listing.Model) ? "CAR_NAME_MISSING"
                 : "YEAR_MISSING";
             listing.MatchReason = listing.ReasonCode switch
             {
-                "MANUFACTURER_MISSING" => "شرکت سازنده از متن یا نام معتبر شناسایی نشده است.",
-                "MODEL_MISSING" => "مدل خودرو مشخص نیست.",
+                "CAR_NAME_MISSING" => "نام خودرو مشخص نیست.",
+                "CAR_NAME_AMBIGUOUS" => "بیش از یک خودروی متفاوت در پیام دیده می‌شود.",
                 _ => "سال ساخت شمسی یا میلادی به‌طور روشن مشخص نشده است."
             };
             listing.ProcessingStatus = "NeedsReview";
@@ -135,7 +164,7 @@ public static class CarListingMatcher
         }
 
         listing.CarId = candidates[0].Id;
-        listing.Brand = candidates[0].Company.Name;
+        listing.Brand = candidates[0].Company?.Name;
         listing.Model = candidates[0].CarModel.Name;
         listing.Trim = candidates[0].Tip?.Name;
     }

@@ -31,7 +31,12 @@ public sealed class TelegramChannelService(
                 Failed = x.Count(y => y.ProcessingStatus == "Rejected" || y.ProcessingStatus == "Failed"),
                 Review = x.Count(y => y.ProcessingStatus == "NeedsReview"),
                 Waiting = x.Count(y => y.ProcessingStatus == "WaitingForComparableChannels"),
-                Priced = x.Count(y => y.NormalizedPrice > 0 && y.MatchStatus != "Ignored")
+                Priced = x.Count(y => y.NormalizedPrice > 0 && y.MatchStatus != "Ignored"),
+                Named = x.Count(y => y.NameValidationStatus == "Validated"),
+                Compared = x.Count(y => y.ComparisonStatus == "Compared"),
+                References = x.Where(y => y.ProcessingStatus == "Published" && y.CarId != null && y.PriceDay != null)
+                    .Select(y => new { y.CarId, y.PriceDay }).Distinct().Count(),
+                CalculatedAt = x.Max(y => y.ComparedAt)
             }).ToListAsync(cancellationToken);
         var ignored = await processingStore.Messages.AsNoTracking()
             .Where(x => !x.IsDelete && !x.Channel.IsDelete && x.ProcessingStatus == "Ignored")
@@ -45,6 +50,10 @@ public sealed class TelegramChannelService(
                 ProcessedListings = stat?.Processed ?? 0, FailedListings = stat?.Failed ?? 0,
                 NeedsReviewListings = stat?.Review ?? 0, WaitingComparisonListings = stat?.Waiting ?? 0,
                 ValidPriceListings = stat?.Priced ?? 0,
+                ValidNameListings = stat?.Named ?? 0,
+                ComparedListings = stat?.Compared ?? 0,
+                ReferencePriceGroups = stat?.References ?? 0,
+                LastCalculationAt = stat?.CalculatedAt,
                 IgnoredMessages = ignored.FirstOrDefault(x => x.Key == channel.Id)?.Count ?? 0
             };
         }).ToList();
@@ -70,7 +79,7 @@ public sealed class TelegramChannelService(
             await listings.Where(x => x.ComparisonStatus == "Compared" && x.ValidPriceSourceCount > 0 && x.Car != null && !x.Car.IsDelete).Select(x => x.CarId).Distinct().CountAsync(cancellationToken),
             await listings.CountAsync(x => x.ProcessingStatus == "Pending" || x.ProcessingStatus == "Processing" || x.ProcessingStatus == "NeedsReview" || x.ProcessingStatus == "WaitingForComparableChannels", cancellationToken),
             await listings.CountAsync(x => x.ProcessingStatus == "Rejected" || x.ProcessingStatus == "Failed", cancellationToken), await listings.CountAsync(x => x.PrimaryImageUrl == null, cancellationToken),
-            await listings.CountAsync(x => (x.Manufacturer == null || x.Manufacturer == "") && x.MatchStatus != "Matched", cancellationToken),
+            await listings.CountAsync(x => x.Manufacturer == null || x.Manufacturer == "", cancellationToken),
             await processingStore.Messages.CountAsync(x => !x.IsDelete && x.ProcessingStatus == "Ignored" && activeChannelIds.Contains(x.ChannelId), cancellationToken),
             await listings.CountAsync(x => x.NormalizedPrice > 0, cancellationToken),
             await processingStore.Listings.CountAsync(x => !x.IsDelete && x.MatchStatus != "Ignored", cancellationToken));
