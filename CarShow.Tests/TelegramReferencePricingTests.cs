@@ -33,7 +33,7 @@ public sealed class TelegramReferencePricingTests
         Assert.Null(listing.Trim);
         Assert.Null(listing.PrimaryImageUrl);
         Assert.Null(TelegramMarketPriceCalculator.ValidationFailure(listing,
-            new DateTime(2026, 10, 29, 9, 0, 0, DateTimeKind.Utc), new DateOnly(2026, 10, 29)));
+            new DateTime(2026, 10, 29, 9, 0, 0, DateTimeKind.Utc)));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class TelegramReferencePricingTests
     }
 
     [Fact]
-    public void ExtremePriceIsRetainedForReviewButExcludedFromArithmeticMean()
+    public void ExtremePriceIsRegisteredWithOtherValidPrices()
     {
         var listings = new[] { 800m, 900m, 9000m }.Select((price, index) => new CarListing
         {
@@ -115,8 +115,7 @@ public sealed class TelegramReferencePricingTests
             NormalizedPrice = price
         }).ToArray();
         var group = Assert.Single(TelegramMarketPriceCalculator.Compare(listings));
-        Assert.Equal(850m, group.Average);
-        Assert.Single(group.Outliers);
-        Assert.Equal(9000m, group.Outliers[0].NormalizedPrice);
+        Assert.Equal(decimal.Round((800m + 900m + 9000m) / 3m, 2), group.Average);
+        Assert.Empty(group.Outliers);
     }
 }
