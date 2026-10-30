@@ -99,7 +99,8 @@ namespace CarShow.ApplicationService.Services
 
             var query = carRepository.GetAll().Where(car => !car.IsDelete && car.IsUsed == isUsed
                 && (car.TelegramIdentityKey == null || (car.MarketPrice > 0 && car.PriceSampleCount > 0
-                    && processingStore.Listings.Any(listing => !listing.IsDelete && !listing.Channel.IsDelete
+                    && processingStore.Listings.Any(listing => !listing.IsDelete
+                        && processingStore.Channels.Any(channel => channel.Id == listing.ChannelId && !channel.IsDelete)
                         && listing.CarId == car.Id && listing.ProcessingStatus == "Published"))));
             var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && x.IsUsed == isUsed);
             if (!string.IsNullOrWhiteSpace(model)) query = query.Where(c => c.Name.Contains(model) || c.CarModel.Name.Contains(model));
@@ -286,7 +287,8 @@ namespace CarShow.ApplicationService.Services
                 .Include(x => x.CarModel)
                 .FirstOrDefaultAsync(x => x.Id == carId && !x.IsDelete
                     && (x.TelegramIdentityKey == null || processingStore.Listings.Any(listing =>
-                        !listing.IsDelete && !listing.Channel.IsDelete && listing.CarId == x.Id
+                        !listing.IsDelete && processingStore.Channels.Any(channel => channel.Id == listing.ChannelId && !channel.IsDelete)
+                        && listing.CarId == x.Id
                         && listing.ProcessingStatus == "Published")));
 
             if (car is null)

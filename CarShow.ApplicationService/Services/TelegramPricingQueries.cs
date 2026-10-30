@@ -106,7 +106,8 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
     public async Task<IReadOnlyList<TelegramObservationDto>> ObservationsAsync(string? status, int page, CancellationToken cancellationToken)
     {
         var registeredChannelCount = await store.Channels.CountAsync(channel => !channel.IsDelete, cancellationToken);
-        var query = store.Listings.AsNoTracking().Where(x => !x.IsDelete && !x.Channel.IsDelete);
+        var query = store.Listings.AsNoTracking().Where(x => !x.IsDelete
+            && store.Channels.Any(channel => channel.Id == x.ChannelId && !channel.IsDelete));
         if (!string.IsNullOrWhiteSpace(status))
         {
             query = query.Where(x => x.MatchStatus == status);
@@ -194,7 +195,8 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
     {
         return await store.History.AsNoTracking().Where(x => x.PriceDay != null && !x.Car.IsDelete
                 && (x.Car.TelegramIdentityKey == null || store.Listings.Any(listing => !listing.IsDelete
-                    && !listing.Channel.IsDelete && listing.CarId == x.CarId))
+                    && store.Channels.Any(channel => channel.Id == listing.ChannelId && !channel.IsDelete)
+                    && listing.CarId == x.CarId))
                 && (carId == null || x.CarId == carId))
             .OrderByDescending(x => x.PriceDay).ThenBy(x => x.CarId).Skip(Math.Clamp(page, 0, 100000) * 100).Take(100)
             .Select(x => new DailyCarPriceDto(x.CarId, x.Car.Name, x.MarketPrice, x.FactoryPrice,
