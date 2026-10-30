@@ -82,10 +82,12 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<string>> DeleteCar(long id)
         {
             var car = await carRepository.GetById(id);
-            if (car is null)
+            if (car is null || car.IsDelete)
                 return Result<string>.Failure("اتوموبیلی یافت نشد");
 
-            await carRepository.Delete(car);
+            // Listings and daily price history reference this car. Keep those records intact;
+            // hiding the car also prevents a deleted Telegram identity from being recreated.
+            car.IsDelete = true;
             await carRepository.SaveChanges();
             return Result<string>.Success("اتوموبیل با موفقیت حذف شد");
         }
@@ -97,7 +99,7 @@ namespace CarShow.ApplicationService.Services
 
             var query = carRepository.GetAll().Where(car => !car.IsDelete && car.IsUsed == isUsed
                 && (car.TelegramIdentityKey == null || (car.MarketPrice > 0 && car.PriceSampleCount > 0
-                    && processingStore.Listings.Any(listing => !listing.IsDelete
+                    && processingStore.Listings.Any(listing => !listing.IsDelete && !listing.Channel.IsDelete
                         && listing.CarId == car.Id && listing.ProcessingStatus == "Published"))));
             var listings = processingStore.Listings.Where(x => !x.IsDelete && x.CarId != null && x.IsUsed == isUsed);
             if (!string.IsNullOrWhiteSpace(model)) query = query.Where(c => c.Name.Contains(model) || c.CarModel.Name.Contains(model));
@@ -284,7 +286,8 @@ namespace CarShow.ApplicationService.Services
                 .Include(x => x.CarModel)
                 .FirstOrDefaultAsync(x => x.Id == carId && !x.IsDelete
                     && (x.TelegramIdentityKey == null || processingStore.Listings.Any(listing =>
-                        !listing.IsDelete && listing.CarId == x.Id && listing.ProcessingStatus == "Published")));
+                        !listing.IsDelete && !listing.Channel.IsDelete && listing.CarId == x.Id
+                        && listing.ProcessingStatus == "Published")));
 
             if (car is null)
                 return Result<CarDto>.Failure("اتومبیلی یافت نشد");

@@ -44,8 +44,8 @@ public sealed class TelegramPricingService(
         {
             var state = await GetStateAsync(cancellationToken);
             state.LastAttemptAt = nowUtc;
-            var catalog = await store.Cars.Where(x => !x.IsDelete).ToListAsync(cancellationToken);
-            await ProcessMessagesAsync(catalog, nowUtc, cancellationToken);
+            var catalog = await store.Cars.ToListAsync(cancellationToken);
+            await ProcessMessagesAsync(catalog.Where(car => !car.IsDelete).ToList(), nowUtc, cancellationToken);
             await store.SaveAsync(cancellationToken);
             catalog = (await UpdateComparisonsAsync(catalog, nowUtc, cancellationToken)).ToList();
             await store.SaveAsync(cancellationToken);
@@ -94,7 +94,7 @@ public sealed class TelegramPricingService(
         var version = TelegramListingExtractor.CurrentVersion;
         var batchSize = Math.Clamp(configuration.GetValue("Telegram:ReprocessBatchSize", 2000), 1, 5000);
         var messages = await store.Messages.Include(x => x.Channel)
-            .Where(x => !x.IsDelete && (x.ExtractionVersion < version
+            .Where(x => !x.IsDelete && !x.Channel.IsDelete && (x.ExtractionVersion < version
                 || x.ProcessingStatus == "Pending" || x.ProcessingStatus == "Extracted"))
             .OrderBy(x => x.Id).Take(batchSize).ToListAsync(cancellationToken);
         if (messages.Count == 0) return;
@@ -241,6 +241,8 @@ public sealed class TelegramPricingService(
         }
 
         var catalog = await TelegramVehicleCatalog.LoadAsync(store, existingCars, cancellationToken);
+        var removedIdentities = existingCars.Where(car => car.IsDelete && car.TelegramIdentityKey != null)
+            .Select(car => car.TelegramIdentityKey!).ToHashSet(StringComparer.Ordinal);
         var assignments = new List<(TelegramMarketPriceGroup Group, Car Car)>();
         foreach (var group in TelegramMarketPriceCalculator.Compare(eligible))
         {
@@ -251,6 +253,14 @@ public sealed class TelegramPricingService(
             }
 
             var representative = group.Samples[0];
+            if (removedIdentities.Contains(representative.ComparisonKey!))
+            {
+                foreach (var listing in group.Observations)
+                {
+                    MarkExcluded(listing, "CAR_REMOVED", "این خودرو از سایت حذف شده است.", cutoff);
+                }
+                continue;
+            }
             var car = catalog.GetOrCreate(representative, nowUtc);
             assignments.Add((group, car));
         }
@@ -329,7 +339,7 @@ public sealed class TelegramPricingService(
     private async Task CalculateDaysAsync(IReadOnlyList<Car> catalog, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var cutoff = OpenWindowStart(nowUtc);
-        var observations = await store.Listings.Where(x => !x.IsDelete && x.MatchStatus == "Matched"
+        var observations = await store.Listings.Where(x => !x.IsDelete && x.Car != null && !x.Car.IsDelete && x.MatchStatus == "Matched"
             && x.ComparisonStatus == "Compared" && x.ValidPriceSourceCount > 0
             && x.ComparisonKey != null && x.CarId != null && x.PriceDay >= cutoff && x.NormalizedPrice > 0
             && store.Channels.Any(channel => channel.Id == x.ChannelId && !channel.IsDelete))

@@ -42,4 +42,19 @@ public sealed class TelegramListingManagementService(ITelegramProcessingStore st
         }, cancellationToken);
         return result;
     }
+
+    public async Task ClearLastCalculationAsync(CancellationToken cancellationToken)
+    {
+        await store.RunExclusiveAsync("TelegramDailyPricing", async () =>
+        {
+            var state = await store.PricingStates.SingleOrDefaultAsync(cancellationToken);
+            if (state is null) return;
+            state.LastAttemptAt = null;
+            state.LastSuccessAt = null;
+            state.LastError = null;
+            state.RunStartedAt = null;
+            state.RunCollectionCompletedAt = null;
+            state.RunCompletedAt = null;
+        }, cancellationToken);
+    }
 }

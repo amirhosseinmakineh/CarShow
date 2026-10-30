@@ -44,7 +44,8 @@ public sealed record TelegramChannelSummaryDto(
     int MissingImageListings = 0,
     int MissingManufacturerListings = 0,
     int IgnoredMessages = 0,
-    int ValidPriceListings = 0);
+    int ValidPriceListings = 0,
+    int StoredListingsIncludingRemovedChannels = 0);
 public sealed record BulkTelegramChannelImportResult(
     int Total,
     int Created,

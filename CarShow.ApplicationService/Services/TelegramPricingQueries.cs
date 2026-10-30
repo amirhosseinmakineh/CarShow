@@ -11,7 +11,7 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
     public async Task<TelegramPipelineTimelineDto> PipelineTimelineAsync(CancellationToken cancellationToken)
     {
         var state = await store.PricingStates.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        if (state?.RunStartedAt is null)
+        if (state?.RunStartedAt is null || !await store.Channels.AnyAsync(channel => !channel.IsDelete, cancellationToken))
         {
             return new TelegramPipelineTimelineDto("NotStarted", null, null, 0, 0, 0, []);
         }
@@ -19,7 +19,7 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
         var startedAt = state.RunStartedAt.Value;
         var end = state.RunCompletedAt ?? DateTime.UtcNow;
         var jobs = await store.Jobs.AsNoTracking()
-            .Where(job => job.CreatedAt >= startedAt && job.CreatedAt <= end)
+            .Where(job => !job.Channel.IsDelete && job.CreatedAt >= startedAt && job.CreatedAt <= end)
             .Select(job => new { job.ChannelId, job.Status, job.StartedAt, job.CompletedAt })
             .ToListAsync(cancellationToken);
         var pending = jobs.Any(job => job.Status is TelegramCollectionJobStatus.Queued
@@ -31,13 +31,15 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 or TelegramCollectionJobStatus.AccessRequired));
 
         var received = await store.Messages.AsNoTracking()
-            .Where(message => message.CollectedAt >= startedAt && message.CollectedAt <= end)
+            .Where(message => !message.IsDelete && !message.Channel.IsDelete
+                && message.CollectedAt >= startedAt && message.CollectedAt <= end)
             .GroupBy(_ => 1)
             .Select(group => new { Count = group.Count(), At = group.Max(message => message.CollectedAt) })
             .SingleOrDefaultAsync(cancellationToken);
         var candidates = await (from listing in store.Listings.AsNoTracking()
             join message in store.Messages.AsNoTracking() on listing.RawMessageId equals (long?)message.Id
-            where message.CollectedAt >= startedAt && message.CollectedAt <= end
+            where !listing.IsDelete && !message.IsDelete && !message.Channel.IsDelete
+                && message.CollectedAt >= startedAt && message.CollectedAt <= end
             select listing)
             .GroupBy(_ => 1)
             .Select(group => new
@@ -53,6 +55,10 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
             })
             .SingleOrDefaultAsync(cancellationToken);
 
+        if (jobs.Count == 0)
+        {
+            return new TelegramPipelineTimelineDto("NotStarted", null, null, 0, 0, 0, []);
+        }
         var finished = state.RunCompletedAt is not null;
         var collectionFinished = jobs.Count > 0 && !pending;
         var stages = new List<TelegramTimelineStageDto>
@@ -69,7 +75,8 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
                 candidates?.ParsedAt, candidates?.Parsed ?? 0),
             new("Validated", candidates?.Validated > 0 ? "Completed" : finished ? "NoData" : "Waiting",
                 candidates?.ValidatedAt, candidates?.Validated ?? 0),
-            new("Pricing", finished ? "Completed" : collectionFinished ? "InProgress" : "Waiting",
+            new("Pricing", finished ? candidates?.Validated > 0 ? "Completed" : "NoData"
+                : collectionFinished ? "InProgress" : "Waiting",
                 finished ? state.RunCompletedAt : null, candidates?.Validated ?? 0),
             new("Compared", candidates?.Compared > 0 ? "Completed" : finished ? "NoData" : "Waiting",
                 candidates?.ComparedAt, candidates?.Compared ?? 0),
@@ -84,9 +91,14 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
             channels.Length, completedChannels, failedChannels, stages);
     }
 
-    public Task<TelegramPricingStateDto?> StateAsync(CancellationToken cancellationToken)
+    public async Task<TelegramPricingStateDto?> StateAsync(CancellationToken cancellationToken)
     {
-        return store.PricingStates.AsNoTracking()
+        if (!await store.Channels.AnyAsync(channel => !channel.IsDelete, cancellationToken))
+        {
+            return new TelegramPricingStateDto(null, null, null);
+        }
+        return await store.PricingStates.AsNoTracking()
+            .Where(x => x.RunStartedAt != null)
             .Select(x => new TelegramPricingStateDto(x.LastSuccessAt, x.LastAttemptAt, x.LastError))
             .SingleOrDefaultAsync(cancellationToken);
     }
@@ -94,7 +106,7 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
     public async Task<IReadOnlyList<TelegramObservationDto>> ObservationsAsync(string? status, int page, CancellationToken cancellationToken)
     {
         var registeredChannelCount = await store.Channels.CountAsync(channel => !channel.IsDelete, cancellationToken);
-        var query = store.Listings.AsNoTracking().Where(x => !x.IsDelete);
+        var query = store.Listings.AsNoTracking().Where(x => !x.IsDelete && !x.Channel.IsDelete);
         if (!string.IsNullOrWhiteSpace(status))
         {
             query = query.Where(x => x.MatchStatus == status);
@@ -180,7 +192,10 @@ public sealed class TelegramPricingQueries(ITelegramProcessingStore store) : ITe
 
     public async Task<IReadOnlyList<DailyCarPriceDto>> PricesAsync(long? carId, int page, CancellationToken cancellationToken)
     {
-        return await store.History.AsNoTracking().Where(x => x.PriceDay != null && (carId == null || x.CarId == carId))
+        return await store.History.AsNoTracking().Where(x => x.PriceDay != null && !x.Car.IsDelete
+                && (x.Car.TelegramIdentityKey == null || store.Listings.Any(listing => !listing.IsDelete
+                    && !listing.Channel.IsDelete && listing.CarId == x.CarId))
+                && (carId == null || x.CarId == carId))
             .OrderByDescending(x => x.PriceDay).ThenBy(x => x.CarId).Skip(Math.Clamp(page, 0, 100000) * 100).Take(100)
             .Select(x => new DailyCarPriceDto(x.CarId, x.Car.Name, x.MarketPrice, x.FactoryPrice,
                 x.PriceDay, x.SampleCount, x.CalculatedAt, x.IsFinal,

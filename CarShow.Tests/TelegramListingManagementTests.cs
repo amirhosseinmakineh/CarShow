@@ -13,6 +13,53 @@ public sealed class TelegramListingManagementTests
     private static readonly DateTime Now = new(2026, 10, 28, 8, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public async Task ResetLastCalculationKeepsRawMessagesAndHistory()
+    {
+        await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        var channel = new TelegramChannel { NormalizedIdentifier = "reset_calculation" };
+        AddMessage(db, channel, "1", "پژو 207 اتومات مدل: 1403 صفر قیمت: 800 میلیون تومان");
+        await db.SaveChangesAsync();
+        await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
+        var store = scope.ServiceProvider.GetRequiredService<ITelegramProcessingStore>();
+        var management = new TelegramListingManagementService(store);
+        await management.ClearLastCalculationAsync(default);
+        var state = await db.TelegramPricingStates.SingleAsync();
+        Assert.Null(state.LastSuccessAt);
+        Assert.Null(state.LastAttemptAt);
+        Assert.Null(state.RunStartedAt);
+        Assert.Single(await db.TelegramRawMessages.ToListAsync());
+        Assert.Single(await db.CarPriceHistories.ToListAsync());
+    }
+
+    [Fact]
+    public async Task DeletingTelegramCarHidesItWithoutBreakingListingAndHistoryReferences()
+    {
+        await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        var channel = new TelegramChannel { NormalizedIdentifier = "delete_car" };
+        AddMessage(db, channel, "1", "پژو 207 اتومات مدل: 1403 صفر قیمت: 800 میلیون تومان");
+        await db.SaveChangesAsync();
+        await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
+        var car = await db.Cars.SingleAsync();
+        var service = ActivatorUtilities.CreateInstance<CarService>(scope.ServiceProvider);
+
+        Assert.True((await service.DeleteCar(car.Id)).IsSuccess);
+        Assert.True((await db.Cars.SingleAsync()).IsDelete);
+        Assert.Empty(await service.GetAllCars(null, null, null));
+        Assert.Single(await db.CarListings.ToListAsync());
+        Assert.Single(await db.CarPriceHistories.ToListAsync());
+        Assert.False((await service.DeleteCar(car.Id)).IsSuccess);
+
+        await scope.ServiceProvider.GetRequiredService<TelegramPricingService>()
+            .CalculateAsync(Now.AddMinutes(1), default);
+        Assert.Single(await db.Cars.ToListAsync());
+        Assert.Empty(await service.GetAllCars(null, null, null));
+    }
+
+    [Fact]
     public async Task ClearHidesAllCandidatesAndPublicCarsWithoutDeletingRawOrHistory()
     {
         await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
