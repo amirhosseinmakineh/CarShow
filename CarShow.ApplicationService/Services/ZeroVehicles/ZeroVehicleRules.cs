@@ -32,6 +32,8 @@ public sealed class ZeroTrimDefinition
 {
     public string Name { get; set; } = "";
     public List<string> Aliases { get; set; } = [];
+    public List<List<string>> RequiredAliasGroups { get; set; } = [];
+    public List<string> ExcludedAliases { get; set; } = [];
 }
 public sealed record ZeroValidationResult(ZeroVehicleListing? Listing, string? RejectionCode);
 
@@ -44,13 +46,27 @@ public static class ZeroVehicleRules
             result.Append(c is >= '۰' and <= '۹' ? (char)('0' + c - '۰') : c is >= '٠' and <= '٩' ? (char)('0' + c - '٠') : c switch { 'ي' or 'ى' => 'ی', 'ك' => 'ک', '\u200c' or '\u00a0' => ' ', _ => char.ToLowerInvariant(c) });
         return Regex.Replace(result.ToString(), @"\s+", " ").Trim();
     }
-    private static bool ContainsAlias(string text, string alias) => Regex.IsMatch(text,
+    private static bool ContainsAlias(string text, string alias) => !string.IsNullOrWhiteSpace(alias) && Regex.IsMatch(text,
         @"(?<![\p{L}\p{N}])" + Regex.Escape(Normalize(alias)).Replace(@"\ ", @"\s+") + @"(?![\p{L}\p{N}])");
     private static string[] Aliases(string canonical, string aliases) => aliases.Split('\n', StringSplitOptions.RemoveEmptyEntries).Prepend(canonical).Distinct().ToArray();
 
+    // Channel signatures describe destinations (zero/used), not the advertised vehicle.
+    // Only remove contact/link lines; a condition stated in the body must still be validated.
+    private static string AdvertisementBody(string text)
+    {
+        text = Regex.Replace(text,
+            @"(?im)^[\t ]*(?:@[a-z][a-z0-9_]{4,31}|https?://(?:www\.)?(?:t\.me|telegram\.me)/[a-z][a-z0-9_]{4,31})(?![a-z0-9_])[^\r\n]*$", "");
+        // Forwarded captions can flatten the same navigation footer onto one line.
+        text = Regex.Replace(text, @"(?i)@[a-z][a-z0-9_]{4,31}(?![a-z0-9_])[\t ]*(?:👉|👈|→)[\t ]*(?:کارکرده|صفر)(?![\p{L}])", " ");
+        // Common captions join the insurance date, condition and price: '07صفر2950م'.
+        return Regex.Replace(text, @"(?<=[0-9۰-۹٠-٩])(?=صفر)|(?<=صفر)(?=[0-9۰-۹٠-٩])", " ");
+    }
+
+    private const string PriceToken = @"(?<amount>-?[0-9][0-9,٬.٫]*)\s*(?<scale>میلیارد|میلیون|هزار|م(?![\p{L}]))?(?:\s*و\s*(?<remainder>[0-9,٬.٫]+)\s*(?<remainderScale>میلیون|هزار))?\s*(?<currency>تومان|تومن|ریال|irt|irr)?";
+
     public static string? ZeroFailure(string text)
     {
-        text = Normalize(text);
+        text = Normalize(AdvertisementBody(text));
         // Reject any positive odometer, including '20 هزار کیلومتر' and decimal thousand values.
         var mileage = Regex.Matches(text, @"(?:کارکرد|کیلومتر|km)\s*[:：=]?\s*([0-9][0-9,٬.٫]*)\s*(هزار)?|([0-9][0-9,٬.٫]*)\s*(هزار)?\s*(?:کیلومتر|km)(?![\p{L}])");
         foreach (Match match in mileage)
@@ -68,7 +84,9 @@ public static class ZeroVehicleRules
         IReadOnlyList<ZeroVehicleModel> catalog, ZeroVehicleOptions options, DateTime now)
     {
         if (message.Text.Length > 8000 || message.ExternalMessageId.Length > 32 || string.IsNullOrWhiteSpace(message.ExternalMessageId)) return new(null, "MESSAGE_INVALID");
-        var text = Normalize(message.Text);
+        var text = Normalize(AdvertisementBody(message.Text));
+        if (Regex.IsMatch(text, @"حواله|پیش\s*فروش|پیشفروش|امتیاز\s*(?:ثبت\s*نام|خرید)")) return new(null, "ALLOCATION_OR_PREORDER");
+        if (Regex.IsMatch(text, @"^[^\p{L}\p{N}]*خریدار|(?<![\p{L}])(?:خریدارم|می\s*خرم|می\s*خریم|خریداری\s*می\s*شود)(?![\p{L}])")) return new(null, "BUY_REQUEST");
         var zeroFailure = ZeroFailure(text);
         if (zeroFailure is not null) return new(null, zeroFailure);
         if (message.MessageDate == default || message.MessageDate > now.AddMinutes(5)) return new(null, "PUBLICATION_DATE_INVALID");
@@ -76,17 +94,24 @@ public static class ZeroVehicleRules
         models = models.Where(model => !models.Any(other => other.Id != model.Id && Normalize(other.Name).StartsWith(Normalize(model.Name) + " ", StringComparison.Ordinal))).ToArray();
         if (models.Length != 1) return new(null, "MODEL_UNKNOWN_OR_AMBIGUOUS");
         var model = models[0];
-        var trims = model.Trims.Select(trim => new { Trim = trim, Matches = Aliases(trim.Name, trim.Aliases).Where(alias => ContainsAlias(text, alias)).Select(Normalize).ToArray() }).Where(x => x.Matches.Length > 0).ToArray();
+        var trimDefinitions = options.Catalog.FirstOrDefault(x => x.Name == model.Name)?.Trims;
+        var trims = model.Trims.Where(trim => TrimConstraintsMatch(text, trimDefinitions?.FirstOrDefault(x => x.Name == trim.Name)))
+            .Select(trim => new { Trim = trim, Matches = Aliases(trim.Name, trim.Aliases).Where(alias => ContainsAlias(text, alias)).Select(Normalize).ToArray() }).Where(x => x.Matches.Length > 0).ToArray();
         trims = trims.Where(item => !trims.Any(other => other.Trim.Id != item.Trim.Id && item.Matches.All(shorter => other.Matches.Any(longer => longer != shorter && ContainsAlias(longer, shorter))))).ToArray();
         if (trims.Length != 1) return new(null, "TRIM_UNKNOWN_OR_AMBIGUOUS");
-        var priceMatches = Regex.Matches(text, @"(?:قیمت(?:\s+(?:نقدی|فروش|کل))?|price)\s*[:：=💰💵💶💸🔴🟢]*\s*(-?[0-9][0-9,٬.٫]*)\s*(میلیارد|میلیون|هزار|م(?![\p{L}]))?(?:\s*و\s*([0-9,٬.٫]+)\s*(میلیون|هزار))?\s*(تومان|تومن|ریال|irt|irr)?");
-        if (priceMatches.Count != 1 || Regex.IsMatch(text, @"توافقی|قیمت\s*تماس|پیش\s*پرداخت|اقساط|قسط")) return new(null, "PRICE_INVALID");
+        var priceMatches = Regex.Matches(text, @"(?:قیمت(?:\s+(?:نقدی|فروش|کل))?|price)\s*[:：=💰💵💶💸🔴🟢]*\s*" + PriceToken).ToArray();
+        // Dealers often write '2045م مشهد' without a price label. Require an explicit
+        // unit and exactly one amount; years, phone numbers and bare numbers cannot qualify.
+        if (priceMatches.Length == 0 && !Regex.IsMatch(text, @"قیمت|price"))
+            priceMatches = Regex.Matches(text, @"(?<![\p{L}\p{N}.,٬٫])" + PriceToken)
+                .Where(match => match.Groups["scale"].Success || match.Groups["currency"].Success).ToArray();
+        if (priceMatches.Length != 1 || Regex.IsMatch(text, @"توافقی|قیمت\s*تماس|پیش\s*پرداخت|اقساط|قسط|بیعانه|ودیعه")) return new(null, "PRICE_INVALID");
         var priceMatch = priceMatches[0];
-        var amount = Number(priceMatch.Groups[1].Value);
-        var scale = priceMatch.Groups[2].Value switch { "میلیارد" => 1_000_000_000m, "میلیون" or "م" => 1_000_000m, "هزار" => 1000m, _ => 1m };
+        var amount = Number(priceMatch.Groups["amount"].Value);
+        var scale = priceMatch.Groups["scale"].Value switch { "میلیارد" => 1_000_000_000m, "میلیون" or "م" => 1_000_000m, "هزار" => 1000m, _ => 1m };
         if (amount is null or <= 0 || amount > options.MaximumPriceToman * 10 / scale) return new(null, "PRICE_INVALID");
-        var price = amount.Value * scale + (Number(priceMatch.Groups[3].Value) ?? 0m) * (priceMatch.Groups[4].Value == "میلیون" ? 1_000_000m : 1000m);
-        var currency = priceMatch.Groups[5].Value;
+        var price = amount.Value * scale + (Number(priceMatch.Groups["remainder"].Value) ?? 0m) * (priceMatch.Groups["remainderScale"].Value == "میلیون" ? 1_000_000m : 1000m);
+        var currency = priceMatch.Groups["currency"].Value;
         if (currency is "ریال" or "irr") price /= 10m;
         else if (currency.Length == 0 && scale == 1m) return new(null, "CURRENCY_MISSING");
         if (price < options.MinimumPriceToman || price > options.MaximumPriceToman) return new(null, "PRICE_OUT_OF_RANGE");
@@ -103,6 +128,9 @@ public static class ZeroVehicleRules
         }, null);
     }
     private static decimal? Number(string value) => decimal.TryParse(value.Replace(",", "").Replace("٬", "").Replace("٫", "."), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number) ? number : null;
+    private static bool TrimConstraintsMatch(string text, ZeroTrimDefinition? definition) => definition is null ||
+        (!definition.ExcludedAliases.Any(alias => ContainsAlias(text, alias)) &&
+         definition.RequiredAliasGroups.All(group => group.Count > 0 && group.Any(alias => ContainsAlias(text, alias))));
     public static decimal Median(IEnumerable<decimal> values)
     {
         var ordered = values.Order().ToArray();

@@ -16,6 +16,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="../CarShow/appsettings.json" Link="ZeroVehicleTestSettings.json" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../CarShow/CarShow.csproj" />
     <ProjectReference Include="../CarShow.Infrastracture/CarShow.Infrastracture.csproj" />
   </ItemGroup>
