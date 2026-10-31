@@ -1,5 +1,7 @@
 using CarShow.ApplicationService.Services.ZeroVehicles;
 using CarShow.Domain.Telegram;
+using CarShow.Infrastracture.Context;
+using Microsoft.EntityFrameworkCore;
 namespace CarShow.BackgroundServices;
 
 public sealed class ZeroVehicleWorker(IServiceScopeFactory scopes, ILogger<ZeroVehicleWorker> logger) : BackgroundService
@@ -7,12 +9,28 @@ public sealed class ZeroVehicleWorker(IServiceScopeFactory scopes, ILogger<ZeroV
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var nextRecalculation = DateTime.MinValue;
+        var nextSchemaCheck = DateTime.MinValue;
+        var schemaReady = false;
         while (!stoppingToken.IsCancellationRequested)
         {
             long? runId = null;
             try
             {
                 await using var scope = scopes.CreateAsyncScope();
+                if (!schemaReady && DateTime.UtcNow >= nextSchemaCheck)
+                {
+                    nextSchemaCheck = DateTime.UtcNow.AddMinutes(1);
+                    var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+                    schemaReady = (await db.Database.GetAppliedMigrationsAsync(stoppingToken))
+                        .Contains("20261030213449_IndependentZeroVehicles");
+                    if (!schemaReady)
+                        logger.LogWarning("Zero vehicle import is paused until migration 20261030213449_IndependentZeroVehicles is applied.");
+                }
+                if (!schemaReady)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                    continue;
+                }
                 var service = scope.ServiceProvider.GetRequiredService<ZeroVehicleService>();
                 runId = await service.ClaimAsync(DateTime.UtcNow, stoppingToken);
                 if (runId.HasValue)
