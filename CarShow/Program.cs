@@ -1,3 +1,4 @@
+using CarShow.ApplicationService.Services.ZeroVehicles;
 using CarShow.Domain.Telegram;
 using CarShow.BackgroundServices;
 using CarShow.ApplicationService.Contract.IService;
@@ -45,6 +46,10 @@ if (builder.Configuration.GetValue("Telegram:WorkersEnabled", true))
     builder.Services.AddHostedService<TelegramPricingWorker>();
 }
 builder.Services.AddScoped<ITelegramProcessingStore, TelegramProcessingStore>();
+builder.Services.AddScoped<IZeroVehicleStore, ZeroVehicleStore>();
+builder.Services.AddScoped<ZeroVehicleService>();
+if (builder.Configuration.GetValue("ZeroVehicles:WorkerEnabled", true))
+    builder.Services.AddHostedService<ZeroVehicleWorker>();
 builder.Services.AddScoped<TelegramCollectionService>();
 builder.Services.AddScoped<TelegramPricingService>();
 builder.Services.AddScoped<TelegramListingManagementService>();
