@@ -53,12 +53,12 @@ public sealed class ZeroVehicleTests
         public CarShowContext Db = null!;
         public Collector Collector = new();
         public ZeroVehicleService Service = null!;
-        public static async Task<Fixture> Create()
+        public static async Task<Fixture> Create(IConfiguration? configuration = null)
         {
             var f = new Fixture(); await f.Connection.OpenAsync();
             f.Db = new(new DbContextOptionsBuilder<CarShowContext>().UseSqlite(f.Connection).Options);
             await f.Db.Database.EnsureCreatedAsync();
-            f.Service = new(new ZeroVehicleStore(f.Db), f.Collector, Config());
+            f.Service = new(new ZeroVehicleStore(f.Db), f.Collector, configuration ?? Config());
             return f;
         }
         public async Task<ZeroImportDto> Import(string channel, params string[] texts)
@@ -242,6 +242,109 @@ public sealed class ZeroVehicleTests
         await f.Import("same_channel", "پژو 207 دنده ای صفر مدل: 1404 قیمت: 800 میلیون تومان", "پژو 207 دنده ای صفر مدل: 1405 قیمت: 1000 میلیون تومان");
         var group = await f.Db.Set<ZeroVehiclePriceGroup>().SingleAsync();
         Assert.Equal(2, group.SampleCount); Assert.Equal(1, group.SourceCount); Assert.Equal(900000000m, group.ReferencePrice);
+    }
+
+    [Theory]
+    [InlineData("تارا صفر\n@aliajamihavaleh👉صفر\n@aliajami_used_car👉کارکرده", null)]
+    [InlineData("تارا\n@aliajamihavaleh👉صفر\n@aliajami_used_car👉کارکرده", "ZERO_NOT_CONFIRMED")]
+    [InlineData("تارا کارکرده\n@aliajamihavaleh👉صفر", "CONTRADICTORY_CONDITION")]
+    [InlineData("تارا صفر کارکرد ۶۰۰تا\n@aliajamihavaleh👉صفر", "POSITIVE_MILEAGE")]
+    [InlineData("تارا صفر\nhttps://t.me/aliajami_used_car کارکرده", null)]
+    [InlineData("تارا صفر @aliajamihavaleh👉صفر @aliajami_used_car👉کارکرده", null)]
+    [InlineData("تارا @aliajamihavaleh👉صفر @aliajami_used_car👉کارکرده", "ZERO_NOT_CONFIRMED")]
+    [InlineData("تارا بیمه تا۱۴۰۶/۰۷صفر۲۹۵۰م", null)]
+    public void ChannelNavigationSignaturesDoNotSetVehicleCondition(string text, string? failure)
+        => Assert.Equal(failure, ZeroVehicleRules.ZeroFailure(text));
+
+    [Fact]
+    public async Task PublicChannelFormatsPersistWithProductionCatalogAndReplayWithoutDuplicates()
+    {
+        var configuration = new ConfigurationBuilder().AddJsonFile(Path.Combine(AppContext.BaseDirectory, "ZeroVehicleTestSettings.json")).Build();
+        await using var f = await Fixture.Create(configuration);
+        // Reproduce public dealer wording; contact details are omitted. Actual condition,
+        // type, price units and social navigation footer are retained.
+        const string tara = "تارا وی یک پلاس سفید مدل ۱۴۰۵ بیمه تا ۱۴۰۶/۰۵ صفر ۲۰۴۵م مشهد\n@aliajamihavaleh👉صفر\n@aliajami_used_car👉کارکرده";
+        const string automatic = "پژو۲۰۷ پانا اتومات سفید مدل ۱۴۰۵ بیمه تا ۱۴۰۶/۰۳ صفر ۲۹۳۰م مشهد\n@aliajamihavaleh👉صفر\n@aliajami_used_car👉کارکرده";
+        const string manual = "پژو ۲۰۷ دنده‌ای صفر\n۲,۰۱۰ میلیون تومان\n@aliajamihavaleh👉صفر\n@aliajami_used_car👉کارکرده";
+        var report = await f.Import("aliajamihavaleh", tara, automatic, manual,
+            "حواله پژو۲۰۷ پانا اتومات مدل ۱۴۰۵ صفر قیمت ۳۰۰ میلیون تومان",
+            "تارا وی یک پلاس کارکرد ۶۰۰تا ۳۰۳۰م مشهد\n@aliajamihavaleh👉صفر",
+            "تارا وی یک پلاس ۲۰۴۵م مشهد\n@aliajamihavaleh👉صفر",
+            "تارا وی یک پلاس صفر ۲۰۴۵ مشهد",
+            "تارا وی یک پلاس صفر ۲۰۴۵م و تارا وی چهار صفر ۲۸۰۰م",
+            "کوییک GX صفر ۱۲۰۰م");
+        Assert.Equal(9, report.Scanned); Assert.Equal(3, report.Stored); Assert.Equal(6, report.Rejected);
+        f.Db.ChangeTracker.Clear();
+        var rows = await f.Db.Set<ZeroVehicleListing>().Include(x => x.Model).Include(x => x.Trim).ToListAsync();
+        Assert.Contains(rows, x => x.Model.Name == "تارا" && x.Trim.Name == "V1P" && x.PriceToman == 2_045_000_000m && x.Year == 1405);
+        Assert.Contains(rows, x => x.Model.Name == "پژو 207" && x.Trim.Name == "اتوماتیک پانوراما" && x.PriceToman == 2_930_000_000m);
+        Assert.Contains(rows, x => x.Trim.Name == "دنده‌ای" && x.PriceToman == 2_010_000_000m && x.Year is null);
+        Assert.Equal(3, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
+        Assert.All(await f.Db.Set<ZeroVehiclePriceGroup>().ToListAsync(), x => Assert.Equal(1, x.SampleCount));
+        Assert.Contains("ALLOCATION_OR_PREORDER", report.RejectionCounts);
+        var replay = await f.Import("aliajamihavaleh", tara, automatic, manual);
+        Assert.Equal(3, replay.Duplicates); Assert.Equal(0, replay.Stored);
+        Assert.Equal(3, await f.Db.Set<ZeroVehicleListing>().CountAsync());
+        Assert.Empty(await f.Db.Cars.ToListAsync()); Assert.Empty(await f.Db.CarListings.ToListAsync()); Assert.Empty(await f.Db.TelegramRawMessages.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("۲,۰۴۵ میلیون تومان", 2045000000)]
+    [InlineData("۲۰۴۵م", 2045000000)]
+    [InlineData("2.045 میلیارد تومان", 2045000000)]
+    [InlineData("۲۰۴۵۰۰۰۰۰۰ تومان", 2045000000)]
+    [InlineData("۲۰۴۵۰۰۰۰۰۰۰ ریال", 2045000000)]
+    public async Task UnlabelledPricesRequireOneExplicitAmountWithUnit(string amount, long expected)
+    {
+        await using var f = await Fixture.Create();
+        var report = await f.Import("unit_channel", "پژو 207 دنده ای صفر مدل ۱۴۰۵\n" + amount);
+        Assert.Equal(1, report.Stored);
+        Assert.Equal((decimal)expected, (await f.Db.Set<ZeroVehicleListing>().SingleAsync()).PriceToman);
+    }
+
+    [Theory]
+    [InlineData("صفر ۸۰۰م و ۹۰۰م")]
+    [InlineData("صفر قیمت: توافقی ۸۰۰م")]
+    [InlineData("صفر ۸۰۰")]
+    [InlineData("صفر بیعانه ۸۰۰م")]
+    [InlineData("صفر قیمت -۸۰۰ میلیون تومان")]
+    [InlineData("صفر ۰۸۰۰م کارکرد ۱۶هزارتا")]
+    [InlineData("صفر خریدارم ۸۰۰م")]
+    public async Task UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(string body)
+    {
+        await using var f = await Fixture.Create();
+        var report = await f.Import("unit_channel", "پژو 207 دنده ای " + body);
+        Assert.Equal(0, report.Stored); Assert.Equal(1, report.Rejected);
+        Assert.Empty(await f.Db.Set<ZeroVehicleListing>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task ActualOctoberChannelCaptionsStoreAndKeepHydraulicEngineVariantSeparate()
+    {
+        var configuration = new ConfigurationBuilder().AddJsonFile(Path.Combine(AppContext.BaseDirectory, "ZeroVehicleTestSettings.json")).Build();
+        await using var f = await Fixture.Create(configuration);
+        const string vehicle = "پژو ۲۰۷ هیدرولیک سفید مدل ۱۴۰۵ تیو۵ پلاس بیمه تا ۱۴۰۶/۰۷ صفر ۲۹۵۰م تهران";
+        f.Collector.Messages = [
+            new("109136", vehicle + "\n@aliajamihavaleh👉صفر\n@aliajami_used_car👉کارکرده", new DateTime(2026, 10, 31, 7, 45, 31, DateTimeKind.Utc), "https://t.me/aliajamihavaleh/109136", null),
+            new("109137", vehicle + " @aliajamihavaleh👉صفر @aliajami_used_car👉کارکرده", new DateTime(2026, 10, 31, 8, 20, 29, DateTimeKind.Utc), "https://t.me/aliajamihavaleh/109137", null)
+        ];
+        var run = await f.Service.EnqueueAsync(new("aliajamihavaleh", 100), default);
+        await f.Service.ClaimAsync(Now, default); await f.Service.ProcessAsync(run.Id, Now, default);
+        Assert.Equal(2, (await f.Service.GetRunAsync(run.Id, default))!.Stored);
+        f.Db.ChangeTracker.Clear();
+        var listings = await f.Db.Set<ZeroVehicleListing>().Include(x => x.Trim).ToListAsync();
+        Assert.All(listings, x => { Assert.Equal("دنده‌ای هیدرولیک TU5P", x.Trim.Name); Assert.Equal(2_950_000_000m, x.PriceToman); });
+        var price = await f.Db.Set<ZeroVehiclePriceGroup>().SingleAsync();
+        Assert.Equal(1, price.SampleCount); Assert.Equal(2_950_000_000m, price.ReferencePrice);
+        Assert.Single(listings, x => x.PricingStatus == "DuplicateContent");
+        await f.Service.ProcessAsync(run.Id, Now, default); // Completed run cannot be inserted again.
+        Assert.Equal(2, await f.Db.Set<ZeroVehicleListing>().CountAsync());
+        var invalid = await f.Import("other_channel",
+            "پژو ۲۰۷ هیدرولیک صفر ۲۹۵۰م", // Engine variant is missing: do not guess.
+            "پژو ۲۰۷ دنده ای هیدرولیک TU5 صفر ۲۹۵۰م", // Different engine must not fall back to generic manual.
+            "پژو ۲۰۷ اتومات هیدرولیک TU5P صفر ۲۹۵۰م",
+            "حواله پژو ۲۰۷ هیدرولیک TU5P صفر قیمت ۳۰۰ میلیون تومان");
+        Assert.Equal(0, invalid.Stored); Assert.Equal(4, invalid.Rejected);
     }
     private sealed class TestAuth(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
