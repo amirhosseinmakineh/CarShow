@@ -192,6 +192,38 @@ public sealed class TelegramAllChannelPricingTests
         Console.WriteLine($"Compared {rows.Length} rows across {result.Samples.Count} channels in {timer.ElapsedMilliseconds} ms.");
     }
 
+    [Fact]
+    public async Task RepeatedCyclesAfterFinalizationKeepHistoryAndStillRegisterNewAds()
+    {
+        await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        Add(db, new TelegramChannel { NormalizedIdentifier = "finalized_source" }, "1", 800);
+        await db.SaveChangesAsync();
+        var service = scope.ServiceProvider.GetRequiredService<TelegramPricingService>();
+        await service.CalculateAsync(Now, default);
+        var historyId = (await db.CarPriceHistories.SingleAsync()).Id;
+        var later = Now.AddDays(4);
+        await service.CalculateAsync(later, default);
+        var frozen = await db.CarPriceHistories.SingleAsync();
+        Assert.True(frozen.IsFinal);
+        var finalizedAt = frozen.CalculatedAt;
+        db.ChangeTracker.Clear();
+        // A fresh scope/tracker must find the old finalized key before attempting INSERT.
+        Add(db, new TelegramChannel { NormalizedIdentifier = "new_source" }, "1", 900, published: later);
+        await db.SaveChangesAsync();
+        await service.CalculateAsync(later.AddMinutes(1), default);
+        db.ChangeTracker.Clear();
+        await service.CalculateAsync(later.AddMinutes(2), default);
+        Assert.Equal(2, await db.CarPriceHistories.CountAsync());
+        var old = await db.CarPriceHistories.SingleAsync(x => x.Id == historyId);
+        Assert.True(old.IsFinal);
+        Assert.Equal(800000000m, old.MarketPrice);
+        Assert.Equal(finalizedAt, old.CalculatedAt);
+        Assert.Equal(900000000m, (await db.Cars.SingleAsync()).MarketPrice);
+        Assert.Equal(2, await db.CarListings.CountAsync());
+    }
+
     private static TelegramRawMessage Add(CarShowContext db, TelegramChannel channel, string id, int millions,
         string condition = "صفر", int year = 1403, string trim = "اتومات", DateTime? published = null)
     {
