@@ -821,6 +821,46 @@ namespace CarShow.Infrastracture.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleChannel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Identifier")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime?>("LastImportedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LatestMessageId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("PendingLatestMessageId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ScanBefore")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Identifier")
+                        .IsUnique();
+
+                    b.ToTable("ZeroVehicleChannels", (string)null);
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleImportRun", b =>
                 {
                     b.Property<long>("Id")
@@ -852,6 +892,9 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<string>("Error")
                         .HasMaxLength(1024)
                         .HasColumnType("nvarchar(1024)");
+
+                    b.Property<int>("Extracted")
+                        .HasColumnType("int");
 
                     b.Property<int>("MessageLimit")
                         .HasColumnType("int");
@@ -901,6 +944,43 @@ namespace CarShow.Infrastracture.Migrations
                     b.ToTable("ZeroVehicleImportRuns", (string)null);
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleIssue", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ExternalMessageId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("PartIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RawText")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("RunId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId", "ExternalMessageId", "PartIndex")
+                        .IsUnique();
+
+                    b.ToTable("ZeroVehicleIssues", (string)null);
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleListing", b =>
                 {
                     b.Property<long>("Id")
@@ -919,10 +999,37 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<decimal?>("FinalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Fingerprint")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("MarketFetchedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MarketName")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<decimal?>("MarketPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("MarketPriceAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MarketStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("MarketUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<long>("ModelId")
                         .HasColumnType("bigint");
@@ -931,6 +1038,14 @@ namespace CarShow.Infrastracture.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("PartIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PriceCandidates")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<decimal>("PriceToman")
                         .HasPrecision(18, 2)
@@ -944,6 +1059,11 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<DateTime>("PublishedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("RawPrice")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("RawText")
                         .IsRequired()
                         .HasMaxLength(8000)
@@ -951,6 +1071,10 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.Property<DateTime>("ReceivedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
 
                     b.Property<string>("SourceUrl")
                         .HasMaxLength(2048)
@@ -966,10 +1090,10 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.HasIndex("PublishedAt");
 
-                    b.HasIndex("Channel", "ExternalMessageId")
-                        .IsUnique();
-
                     b.HasIndex("TrimId", "ModelId");
+
+                    b.HasIndex("Channel", "ExternalMessageId", "PartIndex")
+                        .IsUnique();
 
                     b.HasIndex("ModelId", "TrimId", "PublishedAt");
 
@@ -1018,6 +1142,10 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
+                    b.Property<decimal>("MarketPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("MaxPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1028,6 +1156,11 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.Property<long>("ModelId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("PricingStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<decimal>("ReferencePrice")
                         .HasPrecision(18, 2)
@@ -1050,6 +1183,23 @@ namespace CarShow.Infrastracture.Migrations
                     b.HasIndex("TrimId", "ModelId");
 
                     b.ToTable("ZeroVehiclePriceGroups", (string)null);
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DeviationPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ZeroVehicleSettings", (string)null);
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleTrim", b =>
@@ -1215,6 +1365,15 @@ namespace CarShow.Infrastracture.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleIssue", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleImportRun", null)
+                        .WithMany()
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleListing", b =>

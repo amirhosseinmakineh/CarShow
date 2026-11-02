@@ -1,0 +1,217 @@
+  Determining projects to restore...
+  Restored /workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj (in 551 ms).
+  Restored /workspace/scratch/b408070ef9e1/baseline/Carshow.Utilities/Carshow.Utilities.csproj (in 551 ms).
+  Restored /workspace/scratch/b408070ef9e1/baseline/CarShow.Security/CarShow.Security.csproj (in 1.47 sec).
+  Restored /workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj (in 1.47 sec).
+  Restored /workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/CarShow.ApplicationService.csproj (in 3.86 sec).
+/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj : warning NU1903: Package 'Microsoft.OpenApi' 2.4.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc [/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj : warning NU1902: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2fmv-rv2c-59x7 [/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj : warning NU1903: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known high severity vulnerability, https://github.com/advisories/GHSA-846f-f764-76mx [/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/CarShow.Infrastracture.csproj : warning NU1902: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2fmv-rv2c-59x7 [/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1903: Package 'Microsoft.OpenApi' 2.4.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1903: Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2m69-gcr7-jv3q
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1902: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2fmv-rv2c-59x7
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1903: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known high severity vulnerability, https://github.com/advisories/GHSA-846f-f764-76mx
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/CarShow.Infrastracture.csproj : warning NU1903: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known high severity vulnerability, https://github.com/advisories/GHSA-846f-f764-76mx [/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj]
+  Restored /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj (in 8.62 sec).
+  Restored /workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj (in 9.25 sec).
+  Restored /workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/CarShow.Infrastracture.csproj (in 10.14 sec).
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1903: Package 'Microsoft.OpenApi' 2.4.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1903: Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2m69-gcr7-jv3q
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1902: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2fmv-rv2c-59x7
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/CarShow.Tests.csproj : warning NU1903: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known high severity vulnerability, https://github.com/advisories/GHSA-846f-f764-76mx
+/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj : warning NU1903: Package 'Microsoft.OpenApi' 2.4.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc
+/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj : warning NU1902: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2fmv-rv2c-59x7
+/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj : warning NU1903: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known high severity vulnerability, https://github.com/advisories/GHSA-846f-f764-76mx
+/workspace/scratch/b408070ef9e1/baseline/Carshow.Utilities/Patterns/Result.cs(16,13): warning CS8618: Non-nullable property 'Data' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/Carshow.Utilities/Carshow.Utilities.csproj]
+/workspace/scratch/b408070ef9e1/baseline/Carshow.Utilities/Patterns/Result.cs(32,30): warning CS8604: Possible null reference argument for parameter 'data' in 'Result<T>.Result(T data, string message, bool isSuccess)'. [/workspace/scratch/b408070ef9e1/baseline/Carshow.Utilities/Carshow.Utilities.csproj]
+  Carshow.Utilities -> /workspace/scratch/b408070ef9e1/baseline/Carshow.Utilities/bin/Debug/net10.0/Carshow.Utilities.dll
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CategoryDto/CategoryDto.cs(6,23): warning CS8618: Non-nullable property 'Name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForCreateDto.cs(5,77): warning CS8618: Non-nullable property 'Tips' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForCreateDto.cs(6,40): warning CS8618: Non-nullable property 'Models' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForCreateDto.cs(7,44): warning CS8618: Non-nullable property 'Companys' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForCreateDto.cs(8,46): warning CS8618: Non-nullable property 'Categories' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForUpdateDto.cs(5,77): warning CS8618: Non-nullable property 'Tips' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForUpdateDto.cs(6,40): warning CS8618: Non-nullable property 'Models' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForUpdateDto.cs(7,44): warning CS8618: Non-nullable property 'Companys' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForUpdateDto.cs(8,46): warning CS8618: Non-nullable property 'Categories' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/CarDto/GetCarForUpdateDto.cs(9,29): warning CS8618: Non-nullable property 'dto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/ModelDto/ModelDto.cs(6,23): warning CS8618: Non-nullable property 'Name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/Order/CreaateOrderDto.cs(13,29): warning CS8618: Non-nullable property 'OrderItem' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/Order/UpdateOrderDto.cs(10,29): warning CS8618: Non-nullable property 'OrderItem' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/Dtos/User/RegisterDto.cs(27,23): warning CS8618: Non-nullable property 'RoleName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/CarShow.ApplicationService.Contract.csproj]
+  CarShow.ApplicationService.Contract -> /workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService.Contract/bin/Debug/net10.0/CarShow.ApplicationService.Contract.dll
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/Category.cs(8,33): warning CS8618: Non-nullable property 'Car' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/Role.cs(5,23): warning CS8618: Non-nullable property 'RoleName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/Role.cs(7,38): warning CS8618: Non-nullable property 'UserRoles' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/OrderItem.cs(11,23): warning CS8618: Non-nullable property 'CreateOrderItemDate' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/OrderItem.cs(13,22): warning CS8618: Non-nullable property 'Order' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/User.cs(11,38): warning CS8618: Non-nullable property 'UserRoles' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/UserRole.cs(8,21): warning CS8618: Non-nullable property 'User' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/UserRole.cs(9,21): warning CS8618: Non-nullable property 'Role' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/Order.cs(10,21): warning CS8618: Non-nullable property 'User' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/Order.cs(11,21): warning CS8618: Non-nullable property 'Role' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/Order.cs(12,20): warning CS8618: Non-nullable property 'Car' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/Models/Order.cs(13,39): warning CS8618: Non-nullable property 'OrderItems' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/CarShow.Domain.csproj]
+  CarShow.Domain -> /workspace/scratch/b408070ef9e1/baseline/CarShow.Domain/bin/Debug/net10.0/CarShow.Domain.dll
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Security/Generator/TokenGenerator.cs(23,52): warning CS8604: Possible null reference argument for parameter 's' in 'byte[] Encoding.GetBytes(string s)'. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Security/CarShow.Security.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Security/Generator/TokenGenerator.cs(64,52): warning CS8604: Possible null reference argument for parameter 's' in 'byte[] Encoding.GetBytes(string s)'. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Security/CarShow.Security.csproj]
+  CarShow.Security -> /workspace/scratch/b408070ef9e1/baseline/CarShow.Security/bin/Debug/net10.0/CarShow.Security.dll
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/Services/TelegramChannelService.cs(15,20): warning CS9113: Parameter 'configuration' is unread. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/CarShow.ApplicationService.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/Services/OrderService.cs(113,47): warning CS8625: Cannot convert null literal to non-nullable reference type. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/CarShow.ApplicationService.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/Services/UserService.cs(87,28): warning CS8625: Cannot convert null literal to non-nullable reference type. [/workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/CarShow.ApplicationService.csproj]
+  CarShow.ApplicationService -> /workspace/scratch/b408070ef9e1/baseline/CarShow.ApplicationService/bin/Debug/net10.0/CarShow.ApplicationService.dll
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/CarShow.Infrastracture.csproj : warning NU1902: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2fmv-rv2c-59x7
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/CarShow.Infrastracture.csproj : warning NU1903: Package 'System.Security.Cryptography.Pkcs' 9.0.4 has a known high severity vulnerability, https://github.com/advisories/GHSA-846f-f764-76mx
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/Repository/UnitOfWork.cs(8,12): warning CS8618: Non-nullable field '_transaction' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the field as nullable. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/CarShow.Infrastracture.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/Repository/BaseRepository.cs(39,20): warning CS8603: Possible null reference return. [/workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/CarShow.Infrastracture.csproj]
+  CarShow.Infrastracture -> /workspace/scratch/b408070ef9e1/baseline/CarShow.Infrastracture/bin/Debug/net10.0/CarShow.Infrastracture.dll
+/workspace/scratch/b408070ef9e1/baseline/CarShow/Controllers/OrderController.cs(93,35): warning CS8604: Possible null reference argument for parameter 'input' in 'Guid Guid.Parse(string input)'. [/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow/Controllers/WeatherForecastController.cs(58,25): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj]
+/workspace/scratch/b408070ef9e1/baseline/CarShow/Controllers/WeatherForecastController.cs(79,25): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/b408070ef9e1/baseline/CarShow/CarShow.csproj]
+  CarShow -> /workspace/scratch/b408070ef9e1/baseline/CarShow/bin/Debug/net10.0/CarShow.dll
+  CarShow.Tests -> /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/bin/Debug/net10.0/CarShow.Tests.dll
+Test run for /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/bin/Debug/net10.0/CarShow.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:06.84]     CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney [FAIL]
+[xUnit.net 00:00:06.86]     CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource [FAIL]
+  Failed CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney [119 ms]
+  Error Message:
+   Assert.NotNull() Failure: Value is null
+  Stack Trace:
+     at CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramReprocessingTests.cs:line 88
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource [5 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 825000000
+Actual:   850000000
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 249
+   at CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 254
+   at CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 254
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:07.81]     CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain [FAIL]
+  Failed CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain [242 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "207"
+Actual:   "پژو 207"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramReprocessingTests.cs:line 43
+   at CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramReprocessingTests.cs:line 54
+   at CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramReprocessingTests.cs:line 54
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:08.64]     CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریا"···, expected: 850000000) [FAIL]
+[xUnit.net 00:00:08.69]     CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation [FAIL]
+[xUnit.net 00:00:08.72]     CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون توما"···, expected: 850000000) [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریا"···, expected: 850000000) [93 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Matched"
+Actual:   "Unmatched"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(String text, Decimal expected) in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 50
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation [117 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 20000
+Actual:   200
+  Stack Trace:
+     at CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramAllChannelPricingTests.cs:line 188
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون توما"···, expected: 850000000) [78 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Matched"
+Actual:   "Unmatched"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(String text, Decimal expected) in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 50
+   at InvokeStub_TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:09.71]     CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory [305 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 900000000
+Actual:   908333333.33
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 130
+   at CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 139
+   at CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 158
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:10.51]     CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay [759 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Late"
+Actual:   "Matched"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 180
+   at CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 182
+   at CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 182
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:10.74]     CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim [FAIL]
+[xUnit.net 00:00:11.08]     CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim [171 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   null
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 60
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry [1 s]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "207"
+Actual:   "پژو 207"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 140
+   at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 141
+   at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 146
+   at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 146
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:11.26]     CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened [520 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 7
+Actual:   0
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 293
+   at CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 293
+   at CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramPricingTests.cs:line 293
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:38.68]     CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel [FAIL]
+  Failed CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel [1 m 10 s]
+  Error Message:
+   System.Threading.Tasks.TaskCanceledException : A task was canceled.
+  Stack Trace:
+     at CarShow.Tests.TelegramCollectionTests.Fixture.WaitForAsync(Func`2 predicate) in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 319
+   at CarShow.Tests.TelegramCollectionTests.Fixture.WaitForAsync(Func`2 predicate) in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 319
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 258
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 272
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 272
+--- End of stack trace from previous location ---
+Results File: /workspace/scratch/b408070ef9e1/CarShow/docs/verification/baseline.trx
+
+Failed!  - Failed:    12, Passed:   133, Skipped:     0, Total:   145, Duration: 1 m 42 s - CarShow.Tests.dll (net10.0)

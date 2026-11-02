@@ -1,0 +1,67 @@
+[
+  {
+    "VehicleName": "\u0622\u06CC\u062A\u0648 M5 \u0645\u062F\u0644 2025",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Matched",
+      "Name": "\u0622\u06CC\u062A\u0648 M5 \u0645\u062F\u0644 2025",
+      "Price": 14000000000,
+      "PriceAt": "2026-11-01T16:54:12.5764809Z",
+      "FetchedAt": "2026-11-02T16:54:12.9383399Z",
+      "Url": "https://car.ir/1017-eres-hm5-erev",
+      "Reason": null
+    }
+  },
+  {
+    "VehicleName": "\u0644\u0627\u0645\u0627\u06A9\u0648 \u0641\u0644\u0648 \u0645\u062F\u0644 1404",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Matched",
+      "Name": "\u0644\u0627\u0645\u0627\u06A9\u0648 \u0641\u0644\u0648 \u0645\u062F\u0644 1404",
+      "Price": 4500000000,
+      "PriceAt": "2026-11-01T16:54:12.5764809Z",
+      "FetchedAt": "2026-11-02T16:54:12.9383399Z",
+      "Url": "https://car.ir/1027-lamaco-flo-at",
+      "Reason": null
+    }
+  },
+  {
+    "VehicleName": "\u062A\u0627\u0646\u06A9 300 \u0645\u062F\u0644 2025",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Matched",
+      "Name": "\u062A\u0627\u0646\u06A9 300 \u0645\u062F\u0644 2025",
+      "Price": 16500000000,
+      "PriceAt": "2026-11-01T16:54:12.5764809Z",
+      "FetchedAt": "2026-11-02T16:54:12.9383399Z",
+      "Url": "https://car.ir/973-tank-300-automatic",
+      "Reason": null
+    }
+  },
+  {
+    "VehicleName": "\u067E\u0698\u0648 207",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T16:54:12.9383399Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u062C\u0646\u0633\u06CC\u0633 \u062C\u06CC80 2.5 \u062A\u0648\u0631\u0628\u0648 \u0645\u062F\u0644 2026",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "NotFound",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T16:54:12.9383399Z",
+      "Url": null,
+      "Reason": null
+    }
+  }
+]

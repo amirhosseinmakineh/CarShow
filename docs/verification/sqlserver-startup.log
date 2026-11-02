@@ -1,0 +1,68 @@
+This program has encountered a fatal error and cannot continue running at Mon Nov  2 20:24:33 2026
+The following diagnostic information is available:
+
+         Reason: 0x00000002
+     Parameters: 0x30032b690
+                  [0] 0xffffffffc0000142
+    Stack Trace:
+                 file://package6/windows/system32/sqlpal.dll+0x0000000000209C12
+                 file://package6/windows/system32/sqlpal.dll+0x0000000000208D23
+                 file://package6/windows/system32/sqlpal.dll+0x000000000023D2F1
+                 file://package6/windows/system32/sqlpal.dll+0x0000000000201F6E
+                 file://package6/windows/system32/sqlpal.dll+0x00000000003A02FB
+                 file:///windows/system32/ntdll.dll+0x00000000000F8B1F
+                 file:///windows/system32/ntdll.dll+0x0000000000014EB1
+                 file:///windows/system32/ntdll.dll+0x0000000000014DF8
+                 file:///windows/system32/ntdll.dll+0x00000000000148FA
+                 file:///windows/system32/ntdll.dll+0x000000000001FC5E
+                 file://package6/windows/system32/sqlpal.dll+0x0000000000244C17
+                 file://package6/windows/system32/sqlpal.dll+0x00000000003A0441
+                 file://package6/windows/system32/sqlpal.dll+0x000000000020F2DA
+        Process: 10 - sqlservr
+         Thread: 55 (application thread 0xb0)
+    Instance Id: 8228cc25-f19f-4ae0-ba14-e2a83a6ebcc9
+       Crash Id: b33e397e-dee3-49f4-84f0-f605c2fd799d
+    Build stamp: 2325542c0218a3bd28311335ec2734721c08c80d0e3eeaf07f6ce65f821aceee
+   Distribution: Ubuntu 24.04.3 LTS
+     Processors: 9
+   Total Memory: 10451423232 bytes
+      Timestamp: Mon Nov  2 20:24:33 2026
+     Last errno: 2
+Last errno text: No such file or directory
+Capturing a dump of 10
+FAILED to capture a dump. Details in paldumper log.
+Executing: /tmp/carshow-mssql/opt/mssql/bin/handle-crash.sh with parameters
+     handle-crash.sh
+     /tmp/carshow-mssql/opt/mssql/bin/sqlservr
+     10
+     /tmp/carshow-mssql/opt/mssql/bin
+     /var/opt/mssql/log/
+
+     8228cc25-f19f-4ae0-ba14-e2a83a6ebcc9
+     b33e397e-dee3-49f4-84f0-f605c2fd799d
+
+
+
+Ubuntu 24.04.3 LTS
+Capturing core dump and information to /var/opt/mssql/log...
+/bin/cat: /proc/10/maps: No such file or directory
+cat: /proc/10/environ: No such file or directory
+find: ‘/proc/10’: No such file or directory
+find: ‘/proc/10’: No such file or directory
+find: ‘/proc/10’: No such file or directory
+find: ‘/proc/10’: No such file or directory
+dmesg: read kernel buffer failed: Operation not permitted
+No journal files were found.
+No journal files were found.
+Mon Nov  2 20:24:35 +0330 2026 Capturing program information
+Mon Nov  2 20:24:36 +0330 2026 Attempting to capture a dump with paldumper for pid 10
+WARNING: Capture attempt failure detected
+Attempting to capture a filtered dump with paldumper for pid 10
+WARNING: Attempt to capture dump failed.  Reference /var/opt/mssql/log/core.sqlservr.10.temp/log/paldumper-debug.log for details
+Mon Nov  2 20:24:37 +0330 2026 Attempting to capture a dump with gdb
+Mon Nov  2 20:24:37 +0330 2026 Captured a dump with gdb
+Mon Nov  2 20:24:37 +0330 2026 Capturing program binaries
+Mon Nov  2 20:24:37 +0330 2026 Compressing the dump files
+Core dump and information are being compressed in the background. When
+complete, they can be found in the following location:
+  /var/opt/mssql/log/core.sqlservr.11_02_2026_20_24_33.10.tbz2

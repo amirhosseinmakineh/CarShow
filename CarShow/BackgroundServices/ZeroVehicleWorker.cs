@@ -22,9 +22,9 @@ public sealed class ZeroVehicleWorker(IServiceScopeFactory scopes, ILogger<ZeroV
                     nextSchemaCheck = DateTime.UtcNow.AddMinutes(1);
                     var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
                     schemaReady = (await db.Database.GetAppliedMigrationsAsync(stoppingToken))
-                        .Contains("20261030213449_IndependentZeroVehicles");
+                        .Contains("20261102050507_ZeroVehicleCarIrPipeline");
                     if (!schemaReady)
-                        logger.LogWarning("Zero vehicle import is paused until migration 20261030213449_IndependentZeroVehicles is applied.");
+                        logger.LogWarning("Zero vehicle import is paused until migration 20261102050507_ZeroVehicleCarIrPipeline is applied.");
                 }
                 if (!schemaReady)
                 {

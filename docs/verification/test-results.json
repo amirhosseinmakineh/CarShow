@@ -1,0 +1,1683 @@
+{
+  "baseline": {
+    "counters": {
+      "total": "145",
+      "executed": "145",
+      "passed": "133",
+      "failed": "12",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "results": [
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: توافقی\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.TimelineCountsOnlyChannelsStillRegisteredInTheCurrentRun",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.RemovingLastChannelHidesHistoricalCountersAndTimelineWithoutErasingAuditRows",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"KMC J7 مدل: 1403 بدون کارکرد قیمت نقدی: ۹۸۰,۰۰۰,۰۰\"···, model: \"kmc j7\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵۰۰۰۰۰۰۰ ریال\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.PauseResumePersistsAndNormalizesPublicUrls",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"بدون کارکرد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: 0 تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"خرج صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.ConcurrentCalculationsUseDurableUniquenessAndOneHistory",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۸۰۰م و ۹۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر خشک\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.DistinctAdsFromOneChannelContributeWithoutSplittingYears",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"۲۰۷ اتوماتیک مدل: 1403 بدون کارکرد قیمت: 980 میلیو\"···, model: \"پژو 207\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 8)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 کارکرد: ۲۰۰ هزار قیمت: 850 میلیو\"···, used: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.PaginatesTo500WithoutDuplicatesAndReturnsResumeCursor",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ParsesExplicitMoneyWithCommonThousandsSeparators(price: \"۱.۳۰۰.۰۰۰.۰۰۰ تومان\", expected: 1300000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"0 کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.RetriedChannelIsCountedOnceAfterSuccess",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک صفر کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel",
+        "outcome": "Failed",
+        "error": "System.Threading.Tasks.TaskCanceledException : A task was canceled."
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"207\"\nActual:   \"پژو 207\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ActualOctoberChannelCaptionsStoreAndKeepHydraulicEngineVariantSeparate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.CopiedAdvertisementDoesNotCreateExtraSourceWeight",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.TimelineUsesPersistedJobAndStageTimesWithoutClaimingMissingStorage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UsesModelAndTrimAcrossYearsAndComputesMedianWithOneOrManySamples",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 2\nActual:   null"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SharedNumbersAndMissingIdentityCannotMatch(text: \"بنز 207 اتومات صفر قیمت: 850 میلیون تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.ReprocessesVersionFourNeedsReviewCandidateInPlace",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.MissingConditionDoesNotMislabelAnExplicitValidPriceAsInvalid",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین مدل: 1403 قیمت: ۹۸۰ میلیون تومان\", year: 1403, used: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵۰۰۰۰۰۰ تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.MixedCurrenciesNormalizeBeforeMeanAndUnknownIdentityCannotPublish",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 825000000\nActual:   850000000"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"۰ کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: -850 تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.UnknownFieldsHaveSeparateIdentityAndMultipleSourcesCanAverage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.ReportsPartialMessagesWhenNextPageFails",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر تا صد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ParsesExplicitMoneyWithCommonThousandsSeparators(price: \"۱ ۳۰۰ ۰۰۰ ۰۰۰ تومان\", expected: 1300000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"رنگ بدنه صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر خریدارم ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ReprocessingDoesNotOverwritePreviouslyPublishedListing",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.RejectsNonPublicUsernamesWithoutHttp(input: \"../admin\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر قیمت -۸۰۰ میلیون تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"2.045 میلیارد تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousOrInstallmentPricesDoNotEnterPricing(text: \"پژو 207 مدل: 1403 صفر قیمت: 980\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر\\nhttps://t.me/aliajami_used_car کارکرده\", failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ProductionHtmlCollectorPagesThroughValidationIntoIndependentDatabase",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 20000\nActual:   200"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 بدون کارکرد قیمت: 850 میلیون توم\"···, used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.ResetLastCalculationKeepsRawMessagesAndHistory",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.PublicChannelFormatsPersistWithProductionCatalogAndReplayWithoutDuplicates",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵م\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"دنا+ توربو مدل: 1403 بدون کارکرد قیمت: ۹۸۰ میلیون \"···, model: \"دنا پلاس\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 900000000\nActual:   908333333.33"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر نیست\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.RestartRecoversPersistedJobsWithAnEmptyMemoryQueue",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.PausingQueuedChannelDoesNotLeaveTheGlobalRunStuck",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"خشک\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.MigrationConsistencyTests.SqlServerModelMatchesLatestMigrationSnapshot",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲,۰۴۵ میلیون تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا بیمه تا۱۴۰۶/۰۷صفر۲۹۵۰م\", failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 1)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 20)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"خشک کارکرده\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر @aliajamihavaleh\\ud83d\\udc49صفر @aliajami_used_car�\"···, failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.PeriodicSchedulerQueuesActiveChannelsAfterPreviousSuccess",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.TimelineWaitsForEveryChannelAndPricingBeforeFinishing",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر کارکرد: ۲۰ هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: \"پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون توما\"···, expected: 850000000)",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Matched\"\nActual:   \"Unmatched\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفرکیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا\\n@aliajamihavaleh\\ud83d\\udc49صفر\\n@aliajami_used_car\\ud83d\\udc49ک\"···, failure: \"ZERO_NOT_CONFIRMED\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.SixIndependentChannelsCreateCarAndPriceInSameCycleWithoutExistingCatalog",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.RepeatedCyclesAfterFinalizationKeepHistoryAndStillRegisterNewAds",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney",
+        "outcome": "Failed",
+        "error": "Assert.NotNull() Failure: Value is null"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"رنگ صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 2)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا کارکرده\\n@aliajamihavaleh\\ud83d\\udc49صفر\", failure: \"CONTRADICTORY_CONDITION\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SharedNumbersAndMissingIdentityCannotMatch(text: \"قیمت: 850 میلیون تومان صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: \"پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریا\"···, expected: 850000000)",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Matched\"\nActual:   \"Unmatched\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.ReconcileTelegramModelSnapshot))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر\\n@aliajamihavaleh\\ud83d\\udc49صفر\\n@aliajami_used_ca\"···, failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر کارکرد ۶۰۰تا\\n@aliajamihavaleh\\ud83d\\udc49صفر\", failure: \"POSITIVE_MILEAGE\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین قیمت: ۹۸۰,۰۰۰,۰۰۰\", year: null, used: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.RemovingChannelHidesItWithoutCascadingStoredMessagesAndCanBeReadded",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین قیمت: ۹۸۰ میلیون تومان\", year: null, used: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 کارکرد: ۵۰٬۰۰۰ قیمت: 850 میلیون \"···, used: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.Import200ChannelsPersistsJobsAndCountsDuplicateReimport",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"پژو ۲۰۷ اتوماتیک مدل: 1403 کارکرد: 20000 قیمت: 980\"···, model: \"پژو 207\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.ClearHidesAllCandidatesAndPublicCarsWithoutDeletingRawOrHistory",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.AdminApiAuthorizesAndReturnsRealQueuedJobAndServerPagination",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AliasesShareIdentityButDifferentTrimsAndMileageRangesDoNot",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۸۰۰\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramEndpointTests.AdminRoutesValidateJwtBindImportAndReturnPersistedState",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.KeepsRecognizedVehicleCandidateWhenPriceIsMissing",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.ExtremePriceIsRegisteredWithOtherValidPrices",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: 850 میلیون تومان قیمت: 90\"···)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.UsesTehranMidnightInsteadOfReceiptDay",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین صفر قیمت: ۹۸۰ میلیون تومان\", year: null, used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"شاهین G مدل: 1403 بدون کارکرد قیمت: ۱ میلیارد و ۱۵\"···, model: \"شاهین\", expected: 1150000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"کارنکرده\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ZeroImportLeavesExistingPipelineAndRowsUnchanged",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousMileageAndExplicitUsedDoNotBecomeNew",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 صفر کیلومتر قیمت: 850 میلیون توم\"···, used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.OldAdsWithNameAndPriceAreStoredWithoutSourceLinksOrPriceRangeGate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.SingleSourceAndMultipleSourcesUseArithmeticMean",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 7\nActual:   0"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"پژو 207 مدل: 1403 بدون کارکرد قیمت: ۹,۸۰۰,۰۰۰,۰۰۰ \"···, model: \"پژو 207\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا @aliajamihavaleh\\ud83d\\udc49صفر @aliajami_used_car\\ud83d\\udc49کار\"···, failure: \"ZERO_NOT_CONFIRMED\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر نمی باشد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousOrInstallmentPricesDoNotEnterPricing(text: \"پژو 207 مدل: 1403 صفر پیش پرداخت: 300 میلیون قیمت:\"···)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر قیمت: توافقی ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.RejectsNonPublicUsernamesWithoutHttp(input: \"https://evil.test/\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۰۸۰۰م کارکرد ۱۶هزارتا\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین کارکرده قیمت: ۹۸۰ میلیون تومان\", year: null, used: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.DeletingTelegramCarHidesItWithoutBreakingListingAndHistoryReferences",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.SeparatesKnownAndUnknownConditionYearTrimAndDayAndExcludesDeletedSources",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.PaginationSearchDetailsAndMembersReadPersistedResults",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 کارکرد: ۰ قیمت: 850 میلیون تومان\", used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: 999999999999999999999 میل\"···)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.FailureRetriesAndDoesNotPreventAnotherChannelFromRunning",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.StoresOnlyValidatedZeroAdsWithNullableYearAndKeepsOldTablesEmpty",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.NormalizesArabicLettersSpacesAndDigits",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ParsesExplicitMoneyWithCommonThousandsSeparators(price: \"۱۳٬۰۰۰٬۰۰۰٬۰۰۰ ریال\", expected: 1300000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.KeepsNewsRawButRemovesLegacyNewsFromDefaultAdvertisementList",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.NewSourceUpdatesExistingMeanAndHistoryWithoutDuplicateCatalogRows",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر 100 کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.PublicInventoryReturnsStoredNewAndUsedCarsWithNormalizedPricesAndSources",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.TelegramStrictComparisons))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.InaccessiblePreviewDoesNotReportSuccess",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر بیعانه ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousOrInstallmentPricesDoNotEnterPricing(text: \"پژو 207 مدل: 1403 صفر قیمت: توافقی\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MultipleCarsRequireReviewAndRawTextIsPreserved",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک ها کاملا صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.InvalidAndAmbiguousAdsNeverCreateListingsOrReferencePrices",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"207\"\nActual:   \"پژو 207\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SharedNumbersAndMissingIdentityCannotMatch(text: \"پژو 2070 اتومات صفر قیمت: 850 میلیون تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.RejectsNonPublicUsernamesWithoutHttp(input: \"-100123456\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Late\"\nActual:   \"Matched\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.SmartTelegramComparisons))",
+        "outcome": "Passed"
+      }
+    ]
+  },
+  "final": {
+    "counters": {
+      "total": "168",
+      "executed": "168",
+      "passed": "156",
+      "failed": "12",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "results": [
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 صفر کیلومتر قیمت: 850 میلیون توم\"···, used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PaymentAndPhoneNumbersDoNotProduceFullPrices(text: \"تارا صفر تماس 09123456789\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"۲۸۸۰م\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.RejectsNonPublicUsernamesWithoutHttp(input: \"https://evil.test/\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 2\nActual:   null"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا بیمه تا۱۴۰۶/۰۷صفر۲۹۵۰م\", failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 900000000\nActual:   908333333.33"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.PaginatesTo500WithoutDuplicatesAndReturnsResumeCursor",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.ClearHidesAllCandidatesAndPublicCarsWithoutDeletingRawOrHistory",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.RemovingChannelHidesItWithoutCascadingStoredMessagesAndCanBeReadded",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleVerificationTests.RecordedCarIrExtractionValidationComparisonPersistenceAndReplay",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر کارکرد: ۲۰ هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.RejectsNonPublicUsernamesWithoutHttp(input: \"../admin\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر\\n@aliajamihavaleh\\ud83d\\udc49صفر\\n@aliajami_used_ca\"···, failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"۰ کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"رنگ صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 2)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.PauseResumePersistsAndNormalizesPublicUrls",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر @aliajamihavaleh\\ud83d\\udc49صفر @aliajami_used_car�\"···, failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.ReconcileTelegramModelSnapshot))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا کارکرده\\n@aliajamihavaleh\\ud83d\\udc49صفر\", failure: \"CONTRADICTORY_CONDITION\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Late\"\nActual:   \"Matched\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ParsesExplicitMoneyWithCommonThousandsSeparators(price: \"۱ ۳۰۰ ۰۰۰ ۰۰۰ تومان\", expected: 1300000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.MixedNumberingAndMultilineBodiesStaySeparate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.TimelineWaitsForEveryChannelAndPricingBeforeFinishing",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفرکیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر نمی باشد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.ResetLastCalculationKeepsRawMessagesAndHistory",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleVerificationTests.WorkerContinuesOtherChannelsAfterReportedOrThrownFailure(throws: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵۰۰۰۰۰۰ تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.InaccessiblePreviewDoesNotReportSuccess",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵۰۰۰۰۰۰۰ ریال\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.DeletingTelegramCarHidesItWithoutBreakingListingAndHistoryReferences",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"صفر کارکرد ۱۱ هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AliasesShareIdentityButDifferentTrimsAndMileageRangesDoNot",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۸۰۰م و ۹۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.NewSourceUpdatesExistingMeanAndHistoryWithoutDuplicateCatalogRows",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 بدون کارکرد قیمت: 850 میلیون توم\"···, used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleVerificationTests.WorkerContinuesOtherChannelsAfterReportedOrThrownFailure(throws: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.RejectsNonPublicUsernamesWithoutHttp(input: \"-100123456\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 20000\nActual:   200"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.MissingConditionDoesNotMislabelAnExplicitValidPriceAsInvalid",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا\\n@aliajamihavaleh\\ud83d\\udc49صفر\\n@aliajami_used_car\\ud83d\\udc49ک\"···, failure: \"ZERO_NOT_CONFIRMED\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: \"پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریا\"···, expected: 850000000)",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Matched\"\nActual:   \"Unmatched\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 825000000\nActual:   850000000"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.SixIndependentChannelsCreateCarAndPriceInSameCycleWithoutExistingCatalog",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 7\nActual:   0"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ActualOctoberChannelCaptionsStoreAndKeepHydraulicEngineVariantSeparate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"صفر کارکرد ۱۶هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.RetriedChannelIsCountedOnceAfterSuccess",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.FailureRetriesAndDoesNotPreventAnotherChannelFromRunning",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین مدل: 1403 قیمت: ۹۸۰ میلیون تومان\", year: 1403, used: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SharedNumbersAndMissingIdentityCannotMatch(text: \"پژو 2070 اتومات صفر قیمت: 850 میلیون تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۸۰۰\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPreviewTests.ReportsPartialMessagesWhenNextPageFails",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"بدون کارکرد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.NormalizesArabicLettersSpacesAndDigits",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: 850 میلیون تومان قیمت: 90\"···)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SharedNumbersAndMissingIdentityCannotMatch(text: \"قیمت: 850 میلیون تومان صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر تا صد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"پژو ۲۰۷ اتوماتیک مدل: 1403 کارکرد: 20000 قیمت: 980\"···, model: \"پژو 207\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.UsesTehranMidnightInsteadOfReceiptDay",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.TimelineCountsOnlyChannelsStillRegisteredInTheCurrentRun",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.PeriodicSchedulerQueuesActiveChannelsAfterPreviousSuccess",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"۱۶هزار کارکرد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"شاهین G مدل: 1403 بدون کارکرد قیمت: ۱ میلیارد و ۱۵\"···, model: \"شاهین\", expected: 1150000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.BulkChannelsDeduplicateAndInvalidIdentifierDoesNotDiscardOtherChannels",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 کارکرد: ۰ قیمت: 850 میلیون تومان\", used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.KeepsNewsRawButRemovesLegacyNewsFromDefaultAdvertisementList",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ToleranceSettingsPersistAndRecalculationUsesThem",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.RealRecordedCarIrTableSeparatesMarketFactoryAndUnknownAge",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"۲ میلیارد و ۸۸۰ میلیون\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"0 کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۰۸۰۰م کارکرد ۱۶هزارتا\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر خریدارم ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.UnknownFieldsHaveSeparateIdentityAndMultipleSourcesCanAverage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ReprocessingDoesNotOverwritePreviouslyPublishedListing",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین کارکرده قیمت: ۹۸۰ میلیون تومان\", year: null, used: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.ReprocessesVersionFourNeedsReviewCandidateInPlace",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UsesCarIrAndIndependentChannelsToComputeMeanAcrossYears",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر قیمت: توافقی ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ZeroImportLeavesExistingPipelineAndRowsUnchanged",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: توافقی\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵م\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.RemovingLastChannelHidesHistoricalCountersAndTimelineWithoutErasingAuditRows",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"بدون کارکرد؛ کارکرد ۱۶ هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.RestartRecoversPersistedJobsWithAnEmptyMemoryQueue",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ParsesExplicitMoneyWithCommonThousandsSeparators(price: \"۱.۳۰۰.۰۰۰.۰۰۰ تومان\", expected: 1300000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.PaginationSearchDetailsAndMembersReadPersistedResults",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"پژو 207 مدل: 1403 بدون کارکرد قیمت: ۹,۸۰۰,۰۰۰,۰۰۰ \"···, model: \"پژو 207\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک صفر کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousOrInstallmentPricesDoNotEnterPricing(text: \"پژو 207 مدل: 1403 صفر قیمت: توافقی\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.MixedCurrenciesNormalizeBeforeMeanAndUnknownIdentityCannotPublish",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.NumberedMessagesPersistEveryZeroPartAndRejectPositiveMileageIndividually",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.SuspiciousFirstQuoteDoesNotBlockOtherChannelsAndReplayIsIdempotent",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"دنا+ توربو مدل: 1403 بدون کارکرد قیمت: ۹۸۰ میلیون \"···, model: \"دنا پلاس\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"کارنکرده\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.LatestValidQuotePerChannelContributesWithoutSplittingYears",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"207\"\nActual:   \"پژو 207\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر نیست\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.SeparatesKnownAndUnknownConditionYearTrimAndDayAndExcludesDeletedSources",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"2,880,000,000 تومان\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر کارکرد ۶۰۰تا\\n@aliajamihavaleh\\ud83d\\udc49صفر\", failure: \"POSITIVE_MILEAGE\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲,۰۴۵ میلیون تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.SmartTelegramComparisons))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"۲۰۷ اتوماتیک مدل: 1403 بدون کارکرد قیمت: 980 میلیو\"···, model: \"پژو 207\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 8)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.ExtremePriceIsRegisteredWithOtherValidPrices",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"207\"\nActual:   \"پژو 207\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر\\nhttps://t.me/aliajami_used_car کارکرده\", failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک ها کاملا صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.SingleSourceAndMultipleSourcesUseArithmeticMean",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.MigrationConsistencyTests.SqlServerModelMatchesLatestMigrationSnapshot",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 20)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Values differ\nExpected: 0\nActual:   199"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PaymentAndPhoneNumbersDoNotProduceFullPrices(text: \"پیش پرداخت ۲ میلیارد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.ZeroVehicleCarIrPipeline))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousOrInstallmentPricesDoNotEnterPricing(text: \"پژو 207 مدل: 1403 صفر قیمت: 980\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 کارکرد: ۵۰٬۰۰۰ قیمت: 850 میلیون \"···, used: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.PublicInventoryReturnsStoredNewAndUsedCarsWithNormalizedPricesAndSources",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"بدون کارکرد ۱۶ هزار کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.CopiedAdvertisementDoesNotCreateExtraSourceWeight",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramEndpointTests.AdminRoutesValidateJwtBindImportAndReturnPersistedState",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"خشک\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین قیمت: ۹۸۰,۰۰۰,۰۰۰\", year: null, used: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.RepeatedCyclesAfterFinalizationKeepHistoryAndStillRegisterNewAds",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر 100 کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.OldAdsWithNameAndPriceAreStoredWithoutSourceLinksOrPriceRangeGate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: 999999999999999999999 میل\"···)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر خشک\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.AdminApiAuthorizesAndReturnsRealQueuedJobAndServerPagination",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousOrInstallmentPricesDoNotEnterPricing(text: \"پژو 207 مدل: 1403 صفر پیش پرداخت: 300 میلیون قیمت:\"···)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"رنگ بدنه صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MultipleCarsRequireReviewAndRawTextIsPreserved",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.StoresOnlyValidatedZeroAdsWithNullableYearAndKeepsOldTablesEmpty",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.SharedNumbersAndMissingIdentityCannotMatch(text: \"بنز 207 اتومات صفر قیمت: 850 میلیون تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PaymentAndPhoneNumbersDoNotProduceFullPrices(text: \"قسط ماهانه ۲۴م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.ConcurrentCalculationsUseDurableUniquenessAndOneHistory",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ParsesExplicitMoneyWithCommonThousandsSeparators(price: \"۱۳٬۰۰۰٬۰۰۰٬۰۰۰ ریال\", expected: 1300000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین قیمت: ۹۸۰ میلیون تومان\", year: null, used: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.KeepsRecognizedVehicleCandidateWhenPriceIsMissing",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.AncillaryCostIsNotTheVehiclePrice",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: -850 تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramListingManagementTests.TimelineUsesPersistedJobAndStageTimesWithoutClaimingMissingStorage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramMinimalRegistrationTests.NameAndPricePublishCarAndDailyHistoryWithoutOptionalFields(text: \"شاهین صفر قیمت: ۹۸۰ میلیون تومان\", year: null, used: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney",
+        "outcome": "Failed",
+        "error": "Assert.NotNull() Failure: Value is null"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.InvalidAndAmbiguousAdsNeverCreateListingsOrReferencePrices",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.PublicChannelFormatsPersistWithProductionCatalogAndReplayWithoutDuplicates",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر قیمت -۸۰۰ میلیون تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"خرج صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.Import200ChannelsPersistsJobsAndCountsDuplicateReimport",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"2.045 میلیارد تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.AmbiguousMileageAndExplicitUsedDoNotBecomeNew",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPipelineTimelineTests.PausingQueuedChannelDoesNotLeaveTheGlobalRunStuck",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.MissingTrimOrImageDoesNotRejectValidPrice(text: \"پژو 207 مدل: 1403 کارکرد: ۲۰۰ هزار قیمت: 850 میلیو\"···, used: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramReferencePricingTests.CanonicalNameAndExplicitPriceWithoutManufacturer(text: \"KMC J7 مدل: 1403 بدون کارکرد قیمت نقدی: ۹۸۰,۰۰۰,۰۰\"···, model: \"kmc j7\", expected: 980000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ProductionHtmlCollectorPagesThroughValidationIntoIndependentDatabase",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا @aliajamihavaleh\\ud83d\\udc49صفر @aliajami_used_car\\ud83d\\udc49کار\"···, failure: \"ZERO_NOT_CONFIRMED\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر بیعانه ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"٢٨٨٠م\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: \"پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون توما\"···, expected: 850000000)",
+        "outcome": "Failed",
+        "error": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Matched\"\nActual:   \"Unmatched\"\n           ↑ (pos 0)"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"خشک کارکرده\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.TelegramStrictComparisons))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramAllChannelPricingTests.AllRegisteredSourcesEnterSameMeanAndCreateCarHistoryInFirstCycle(count: 1)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.TelegramPricingTests.RejectsInvalidPrices(text: \"پژو 207 اتومات صفر قیمت: 0 تومان\")",
+        "outcome": "Passed"
+      }
+    ]
+  },
+  "zero-focused": {
+    "counters": {
+      "total": "78",
+      "executed": "78",
+      "passed": "78",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "results": [
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PaymentAndPhoneNumbersDoNotProduceFullPrices(text: \"پیش پرداخت ۲ میلیارد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲,۰۴۵ میلیون تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"بدون کارکرد؛ کارکرد ۱۶ هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر خشک\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleVerificationTests.WorkerContinuesOtherChannelsAfterReportedOrThrownFailure(throws: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.PaginationSearchDetailsAndMembersReadPersistedResults",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر خریدارم ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.AdminApiAuthorizesAndReturnsRealQueuedJobAndServerPagination",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ProductionHtmlCollectorPagesThroughValidationIntoIndependentDatabase",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر\\n@aliajamihavaleh\\ud83d\\udc49صفر\\n@aliajami_used_ca\"···, failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.MixedNumberingAndMultilineBodiesStaySeparate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک صفر کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ZeroImportLeavesExistingPipelineAndRowsUnchanged",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.LatestValidQuotePerChannelContributesWithoutSplittingYears",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"خرج صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر قیمت: توافقی ۸۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا @aliajamihavaleh\\ud83d\\udc49صفر @aliajami_used_car\\ud83d\\udc49کار\"···, failure: \"ZERO_NOT_CONFIRMED\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر تا صد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"۰ کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"صفر کارکرد ۱۱ هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"۲ میلیارد و ۸۸۰ میلیون\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.TelegramStrictComparisons))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.MigrationConsistencyTests.SqlServerModelMatchesLatestMigrationSnapshot",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.PublicChannelFormatsPersistWithProductionCatalogAndReplayWithoutDuplicates",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.ZeroVehicleCarIrPipeline))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"رنگ صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر کارکرد: ۲۰ هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleVerificationTests.WorkerContinuesOtherChannelsAfterReportedOrThrownFailure(throws: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PaymentAndPhoneNumbersDoNotProduceFullPrices(text: \"قسط ماهانه ۲۴م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"٢٨٨٠م\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک ها کاملا صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ToleranceSettingsPersistAndRecalculationUsesThem",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵م\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"کارنکرده\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.NumberedMessagesPersistEveryZeroPartAndRejectPositiveMileageIndividually",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"خشک\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر نیست\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ActualOctoberChannelCaptionsStoreAndKeepHydraulicEngineVariantSeparate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.StoresOnlyValidatedZeroAdsWithNullableYearAndKeepsOldTablesEmpty",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا\\n@aliajamihavaleh\\ud83d\\udc49صفر\\n@aliajami_used_car\\ud83d\\udc49ک\"···, failure: \"ZERO_NOT_CONFIRMED\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۸۰۰م و ۹۰۰م\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"لاستیک صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.BulkChannelsDeduplicateAndInvalidIdentifierDoesNotDiscardOtherChannels",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PaymentAndPhoneNumbersDoNotProduceFullPrices(text: \"تارا صفر تماس 09123456789\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.SmartTelegramComparisons))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.InvalidAndAmbiguousAdsNeverCreateListingsOrReferencePrices",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا بیمه تا۱۴۰۶/۰۷صفر۲۹۵۰م\", failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۰۸۰۰م کارکرد ۱۶هزارتا\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"2.045 میلیارد تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر قیمت -۸۰۰ میلیون تومان\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.RealRecordedCarIrTableSeparatesMarketFactoryAndUnknownAge",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا کارکرده\\n@aliajamihavaleh\\ud83d\\udc49صفر\", failure: \"CONTRADICTORY_CONDITION\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"2,880,000,000 تومان\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.AncillaryCostIsNotTheVehiclePrice",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UsesCarIrAndIndependentChannelsToComputeMeanAcrossYears",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.SqlServerMigrationBatchTests.NewColumnAndDependentIndexAreSentAsSeparateCommands(migrationType: typeof(CarShow.Infrastracture.Migrations.ReconcileTelegramModelSnapshot))",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.ExtractsFullAmountWithMixedDigits(text: \"۲۸۸۰م\", expected: 2880000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"0 کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"صفر کارکرد ۱۶هزار\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر 100 کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر\\nhttps://t.me/aliajami_used_car کارکرده\", failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleVerificationTests.RecordedCarIrExtractionValidationComparisonPersistenceAndReplay",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵۰۰۰۰۰۰۰ ریال\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر ۸۰۰\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"۱۶هزار کارکرد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"بدون کارکرد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.PositiveMileageOverridesZero(text: \"بدون کارکرد ۱۶ هزار کیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"خشک کارکرده\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroMarketPipelineTests.SuspiciousFirstQuoteDoesNotBlockOtherChannelsAndReplayIsIdempotent",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر @aliajamihavaleh\\ud83d\\udc49صفر @aliajami_used_car�\"···, failure: null)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"رنگ بدنه صفر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RecognizesExplicitZeroClaims(condition: \"صفرکیلومتر\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.RejectsAccessoryClaimsAndContradictions(text: \"صفر نمی باشد\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.ChannelNavigationSignaturesDoNotSetVehicleCondition(text: \"تارا صفر کارکرد ۶۰۰تا\\n@aliajamihavaleh\\ud83d\\udc49صفر\", failure: \"POSITIVE_MILEAGE\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPricesRequireOneExplicitAmountWithUnit(amount: \"۲۰۴۵۰۰۰۰۰۰ تومان\", expected: 2045000000)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CarShow.Tests.ZeroVehicleTests.UnlabelledPriceSupportKeepsAmbiguousAndInvalidAdsRejected(body: \"صفر بیعانه ۸۰۰م\")",
+        "outcome": "Passed"
+      }
+    ]
+  },
+  "baseline-worker": {
+    "counters": {
+      "total": "1",
+      "executed": "1",
+      "passed": "0",
+      "failed": "1",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "results": [
+      {
+        "name": "CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel",
+        "outcome": "Failed",
+        "error": "System.Threading.Tasks.TaskCanceledException : A task was canceled."
+      }
+    ]
+  }
+}

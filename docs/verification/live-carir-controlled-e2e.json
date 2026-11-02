@@ -1,0 +1,112 @@
+{
+  "TestedAt": "2026-11-02T16:59:28.2643165Z",
+  "TestKind": "ControlledTelegram_LiveCarIr_LocalSqlite",
+  "Runs": [
+    {
+      "Id": 1,
+      "Channel": "outlier_channel",
+      "Status": "Completed",
+      "MessageLimit": 100,
+      "Before": null,
+      "NextBefore": null,
+      "PagesFetched": 0,
+      "StopReason": "",
+      "CreatedAt": "2026-11-02T16:59:16.1463051",
+      "CompletedAt": "2026-11-02T16:59:28.1126894",
+      "Scanned": 1,
+      "Accepted": 1,
+      "Rejected": 0,
+      "Duplicates": 0,
+      "Stored": 1,
+      "PriceGroups": 1,
+      "RejectionCounts": "{}",
+      "Error": null,
+      "Extracted": 1
+    },
+    {
+      "Id": 2,
+      "Channel": "lower_channel",
+      "Status": "Completed",
+      "MessageLimit": 100,
+      "Before": null,
+      "NextBefore": null,
+      "PagesFetched": 0,
+      "StopReason": "",
+      "CreatedAt": "2026-11-02T16:59:28.1726754",
+      "CompletedAt": "2026-11-02T16:59:28.2054272",
+      "Scanned": 1,
+      "Accepted": 1,
+      "Rejected": 0,
+      "Duplicates": 0,
+      "Stored": 1,
+      "PriceGroups": 1,
+      "RejectionCounts": "{}",
+      "Error": null,
+      "Extracted": 1
+    },
+    {
+      "Id": 3,
+      "Channel": "upper_channel",
+      "Status": "Completed",
+      "MessageLimit": 100,
+      "Before": null,
+      "NextBefore": null,
+      "PagesFetched": 0,
+      "StopReason": "",
+      "CreatedAt": "2026-11-02T16:59:28.2102451",
+      "CompletedAt": "2026-11-02T16:59:28.2328502",
+      "Scanned": 1,
+      "Accepted": 1,
+      "Rejected": 0,
+      "Duplicates": 0,
+      "Stored": 1,
+      "PriceGroups": 1,
+      "RejectionCounts": "{}",
+      "Error": null,
+      "Extracted": 1
+    }
+  ],
+  "References": [
+    {
+      "TelegramVehicleName": "\u0622\u06CC\u062A\u0648 M5 \u0645\u062F\u0644 2025",
+      "NormalizedVehicleName": "\u0622\u06CC\u062A\u0648 m5 \u0645\u062F\u0644 2025",
+      "Result": {
+        "Status": "Matched",
+        "Name": "\u0622\u06CC\u062A\u0648 M5 \u0645\u062F\u0644 2025",
+        "Price": 14000000000,
+        "PriceAt": "2026-11-01T16:59:27.3003185Z",
+        "FetchedAt": "2026-11-02T16:59:27.6136983Z",
+        "Url": "https://car.ir/1017-eres-hm5-erev",
+        "Reason": null
+      }
+    }
+  ],
+  "ListingStatuses": [
+    {
+      "Status": "Included",
+      "Count": 2
+    },
+    {
+      "Status": "Outlier",
+      "Count": 1
+    }
+  ],
+  "MarketStatuses": [
+    {
+      "Status": "Matched",
+      "Count": 3
+    }
+  ],
+  "Groups": [
+    {
+      "MarketPrice": 14000000000.0,
+      "FinalPrice": 14000000000.0,
+      "SampleCount": 2,
+      "SourceCount": 2
+    }
+  ],
+  "DatabasePath": "/tmp/carshow-zero-probe-269640d0a0cd4ecdb4bb8927e5c4487a.db",
+  "Stored": 3,
+  "OldCars": 0,
+  "OldListings": 0
+}

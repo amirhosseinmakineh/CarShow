@@ -47,6 +47,11 @@ if (builder.Configuration.GetValue("Telegram:WorkersEnabled", true))
 }
 builder.Services.AddScoped<ITelegramProcessingStore, TelegramProcessingStore>();
 builder.Services.AddScoped<IZeroVehicleStore, ZeroVehicleStore>();
+builder.Services.AddHttpClient("CarIr", client => {
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("CarShowMarketPrice/1.0");
+});
+builder.Services.AddSingleton<CarShow.Domain.Models.ZeroVehicles.ICarIrMarketPriceCrawler, CarShow.Infrastracture.ZeroVehicles.CarIrMarketPriceCrawler>();
 builder.Services.AddScoped<ZeroVehicleService>();
 if (builder.Configuration.GetValue("ZeroVehicles:WorkerEnabled", true))
     builder.Services.AddHostedService<ZeroVehicleWorker>();

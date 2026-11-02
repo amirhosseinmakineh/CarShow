@@ -6,6 +6,19 @@ internal static class ZeroVehicleConfiguration
 {
     public static void Configure(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ZeroVehicleChannel>(e => {
+            e.ToTable("ZeroVehicleChannels"); e.Property(x => x.Identifier).HasMaxLength(64);
+            e.HasIndex(x => x.Identifier).IsUnique(); e.Property(x => x.LastError).HasMaxLength(1024);
+        });
+        modelBuilder.Entity<ZeroVehicleIssue>(e => {
+            e.ToTable("ZeroVehicleIssues"); e.Property(x => x.ExternalMessageId).HasMaxLength(32);
+            e.Property(x => x.Code).HasMaxLength(64); e.Property(x => x.RawText).HasMaxLength(8000);
+            e.HasIndex(x => new { x.RunId, x.ExternalMessageId, x.PartIndex }).IsUnique();
+            e.HasOne<ZeroVehicleImportRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ZeroVehicleSetting>(e => {
+            e.ToTable("ZeroVehicleSettings"); e.Property(x => x.DeviationPercent).HasPrecision(5, 2);
+        });
         modelBuilder.Entity<ZeroVehicleModel>(e =>
         {
             e.ToTable("ZeroVehicleModels");
@@ -33,7 +46,15 @@ internal static class ZeroVehicleConfiguration
             e.Property(x => x.Fingerprint).HasMaxLength(64);
             e.Property(x => x.PricingStatus).HasMaxLength(32);
             e.Property(x => x.PriceToman).HasPrecision(18, 2);
-            e.HasIndex(x => new { x.Channel, x.ExternalMessageId }).IsUnique();
+            e.Property(x => x.MarketPrice).HasPrecision(18, 2);
+            e.Property(x => x.FinalPrice).HasPrecision(18, 2);
+            e.Property(x => x.RawPrice).HasMaxLength(256);
+            e.Property(x => x.PriceCandidates).HasMaxLength(1000);
+            e.Property(x => x.MarketStatus).HasMaxLength(32);
+            e.Property(x => x.MarketName).HasMaxLength(512);
+            e.Property(x => x.MarketUrl).HasMaxLength(2048);
+            e.Property(x => x.RejectionReason).HasMaxLength(1024);
+            e.HasIndex(x => new { x.Channel, x.ExternalMessageId, x.PartIndex }).IsUnique();
             e.HasIndex(x => new { x.ModelId, x.TrimId, x.PublishedAt });
             e.HasIndex(x => x.PublishedAt);
             e.HasOne(x => x.Model).WithMany().HasForeignKey(x => x.ModelId).OnDelete(DeleteBehavior.Restrict);
@@ -44,6 +65,8 @@ internal static class ZeroVehicleConfiguration
             e.ToTable("ZeroVehiclePriceGroups");
             e.HasIndex(x => new { x.ModelId, x.TrimId }).IsUnique();
             e.Property(x => x.ReferencePrice).HasPrecision(18, 2);
+            e.Property(x => x.MarketPrice).HasPrecision(18, 2);
+            e.Property(x => x.PricingStatus).HasMaxLength(32);
             e.Property(x => x.MinPrice).HasPrecision(18, 2);
             e.Property(x => x.MaxPrice).HasPrecision(18, 2);
             e.Property(x => x.Confidence).HasMaxLength(16);

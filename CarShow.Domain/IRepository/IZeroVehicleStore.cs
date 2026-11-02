@@ -3,6 +3,9 @@ namespace CarShow.Domain.IRepository;
 
 public interface IZeroVehicleStore
 {
+    IQueryable<ZeroVehicleChannel> Channels { get; }
+    IQueryable<ZeroVehicleIssue> Issues { get; }
+    IQueryable<ZeroVehicleSetting> Settings { get; }
     IQueryable<ZeroVehicleModel> Models { get; }
     IQueryable<ZeroVehicleTrim> Trims { get; }
     IQueryable<ZeroVehicleListing> Listings { get; }
