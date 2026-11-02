@@ -356,7 +356,12 @@ public sealed class TelegramPricingService(
             && x.ComparisonKey != null && x.CarId != null && x.NormalizedPrice > 0
             && store.Channels.Any(channel => channel.Id == x.ChannelId && !channel.IsDelete))
             .ToListAsync(cancellationToken);
-        var histories = await store.History.Where(x => x.PriceDay != null && (!x.IsFinal || x.PriceDay >= cutoff))
+        // Finalized observations still take part in the comparison pass. Their
+        // existing history keys must be loaded too, or a later cycle tries to
+        // insert the same (CarId, PriceDay) and rolls back the entire batch.
+        var observedDays = observations.Select(x => x.PriceDay).Distinct().ToArray();
+        var histories = await store.History.Where(x => x.PriceDay != null
+            && (!x.IsFinal || x.PriceDay >= cutoff || observedDays.Contains(x.PriceDay)))
             .ToListAsync(cancellationToken);
         var carsById = catalog.ToDictionary(car => car.Id);
         var historiesByDay = histories.ToDictionary(history => (history.CarId, history.PriceDay));
