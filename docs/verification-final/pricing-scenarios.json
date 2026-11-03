@@ -1,0 +1,261 @@
+[
+  {
+    "scenario": "B",
+    "marketStatus": "Matched",
+    "inputs": [
+      "تارا صفر ۱۲۰۰م"
+    ],
+    "ExpectedFinal": 3000000000,
+    "ActualFinal": 3000000000,
+    "ExpectedSamples": 0,
+    "ActualSamples": 0,
+    "GroupStatus": "ReferenceOnly",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 1200000000,
+        "PricingStatus": "Outlier",
+        "FinalPrice": 3000000000
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "E",
+    "marketStatus": "Stale",
+    "inputs": [
+      "تارا صفر ۲۹۵۰م"
+    ],
+    "ExpectedFinal": null,
+    "ActualFinal": null,
+    "ExpectedSamples": 0,
+    "ActualSamples": 0,
+    "GroupStatus": "Unavailable",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2950000000,
+        "PricingStatus": "Unavailable",
+        "FinalPrice": null
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "G",
+    "marketStatus": "Matched",
+    "inputs": [
+      "تارا صفر ۲۹۰۰م",
+      "تارا صفر ۲۹۰۰م",
+      "تارا صفر ۲۹۰۰م"
+    ],
+    "ExpectedFinal": 2950000000,
+    "ActualFinal": 2950000000,
+    "ExpectedSamples": 1,
+    "ActualSamples": 1,
+    "GroupStatus": "Priced",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2900000000,
+        "PricingStatus": "DuplicateContent",
+        "FinalPrice": 2950000000
+      },
+      {
+        "Channel": "channel_1",
+        "PriceToman": 2900000000,
+        "PricingStatus": "DuplicateContent",
+        "FinalPrice": 2950000000
+      },
+      {
+        "Channel": "channel_2",
+        "PriceToman": 2900000000,
+        "PricingStatus": "Included",
+        "FinalPrice": 2950000000
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "E",
+    "marketStatus": "Ambiguous",
+    "inputs": [
+      "تارا صفر ۲۹۵۰م"
+    ],
+    "ExpectedFinal": null,
+    "ActualFinal": null,
+    "ExpectedSamples": 0,
+    "ActualSamples": 0,
+    "GroupStatus": "Unavailable",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2950000000,
+        "PricingStatus": "Unavailable",
+        "FinalPrice": null
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "F",
+    "marketStatus": "Matched",
+    "inputs": [
+      "تارا صفر ۲۹۰۰م تهران",
+      "تارا صفر ۳۱۰۰م مشهد",
+      "تارا صفر ۳۰۰۰م شیراز"
+    ],
+    "ExpectedFinal": 3000000000,
+    "ActualFinal": 3000000000,
+    "ExpectedSamples": 3,
+    "ActualSamples": 3,
+    "GroupStatus": "Priced",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2900000000,
+        "PricingStatus": "Included",
+        "FinalPrice": 3000000000
+      },
+      {
+        "Channel": "channel_1",
+        "PriceToman": 3100000000,
+        "PricingStatus": "Included",
+        "FinalPrice": 3000000000
+      },
+      {
+        "Channel": "channel_2",
+        "PriceToman": 3000000000,
+        "PricingStatus": "Included",
+        "FinalPrice": 3000000000
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "E",
+    "marketStatus": "NotFound",
+    "inputs": [
+      "تارا صفر ۲۹۵۰م"
+    ],
+    "ExpectedFinal": null,
+    "ActualFinal": null,
+    "ExpectedSamples": 0,
+    "ActualSamples": 0,
+    "GroupStatus": "Unavailable",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2950000000,
+        "PricingStatus": "Unavailable",
+        "FinalPrice": null
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "H",
+    "marketStatus": "Matched",
+    "inputs": [
+      "تارا بدون کارکرد ۲۹۵۰م\nکارت طلایی ۲۴م تسویه شد"
+    ],
+    "ExpectedFinal": 2975000000,
+    "ActualFinal": 2975000000,
+    "ExpectedSamples": 1,
+    "ActualSamples": 1,
+    "GroupStatus": "Priced",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2950000000,
+        "PricingStatus": "Included",
+        "FinalPrice": 2975000000
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "D",
+    "marketStatus": "Matched",
+    "inputs": [
+      "تارا صفر ۱۲۰۰م"
+    ],
+    "ExpectedFinal": 3000000000,
+    "ActualFinal": 3000000000,
+    "ExpectedSamples": 0,
+    "ActualSamples": 0,
+    "GroupStatus": "ReferenceOnly",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 1200000000,
+        "PricingStatus": "Outlier",
+        "FinalPrice": 3000000000
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "C",
+    "marketStatus": "Matched",
+    "inputs": [
+      "تارا صفر ۴۰۰۰م"
+    ],
+    "ExpectedFinal": 3000000000,
+    "ActualFinal": 3000000000,
+    "ExpectedSamples": 0,
+    "ActualSamples": 0,
+    "GroupStatus": "ReferenceOnly",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 4000000000,
+        "PricingStatus": "Outlier",
+        "FinalPrice": 3000000000
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "E",
+    "marketStatus": "SourceUnavailable",
+    "inputs": [
+      "تارا صفر ۲۹۵۰م"
+    ],
+    "ExpectedFinal": null,
+    "ActualFinal": null,
+    "ExpectedSamples": 0,
+    "ActualSamples": 0,
+    "GroupStatus": "Unavailable",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2950000000,
+        "PricingStatus": "Unavailable",
+        "FinalPrice": null
+      }
+    ],
+    "TestOutcome": "Passed"
+  },
+  {
+    "scenario": "A",
+    "marketStatus": "Matched",
+    "inputs": [
+      "تارا صفر ۲۹۵۰م"
+    ],
+    "ExpectedFinal": 2975000000,
+    "ActualFinal": 2975000000,
+    "ExpectedSamples": 1,
+    "ActualSamples": 1,
+    "GroupStatus": "Priced",
+    "Rows": [
+      {
+        "Channel": "channel_0",
+        "PriceToman": 2950000000,
+        "PricingStatus": "Included",
+        "FinalPrice": 2975000000
+      }
+    ],
+    "TestOutcome": "Passed"
+  }
+]

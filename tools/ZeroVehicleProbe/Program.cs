@@ -29,7 +29,7 @@ if (args.Contains("--market-only"))
     var evidence = new List<object>();
     var queries = args.Where(x => x.StartsWith("--name=")).Select(x => x[7..]).ToArray();
     foreach (var name in queries.Length > 0 ? queries : ZeroVehicleOptions.Read(configuration).Catalog.Select(x => x.Name).Distinct().Take(20))
-        evidence.Add(new { VehicleName = name, NameSource = "ExplicitProbeOrCatalog_NotLiveTelegram", Result = await liveMarket.LookupAsync(name, default) });
+        evidence.Add(new { VehicleName = name, NameSource = "ExplicitProbeOrCatalog_NotLiveTelegram", Result = await liveMarket.LookupAsync(name, default), Cached = await liveMarket.LookupAsync(name, default) });
     var payload = JsonSerializer.Serialize(evidence, new JsonSerializerOptions { WriteIndented = true });
     var destination = args.FirstOrDefault(x => x.StartsWith("--report="))?[9..];
     if (destination is not null) await File.WriteAllTextAsync(destination, payload);

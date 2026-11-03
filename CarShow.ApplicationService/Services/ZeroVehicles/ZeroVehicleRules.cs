@@ -78,7 +78,7 @@ public static class ZeroVehicleRules
             var value = Number(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[3].Value);
             if (value is > 0) return "POSITIVE_MILEAGE";
         }
-        if (Regex.IsMatch(text, @"[1-9][0-9,٬.٫]*\s*(?:هزار)?\s*(?:تا)?\s*کارکرد")) return "POSITIVE_MILEAGE";
+        if (Regex.IsMatch(text, @"[1-9][0-9,٬.٫]*\s*(?:هزار)?\s*(?:تا)?\s*(?:کارکرد|کار)(?![\p{L}])")) return "POSITIVE_MILEAGE";
         if (Regex.IsMatch(text, @"کار\s*کرده|کارکرده|دست\s*دوم|صفر\s*نیست|غیر\s*صفر|بدون\s*کارکرد\s*نیست|کارکرد\s*دارد|صفر\s*نمی\s*باشد|صفر\s*نبوده")) return "CONTRADICTORY_CONDITION";
         // Accessory claims and idioms must never establish the vehicle's condition.
         var condition = Regex.Replace(text, @"(?:لاستیک|تایر|رنگ|خرج|هزینه|باتری|موتور|گیربکس)\s*(?:(?:ها|های|نو|کاملا|کاملاً|بدنه)\s*|[:：]\s*)*(?:صفر(?:\s*کیلومتر|\s*خشک)?|خشک)|صفر\s*تا\s*صد", " ");
@@ -142,7 +142,7 @@ public static class ZeroVehicleRules
         if (match.Groups["currency"].Value is "ریال" or "irr") value /= 10;
         var candidates = new List<decimal> { value };
         // Decimal shorthand is uncertain until exactly one interpretation fits the reference.
-        if (unit == "م" && match.Groups["amount"].Value.Contains('.') && amount < 100)
+        if (unit == "م" && (match.Groups["amount"].Value.Contains('.') || match.Groups["amount"].Value.Contains('٫')) && amount < 100)
             candidates.Add(amount.Value * 1_000_000_000m);
         return new(match.Value.Trim(), candidates.Where(x => x >= options.MinimumPriceToman && x <= options.MaximumPriceToman).Distinct().ToArray());
     }

@@ -1,0 +1,146 @@
+Test run for /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/bin/Debug/net10.0/CarShow.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.60]     CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource [788 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 825000000
+Actual:   850000000
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 249
+   at CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 254
+   at CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 254
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.04]     CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریا"···, expected: 850000000) [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریا"···, expected: 850000000) [32 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Matched"
+Actual:   "Unmatched"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(String text, Decimal expected) in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 50
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:03.07]     CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون توما"···, expected: 850000000) [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: "پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون توما"···, expected: 850000000) [31 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Matched"
+Actual:   "Unmatched"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(String text, Decimal expected) in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 50
+   at InvokeStub_TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:03.38]     CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory [153 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 900000000
+Actual:   908333333.33
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 130
+   at CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 139
+   at CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 158
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.52]     CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay [FAIL]
+[xUnit.net 00:00:03.55]     CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay [134 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Late"
+Actual:   "Matched"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 180
+   at CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 182
+   at CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 182
+--- End of stack trace from previous location ---
+  Failed CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim [31 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   null
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 60
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:03.64]     CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation [FAIL]
+  Failed CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation [57 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 20000
+Actual:   200
+  Stack Trace:
+     at CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramAllChannelPricingTests.cs:line 188
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:03.84]     CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened [FAIL]
+  Failed CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened [286 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 7
+Actual:   0
+  Stack Trace:
+     at CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 293
+   at CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 293
+   at CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramPricingTests.cs:line 293
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:04.01]     CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney [FAIL]
+  Failed CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney [24 ms]
+  Error Message:
+   Assert.NotNull() Failure: Value is null
+  Stack Trace:
+     at CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramReprocessingTests.cs:line 88
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:04.31]     CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain [FAIL]
+  Failed CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain [108 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "207"
+Actual:   "پژو 207"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramReprocessingTests.cs:line 43
+   at CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramReprocessingTests.cs:line 54
+   at CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramReprocessingTests.cs:line 54
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:05.17]     CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry [FAIL]
+  Failed CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry [468 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "207"
+Actual:   "پژو 207"
+           ↑ (pos 0)
+  Stack Trace:
+     at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 140
+   at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 141
+   at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 146
+   at CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 146
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:55.17]     CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel [FAIL]
+  Failed CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel [48 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 0
+Actual:   199
+  Stack Trace:
+     at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 264
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 267
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 272
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/CarShow/CarShow.Tests/TelegramCollectionTests.cs:line 272
+--- End of stack trace from previous location ---
+WARNING: Overwriting results file: /workspace/scratch/b408070ef9e1/CarShow/docs/verification-final/final.trx
+Results File: /workspace/scratch/b408070ef9e1/CarShow/docs/verification-final/final.trx
+
+Failed!  - Failed:    12, Passed:   180, Skipped:     0, Total:   192, Duration: 59 s - CarShow.Tests.dll (net10.0)

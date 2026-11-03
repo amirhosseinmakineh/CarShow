@@ -1,0 +1,442 @@
+[
+  {
+    "VehicleName": "\u0622\u06CC\u062A\u0648 M5 \u0645\u062F\u0644 2025",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Matched",
+      "Name": "\u0622\u06CC\u062A\u0648 M5 \u0645\u062F\u0644 2025",
+      "Price": 14000000000,
+      "PriceAt": "2026-10-31T18:11:35.8783565Z",
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": "https://car.ir/1017-eres-hm5-erev",
+      "Reason": null
+    },
+    "Cached": {
+      "Status": "Matched",
+      "Name": "\u0622\u06CC\u062A\u0648 M5 \u0645\u062F\u0644 2025",
+      "Price": 14000000000,
+      "PriceAt": "2026-10-31T18:11:35.8783565Z",
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": "https://car.ir/1017-eres-hm5-erev",
+      "Reason": null
+    }
+  },
+  {
+    "VehicleName": "\u0644\u0627\u0645\u0627\u06A9\u0648 \u0641\u0644\u0648 \u0645\u062F\u0644 1404",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Matched",
+      "Name": "\u0644\u0627\u0645\u0627\u06A9\u0648 \u0641\u0644\u0648 \u0645\u062F\u0644 1404",
+      "Price": 4500000000,
+      "PriceAt": "2026-10-31T18:11:35.8783565Z",
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": "https://car.ir/1027-lamaco-flo-at",
+      "Reason": null
+    },
+    "Cached": {
+      "Status": "Matched",
+      "Name": "\u0644\u0627\u0645\u0627\u06A9\u0648 \u0641\u0644\u0648 \u0645\u062F\u0644 1404",
+      "Price": 4500000000,
+      "PriceAt": "2026-10-31T18:11:35.8783565Z",
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": "https://car.ir/1027-lamaco-flo-at",
+      "Reason": null
+    }
+  },
+  {
+    "VehicleName": "\u062A\u0627\u0646\u06A9 300 \u0645\u062F\u0644 2025",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Matched",
+      "Name": "\u062A\u0627\u0646\u06A9 300 \u0645\u062F\u0644 2025",
+      "Price": 16500000000,
+      "PriceAt": "2026-10-31T18:11:35.8783565Z",
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": "https://car.ir/973-tank-300-automatic",
+      "Reason": null
+    },
+    "Cached": {
+      "Status": "Matched",
+      "Name": "\u062A\u0627\u0646\u06A9 300 \u0645\u062F\u0644 2025",
+      "Price": 16500000000,
+      "PriceAt": "2026-10-31T18:11:35.8783565Z",
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": "https://car.ir/973-tank-300-automatic",
+      "Reason": null
+    }
+  },
+  {
+    "VehicleName": "\u067E\u0698\u0648 207",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0634\u0627\u0647\u06CC\u0646",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u062A\u0627\u0631\u0627",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u062F\u0646\u0627 \u067E\u0644\u0627\u0633",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "KMC J7",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0627\u0637\u0644\u0633",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0644\u0627\u0645\u0627\u0631\u06CC \u0627\u06A9\u0648",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "NotFound",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": null
+    },
+    "Cached": {
+      "Status": "NotFound",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": null
+    }
+  },
+  {
+    "VehicleName": "\u0644\u0627\u0645\u0627\u0631\u06CC \u0627\u06CC\u0645\u0627",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u067E\u0631\u0627\u06CC\u062F 151",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u067E\u0627\u062F\u0631\u0627 \u067E\u0644\u0627\u0633",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u06A9\u0648\u06CC\u06CC\u06A9",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0633\u0627\u06CC\u0646\u0627",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0633\u0647\u0646\u062F",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0631\u06CC \u0631\u0627",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0631\u0627\u0646\u0627 \u067E\u0644\u0627\u0633",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0633\u0648\u0631\u0646 \u067E\u0644\u0627\u0633",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  },
+  {
+    "VehicleName": "\u0647\u0627\u06CC\u0645\u0627 S7",
+    "NameSource": "ExplicitProbeOrCatalog_NotLiveTelegram",
+    "Result": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    },
+    "Cached": {
+      "Status": "Ambiguous",
+      "Name": null,
+      "Price": null,
+      "PriceAt": null,
+      "FetchedAt": "2026-11-02T18:11:36.0810799Z",
+      "Url": null,
+      "Reason": "MultipleReferenceVariants"
+    }
+  }
+]

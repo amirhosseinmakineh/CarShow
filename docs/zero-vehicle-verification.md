@@ -1,3 +1,5 @@
+> Historical report. The original ten-ad fixture has now been supplied and verified. See [current acceptance report](zero-vehicle-final-acceptance.md) for updated results and remaining blockers.
+
 # CarShow zero-only verification — 2026-11-02
 
 **Overall: Blocked, not Completed.** Changes from the existing branch were preserved. No production database connection, merge or deployment was performed. Baseline: `240f65357c41e9930534d353236038111f3b795c`; frontend baseline: `c9f4bccd5449925de2428d1fa8428dd98196d1bf`.

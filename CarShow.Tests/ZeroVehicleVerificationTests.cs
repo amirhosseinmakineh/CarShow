@@ -79,10 +79,15 @@ public sealed class ZeroVehicleVerificationTests
     [InlineData(true)]
     public async Task WorkerContinuesOtherChannelsAfterReportedOrThrownFailure(bool throws)
     {
-        await using var connection = new SqliteConnection("Data Source=:memory:"); await connection.OpenAsync();
+        // Separate connections are required: SQLite connections cannot be shared concurrently
+        // by the worker and the observing DbContext. WAL allows a reader during writes.
+        var path = Path.Combine(Path.GetTempPath(), $"zero-worker-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={path};Default Timeout=10";
+        await using var connection = new SqliteConnection(connectionString); await connection.OpenAsync();
+        await using (var command = connection.CreateCommand()) { command.CommandText = "PRAGMA journal_mode=WAL"; await command.ExecuteNonQueryAsync(); }
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(Configuration());
-        services.AddDbContext<CarShowContext>(o => o.UseSqlite(connection));
+        services.AddDbContext<CarShowContext>(o => o.UseSqlite(connectionString));
         services.AddScoped<CarShow.Domain.IRepository.IZeroVehicleStore, ZeroVehicleStore>();
         services.AddScoped<ZeroVehicleService>();
         services.AddSingleton<ITelegramCollector>(new Captions(throws));

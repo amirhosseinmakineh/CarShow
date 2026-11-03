@@ -1,0 +1,8 @@
+{
+  "regeneratedSqlMatchesPrevious": true,
+  "sha256NormalizedSql": "a1b1067e474bf9bc99d3a9cd97f2fe771ac39ed33b5dbc2f6715b762b372d47b",
+  "migrationSourceChanged": false,
+  "executedOnSqlServer": false,
+  "executionStatus": "Blocked",
+  "reason": "SQLPAL startup failure 0xc0000142 before connections"
+}
