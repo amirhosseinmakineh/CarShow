@@ -1,0 +1,5 @@
+{
+  "source": "Exact complete caption supplied by user in this task",
+  "sha256": "4eaa4d1a2314d364901cdb27efdbb4907211192b64b00838c8da66704fabd619",
+  "note": "Original newlines, whitespace, keycaps and phone footer retained. Telegram HTML envelope in test is constructed; no live caption retrieval is claimed."
+}

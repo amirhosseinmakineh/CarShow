@@ -47,6 +47,18 @@ public sealed class ZeroVehicleTests
             return Task.FromResult(new TelegramCollectionResult(true, false, Messages, null, limit, 2, "RequestedLimitReached", 100));
         }
     }
+    // Deterministic reference source. These tests are fixtures, never live price evidence.
+    private sealed class Reference(bool production = false) : ICarIrMarketPriceCrawler
+    {
+        public Task<MarketPriceResult> LookupAsync(string name, CancellationToken ct)
+        {
+            decimal value = name.Contains("کوییک") ? 1_200_000_000m : name.Contains("هیدرولیک") ? 2_950_000_000m : name.Contains("تارا") ? 2_045_000_000m
+                : production && name.Contains("پانوراما") ? 2_930_000_000m
+                : production ? 2_010_000_000m : name.Contains("پانوراما") ? 1_000_000_000m
+                : 900_000_000m;
+            return Task.FromResult(new MarketPriceResult("Matched", name, value, Now, Now, "https://car.ir/prices"));
+        }
+    }
     private sealed class Fixture : IAsyncDisposable
     {
         public SqliteConnection Connection = new("Data Source=:memory:");
@@ -58,7 +70,7 @@ public sealed class ZeroVehicleTests
             var f = new Fixture(); await f.Connection.OpenAsync();
             f.Db = new(new DbContextOptionsBuilder<CarShowContext>().UseSqlite(f.Connection).Options);
             await f.Db.Database.EnsureCreatedAsync();
-            f.Service = new(new ZeroVehicleStore(f.Db), f.Collector, configuration ?? Config());
+            f.Service = new(new ZeroVehicleStore(f.Db), f.Collector, configuration ?? Config(), new Reference(configuration is not null));
             return f;
         }
         public async Task<ZeroImportDto> Import(string channel, params string[] texts)
@@ -89,21 +101,21 @@ public sealed class ZeroVehicleTests
         var run = await f.Import("@zero_test", "پژو ۲۰۷ دنده‌ای صفر قیمت: ۸۰۰ میلیون تومان", "پژو 207 اتومات صفر مدل: 1404 قیمت: 900 میلیون تومان",
             "پژو 207 دنده ای لاستیک صفر قیمت: 800 میلیون تومان", "پژو 207 دنده ای صفر کارکرد: 200 قیمت: 800 میلیون تومان",
             "پژو 207 صفر قیمت: 800 میلیون تومان", "خودروی ناشناس صفر دنده ای قیمت: 800 میلیون تومان", "پژو 207 دنده ای صفر قیمت: توافقی");
-        Assert.Equal(7, run.Scanned); Assert.Equal(2, run.Accepted); Assert.Equal(5, run.Rejected); Assert.Equal(2, run.Stored);
+        Assert.Equal(7, run.Scanned); Assert.Equal(3, run.Accepted); Assert.Equal(4, run.Rejected); Assert.Equal(3, run.Stored);
         Assert.Equal(("zero_test", 50, (long?)200), f.Collector.Last); Assert.Equal(100, run.NextBefore); Assert.Equal(2, run.PagesFetched);
         var ads = await f.Db.Set<ZeroVehicleListing>().ToListAsync();
-        Assert.Equal(2, ads.Count); Assert.Contains(ads, x => x.Year is null); Assert.Contains(ads, x => x.Year == 1404);
-        Assert.Equal(2, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
+        Assert.Equal(3, ads.Count); Assert.Contains(ads, x => x.Year is null); Assert.Contains(ads, x => x.Year == 1404);
+        Assert.Equal(3, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
         Assert.Empty(await f.Db.Cars.ToListAsync()); Assert.Empty(await f.Db.CarListings.ToListAsync()); Assert.Empty(await f.Db.TelegramRawMessages.ToListAsync());
         var replay = await f.Import("zero_test", "پژو ۲۰۷ دنده‌ای صفر قیمت: ۸۰۰ میلیون تومان");
-        Assert.Equal(1, replay.Duplicates); Assert.Equal(0, replay.Stored); Assert.Equal(2, await f.Db.Set<ZeroVehicleListing>().CountAsync());
+        Assert.Equal(1, replay.Duplicates); Assert.Equal(0, replay.Stored); Assert.Equal(3, await f.Db.Set<ZeroVehicleListing>().CountAsync());
     }
     [Fact]
-    public async Task UsesModelAndTrimAcrossYearsAndComputesMedianWithOneOrManySamples()
+    public async Task UsesCarIrAndIndependentChannelsToComputeMeanAcrossYears()
     {
         await using var f = await Fixture.Create();
         await f.Import("channel_one", "پژو 207 دنده ای صفر مدل: 1404 قیمت: 800 میلیون تومان");
-        var single = await f.Db.Set<ZeroVehiclePriceGroup>().SingleAsync(); Assert.Equal(800000000m, single.ReferencePrice); Assert.Equal(1, single.SampleCount);
+        var single = await f.Db.Set<ZeroVehiclePriceGroup>().SingleAsync(); Assert.Equal(850000000m, single.ReferencePrice); Assert.Equal(1, single.SampleCount);
         await f.Import("channel_two", "پژو 207 دنده ای صفر مدل: 1405 قیمت: 1000 میلیون تومان");
         Assert.Equal(900000000m, single.ReferencePrice); Assert.Equal(2, single.SampleCount);
         await f.Import("channel_three", "پژو 207 دنده ای صفر قیمت: 900 میلیون تومان");
@@ -115,7 +127,7 @@ public sealed class ZeroVehicleTests
         Assert.Equal(2, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
         var duplicate = await f.Import("channel_six", "پژو 207 دنده ای صفر قیمت: 900 میلیون تومان");
         Assert.Equal(1, duplicate.Stored); Assert.Equal(3, single.SampleCount);
-        Assert.Equal("DuplicateContent", (await f.Db.Set<ZeroVehicleListing>().SingleAsync(x => x.Channel == "channel_six")).PricingStatus);
+        Assert.Single(await f.Db.Set<ZeroVehicleListing>().Where(x => x.Channel == "channel_six" || x.Channel == "channel_three").Where(x => x.PricingStatus == "DuplicateContent").ToListAsync());
         await f.Service.RecalculateAsync(Now.AddDays(8), default);
         Assert.Empty(await f.Db.Set<ZeroVehiclePriceGroup>().ToListAsync());
         Assert.All(await f.Db.Set<ZeroVehicleListing>().ToListAsync(), x => Assert.Equal("Stale", x.PricingStatus));
@@ -182,7 +194,7 @@ public sealed class ZeroVehicleTests
         var oldCar = await db.Cars.SingleAsync();
         var oldId = oldCar.Id; var oldPrice = oldCar.MarketPrice;
         var collector = new Collector { Messages = [new("1", "پژو 207 دنده ای صفر قیمت: 900 میلیون تومان", Now, null, null)] };
-        var zero = new ZeroVehicleService(new ZeroVehicleStore(db), collector, Config());
+        var zero = new ZeroVehicleService(new ZeroVehicleStore(db), collector, Config(), new Reference());
         var run = await zero.EnqueueAsync(new("independent_channel", 50), default);
         await zero.ClaimAsync(Now, default); await zero.ProcessAsync(run.Id, Now, default);
         await legacy.CalculateAsync(Now.AddMinutes(1), default);
@@ -208,7 +220,7 @@ public sealed class ZeroVehicleTests
         await using var f = await Fixture.Create();
         var handler = new PreviewHandler();
         var collector = new CarShow.Infrastracture.Telegram.TelegramCollector(Config(), new PreviewFactory(handler), Microsoft.Extensions.Logging.Abstractions.NullLogger<CarShow.Infrastracture.Telegram.TelegramCollector>.Instance);
-        var service = new ZeroVehicleService(new ZeroVehicleStore(f.Db), collector, Config());
+        var service = new ZeroVehicleService(new ZeroVehicleStore(f.Db), collector, Config(), new Reference());
         var run = await service.EnqueueAsync(new("html_channel", 3, 150), default);
         await service.ClaimAsync(Now, default); await service.ProcessAsync(run.Id, Now, default);
         var result = (await service.GetRunAsync(run.Id, default))!;
@@ -236,12 +248,12 @@ public sealed class ZeroVehicleTests
         }
     }
     [Fact]
-    public async Task DistinctAdsFromOneChannelContributeWithoutSplittingYears()
+    public async Task LatestValidQuotePerChannelContributesWithoutSplittingYears()
     {
         await using var f = await Fixture.Create();
         await f.Import("same_channel", "پژو 207 دنده ای صفر مدل: 1404 قیمت: 800 میلیون تومان", "پژو 207 دنده ای صفر مدل: 1405 قیمت: 1000 میلیون تومان");
         var group = await f.Db.Set<ZeroVehiclePriceGroup>().SingleAsync();
-        Assert.Equal(2, group.SampleCount); Assert.Equal(1, group.SourceCount); Assert.Equal(900000000m, group.ReferencePrice);
+        Assert.Equal(1, group.SampleCount); Assert.Equal(1, group.SourceCount); Assert.Equal(950000000m, group.ReferencePrice);
     }
 
     [Theory]
@@ -273,18 +285,18 @@ public sealed class ZeroVehicleTests
             "تارا وی یک پلاس صفر ۲۰۴۵ مشهد",
             "تارا وی یک پلاس صفر ۲۰۴۵م و تارا وی چهار صفر ۲۸۰۰م",
             "کوییک GX صفر ۱۲۰۰م");
-        Assert.Equal(9, report.Scanned); Assert.Equal(3, report.Stored); Assert.Equal(6, report.Rejected);
+        Assert.Equal(9, report.Scanned); Assert.Equal(4, report.Stored); Assert.Equal(5, report.Rejected);
         f.Db.ChangeTracker.Clear();
         var rows = await f.Db.Set<ZeroVehicleListing>().Include(x => x.Model).Include(x => x.Trim).ToListAsync();
         Assert.Contains(rows, x => x.Model.Name == "تارا" && x.Trim.Name == "V1P" && x.PriceToman == 2_045_000_000m && x.Year == 1405);
         Assert.Contains(rows, x => x.Model.Name == "پژو 207" && x.Trim.Name == "اتوماتیک پانوراما" && x.PriceToman == 2_930_000_000m);
         Assert.Contains(rows, x => x.Trim.Name == "دنده‌ای" && x.PriceToman == 2_010_000_000m && x.Year is null);
-        Assert.Equal(3, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
+        Assert.Equal(4, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
         Assert.All(await f.Db.Set<ZeroVehiclePriceGroup>().ToListAsync(), x => Assert.Equal(1, x.SampleCount));
         Assert.Contains("ALLOCATION_OR_PREORDER", report.RejectionCounts);
         var replay = await f.Import("aliajamihavaleh", tara, automatic, manual);
         Assert.Equal(3, replay.Duplicates); Assert.Equal(0, replay.Stored);
-        Assert.Equal(3, await f.Db.Set<ZeroVehicleListing>().CountAsync());
+        Assert.Equal(4, await f.Db.Set<ZeroVehicleListing>().CountAsync());
         Assert.Empty(await f.Db.Cars.ToListAsync()); Assert.Empty(await f.Db.CarListings.ToListAsync()); Assert.Empty(await f.Db.TelegramRawMessages.ToListAsync());
     }
 
@@ -344,7 +356,7 @@ public sealed class ZeroVehicleTests
             "پژو ۲۰۷ دنده ای هیدرولیک TU5 صفر ۲۹۵۰م", // Different engine must not fall back to generic manual.
             "پژو ۲۰۷ اتومات هیدرولیک TU5P صفر ۲۹۵۰م",
             "حواله پژو ۲۰۷ هیدرولیک TU5P صفر قیمت ۳۰۰ میلیون تومان");
-        Assert.Equal(0, invalid.Stored); Assert.Equal(4, invalid.Rejected);
+        Assert.Equal(3, invalid.Stored); Assert.Equal(1, invalid.Rejected);
     }
     private sealed class TestAuth(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {

@@ -1,0 +1,35 @@
+{
+  "at": "2026-11-02T18:10:06.101416+00:00",
+  "responses": [
+    {
+      "channel": "aliajamihavaleh",
+      "url": "https://t.me/s/aliajamihavaleh",
+      "status": 200,
+      "bytes": 195,
+      "sha256": "5b131ca14aa96311d3432b0062c7443d3b0e6346ec279bd376a75f0a76bcd5d7",
+      "hasHistory": false,
+      "siteUnavailable": true,
+      "bodyPreview": "<html>\n    <head><title>Site Unavailable</title></head>\n    <body>\n      <center>\n        <h1>Site Unavailable</h1>\n        <p>Unable to access this site.</p>\n      </center>\n    </body>\n</html>\n"
+    },
+    {
+      "channel": "baravard",
+      "url": "https://t.me/s/baravard",
+      "status": 200,
+      "bytes": 195,
+      "sha256": "5b131ca14aa96311d3432b0062c7443d3b0e6346ec279bd376a75f0a76bcd5d7",
+      "hasHistory": false,
+      "siteUnavailable": true,
+      "bodyPreview": "<html>\n    <head><title>Site Unavailable</title></head>\n    <body>\n      <center>\n        <h1>Site Unavailable</h1>\n        <p>Unable to access this site.</p>\n      </center>\n    </body>\n</html>\n"
+    },
+    {
+      "channel": "foroshekhodro",
+      "url": "https://t.me/s/foroshekhodro",
+      "status": 200,
+      "bytes": 195,
+      "sha256": "5b131ca14aa96311d3432b0062c7443d3b0e6346ec279bd376a75f0a76bcd5d7",
+      "hasHistory": false,
+      "siteUnavailable": true,
+      "bodyPreview": "<html>\n    <head><title>Site Unavailable</title></head>\n    <body>\n      <center>\n        <h1>Site Unavailable</h1>\n        <p>Unable to access this site.</p>\n      </center>\n    </body>\n</html>\n"
+    }
+  ]
+}

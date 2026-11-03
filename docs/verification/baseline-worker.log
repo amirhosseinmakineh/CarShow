@@ -1,0 +1,19 @@
+Test run for /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/bin/Debug/net10.0/CarShow.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:01:12.70]     CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel [FAIL]
+  Failed CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel [1 m 11 s]
+  Error Message:
+   System.Threading.Tasks.TaskCanceledException : A task was canceled.
+  Stack Trace:
+     at CarShow.Tests.TelegramCollectionTests.Fixture.WaitForAsync(Func`2 predicate) in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 319
+   at CarShow.Tests.TelegramCollectionTests.Fixture.WaitForAsync(Func`2 predicate) in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 319
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 258
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 272
+   at CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel() in /workspace/scratch/b408070ef9e1/baseline/CarShow.Tests/TelegramCollectionTests.cs:line 272
+--- End of stack trace from previous location ---
+Results File: /workspace/scratch/b408070ef9e1/CarShow/docs/verification/baseline-worker.trx
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 1 m 11 s - CarShow.Tests.dll (net10.0)

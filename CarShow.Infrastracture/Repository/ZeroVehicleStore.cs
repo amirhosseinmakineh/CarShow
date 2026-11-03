@@ -8,6 +8,9 @@ namespace CarShow.Infrastracture.Repository;
 
 public sealed class ZeroVehicleStore(CarShowContext db) : IZeroVehicleStore
 {
+    public IQueryable<ZeroVehicleChannel> Channels => db.Set<ZeroVehicleChannel>();
+    public IQueryable<ZeroVehicleIssue> Issues => db.Set<ZeroVehicleIssue>();
+    public IQueryable<ZeroVehicleSetting> Settings => db.Set<ZeroVehicleSetting>();
     public IQueryable<ZeroVehicleModel> Models => db.Set<ZeroVehicleModel>();
     public IQueryable<ZeroVehicleTrim> Trims => db.Set<ZeroVehicleTrim>();
     public IQueryable<ZeroVehicleListing> Listings => db.Set<ZeroVehicleListing>();

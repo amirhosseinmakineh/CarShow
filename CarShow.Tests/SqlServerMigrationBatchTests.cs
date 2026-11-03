@@ -9,6 +9,7 @@ namespace CarShow.Tests;
 public sealed class SqlServerMigrationBatchTests
 {
     [Theory]
+    [InlineData(typeof(ZeroVehicleCarIrPipeline))]
     [InlineData(typeof(SmartTelegramComparisons))]
     [InlineData(typeof(TelegramStrictComparisons))]
     [InlineData(typeof(ReconcileTelegramModelSnapshot))]
