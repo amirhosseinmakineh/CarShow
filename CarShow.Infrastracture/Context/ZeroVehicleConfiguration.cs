@@ -11,7 +11,7 @@ internal static class ZeroVehicleConfiguration
             e.HasIndex(x => x.Identifier).IsUnique(); e.Property(x => x.LastError).HasMaxLength(1024);
         });
         modelBuilder.Entity<ZeroVehicleIssue>(e => {
-            e.ToTable("ZeroVehicleIssues"); e.Property(x => x.ExternalMessageId).HasMaxLength(32);
+            e.ToTable("ZeroVehicleIssues"); e.Property(x => x.SourceUrl).HasMaxLength(2048); e.Property(x => x.ExternalMessageId).HasMaxLength(32);
             e.Property(x => x.Code).HasMaxLength(64); e.Property(x => x.RawText).HasMaxLength(8000);
             e.HasIndex(x => new { x.RunId, x.ExternalMessageId, x.PartIndex }).IsUnique();
             e.HasOne<ZeroVehicleImportRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
@@ -21,14 +21,16 @@ internal static class ZeroVehicleConfiguration
         });
         modelBuilder.Entity<ZeroVehicleModel>(e =>
         {
-            e.ToTable("ZeroVehicleModels");
+            e.ToTable("ZeroVehicleModels"); e.Property(x => x.ConfigurationKey).HasMaxLength(128);
+            e.HasOne<CarShow.Domain.Models.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.Name).HasMaxLength(128);
             e.Property(x => x.Aliases).HasMaxLength(2000);
             e.HasIndex(x => x.Name).IsUnique();
         });
         modelBuilder.Entity<ZeroVehicleTrim>(e =>
         {
-            e.ToTable("ZeroVehicleTrims");
+            e.ToTable("ZeroVehicleTrims"); e.Property(x => x.ConfigurationKey).HasMaxLength(128);
+            e.Property(x => x.Transmission).HasMaxLength(16);
             e.Property(x => x.Name).HasMaxLength(128);
             e.Property(x => x.Aliases).HasMaxLength(2000);
             e.HasIndex(x => new { x.ModelId, x.Name }).IsUnique();
@@ -37,14 +39,16 @@ internal static class ZeroVehicleConfiguration
         });
         modelBuilder.Entity<ZeroVehicleListing>(e =>
         {
-            e.ToTable("ZeroVehicleListings");
+            e.ToTable("ZeroVehicleListings"); e.Property(x => x.RawCarName).HasMaxLength(256);
             e.Property(x => x.Channel).HasMaxLength(64);
+            e.Property(x => x.YearCalendar).HasMaxLength(16);
             e.Property(x => x.ExternalMessageId).HasMaxLength(32);
             e.Property(x => x.OriginalName).HasMaxLength(256);
             e.Property(x => x.SourceUrl).HasMaxLength(2048);
             e.Property(x => x.RawText).HasMaxLength(8000);
             e.Property(x => x.Fingerprint).HasMaxLength(64);
             e.Property(x => x.PricingStatus).HasMaxLength(32);
+            e.Property(x => x.AdminDecision).HasMaxLength(32);
             e.Property(x => x.PriceToman).HasPrecision(18, 2);
             e.Property(x => x.MarketPrice).HasPrecision(18, 2);
             e.Property(x => x.FinalPrice).HasPrecision(18, 2);
@@ -63,7 +67,11 @@ internal static class ZeroVehicleConfiguration
         modelBuilder.Entity<ZeroVehiclePriceGroup>(e =>
         {
             e.ToTable("ZeroVehiclePriceGroups");
-            e.HasIndex(x => new { x.ModelId, x.TrimId }).IsUnique();
+            e.Property(x => x.YearCalendar).HasMaxLength(16);
+            e.HasIndex(x => new { x.ModelId, x.TrimId, x.Year, x.YearCalendar, x.PriceDay }).IsUnique().HasFilter(null);
+            e.Property(x => x.CalculatedMarketPrice).HasPrecision(18, 2);
+            e.Property(x => x.ManualOverridePrice).HasPrecision(18, 2);
+            e.Property(x => x.PriceReviewStatus).HasMaxLength(32);
             e.Property(x => x.ReferencePrice).HasPrecision(18, 2);
             e.Property(x => x.MarketPrice).HasPrecision(18, 2);
             e.Property(x => x.PricingStatus).HasMaxLength(32);

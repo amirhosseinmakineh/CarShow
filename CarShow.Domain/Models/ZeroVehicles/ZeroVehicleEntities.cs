@@ -2,6 +2,8 @@ namespace CarShow.Domain.Models.ZeroVehicles;
 
 public sealed class ZeroVehicleModel
 {
+    public string? ConfigurationKey { get; set; }
+    public long? CompanyId { get; set; }
     public long Id { get; set; }
     public string Name { get; set; } = "";
     public string Aliases { get; set; } = "";
@@ -10,6 +12,8 @@ public sealed class ZeroVehicleModel
 
 public sealed class ZeroVehicleTrim
 {
+    public string? ConfigurationKey { get; set; }
+    public string? Transmission { get; set; }
     public long Id { get; set; }
     public long ModelId { get; set; }
     public ZeroVehicleModel Model { get; set; } = null!;
@@ -19,6 +23,8 @@ public sealed class ZeroVehicleTrim
 
 public sealed class ZeroVehicleListing
 {
+    public int ExtractionVersion { get; set; }
+    public string? RawCarName { get; set; }
     public long Id { get; set; }
     public long ModelId { get; set; }
     public ZeroVehicleModel Model { get; set; } = null!;
@@ -27,6 +33,8 @@ public sealed class ZeroVehicleListing
     public string OriginalName { get; set; } = "";
     public decimal PriceToman { get; set; }
     public int? Year { get; set; }
+    public string? YearCalendar { get; set; }
+    public DateOnly? PriceDay { get; set; }
     public DateTime PublishedAt { get; set; }
     public DateTime ReceivedAt { get; set; }
     public string Channel { get; set; } = "";
@@ -34,6 +42,8 @@ public sealed class ZeroVehicleListing
     public string? SourceUrl { get; set; }
     public string RawText { get; set; } = "";
     public string Fingerprint { get; set; } = "";
+    public string AdminDecision { get; set; } = "Unreviewed";
+    public bool ManuallyMatched { get; set; }
     public string PricingStatus { get; set; } = "Pending";
     public int PartIndex { get; set; }
     public string RawPrice { get; set; } = "";
@@ -53,8 +63,15 @@ public sealed class ZeroVehiclePriceGroup
     public long Id { get; set; }
     public long ModelId { get; set; }
     public ZeroVehicleModel Model { get; set; } = null!;
+    public int? Year { get; set; }
+    public string? YearCalendar { get; set; }
+    public DateOnly? PriceDay { get; set; }
     public long TrimId { get; set; }
     public ZeroVehicleTrim Trim { get; set; } = null!;
+        public decimal? CalculatedMarketPrice { get; set; }
+        public decimal? ManualOverridePrice { get; set; }
+        public DateTime? ManualOverrideUntil { get; set; }
+        public string PriceReviewStatus { get; set; } = "Unreviewed";
     public decimal ReferencePrice { get; set; }
     public decimal MarketPrice { get; set; }
     public string PricingStatus { get; set; } = "Unavailable";
@@ -104,6 +121,10 @@ public sealed class ZeroVehicleChannel
 }
 public sealed class ZeroVehicleIssue
 {
+    public DateTime? PublishedAt { get; set; }
+    public string? SourceUrl { get; set; }
+    public DateTime? ResolvedAt { get; set; }
+    public long? ResolvedListingId { get; set; }
     public long Id { get; set; }
     public long RunId { get; set; }
     public string ExternalMessageId { get; set; } = "";
@@ -115,4 +136,6 @@ public sealed class ZeroVehicleSetting
 {
     public int Id { get; set; } = 1;
     public decimal DeviationPercent { get; set; } = 15;
+    public DateTime? RecalculationRequestedAt { get; set; }
+    public DateTime? LastRecalculatedAt { get; set; }
 }

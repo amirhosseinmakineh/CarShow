@@ -100,7 +100,7 @@ public sealed class ZeroVehicleVerificationTests
             await db.Database.EnsureCreatedAsync();
             // Worker gate only: this SQLite setup does NOT test SQL Server migrations.
             await db.Database.ExecuteSqlRawAsync("CREATE TABLE __EFMigrationsHistory (MigrationId TEXT PRIMARY KEY, ProductVersion TEXT NOT NULL)");
-            await db.Database.ExecuteSqlRawAsync("INSERT INTO __EFMigrationsHistory VALUES ('20261102050507_ZeroVehicleCarIrPipeline', '10.0.7')");
+            await db.Database.ExecuteSqlRawAsync("INSERT INTO __EFMigrationsHistory VALUES ('20261104171652_UsedPriceRecalculationRequests', '10.0.7')");
             var service = scope.ServiceProvider.GetRequiredService<ZeroVehicleService>();
             foreach (var channel in new[] { "broken_channel", "lower_channel", "upper_channel" }) await service.EnqueueAsync(new(channel), default);
         }

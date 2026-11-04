@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CarShow.Controllers;
 
+[TypeFilter(typeof(MarketReviewExceptionFilter))]
 [ApiController]
 [Route("api/admin/telegram-channels")]
 [Authorize(Roles = "Admin")]
@@ -29,9 +30,9 @@ public sealed class TelegramChannelsController(ITelegramChannelService service) 
     }
 
     [HttpGet("jobs")]
-    public async Task<IActionResult> Jobs(CancellationToken cancellationToken)
+    public async Task<IActionResult> Jobs(CancellationToken cancellationToken, int page = 0)
     {
-        return Ok(await service.GetJobsAsync(cancellationToken));
+        return Ok(await service.GetJobsAsync(cancellationToken, page));
     }
 
     [HttpPost("import")]
@@ -54,6 +55,13 @@ public sealed class TelegramChannelsController(ITelegramChannelService service) 
         }
 
         return Ok(channel);
+    }
+
+    [HttpPut("{id:long}")]
+    public async Task<IActionResult> Update(long id, UpdateTelegramChannelRequest request, CancellationToken ct)
+    {
+        var result = await service.UpdateAsync(id, request, ct);
+        return result is null ? BadRequest(new { message = "کانال پیدا نشد یا شناسه معتبر نیست." }) : Ok(result);
     }
 
     [HttpPatch("{id:long}/enabled")]

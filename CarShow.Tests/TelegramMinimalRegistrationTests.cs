@@ -65,7 +65,7 @@ public sealed class TelegramMinimalRegistrationTests
     }
 
     [Fact]
-    public async Task OldAdsWithNameAndPriceAreStoredWithoutSourceLinksOrPriceRangeGate()
+    public async Task OldAdsWithNameAndPriceAreRetainedOutsideLateWindowWithoutPublishing()
     {
         await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
         await using var scope = fixture.Services.CreateAsyncScope();
@@ -83,18 +83,13 @@ public sealed class TelegramMinimalRegistrationTests
         await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
         db.ChangeTracker.Clear();
 
-        var car = await db.Cars.SingleAsync();
         var listings = await db.CarListings.ToListAsync();
-        var history = await db.CarPriceHistories.SingleAsync();
         Assert.Equal(3, listings.Count);
-        Assert.All(listings, listing =>
-        {
-            Assert.Equal("Published", listing.ProcessingStatus);
-            Assert.Equal(car.Id, listing.CarId);
-        });
-        Assert.Equal(decimal.Round((800000000m + 900000000m + 9000000000m) / 3m, 2), car.MarketPrice);
-        Assert.Equal(car.MarketPrice, history.MarketPrice);
-        Assert.Equal(3, history.SampleCount);
+        Assert.All(listings, listing => { Assert.Equal("Late", listing.ProcessingStatus); Assert.Null(listing.CarId); });
+        Assert.Equal(new decimal?[] { 800000000m, 900000000m, 9000000000m }, listings.OrderBy(x => x.Id).Select(x => x.Price));
+        Assert.Equal(3, await db.TelegramRawMessages.CountAsync());
+        Assert.Empty(await db.Cars.ToListAsync());
+        Assert.Empty(await db.CarPriceHistories.ToListAsync());
     }
 
     [Fact]

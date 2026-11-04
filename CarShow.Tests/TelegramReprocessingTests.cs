@@ -40,7 +40,7 @@ public sealed class TelegramReprocessingTests
         Assert.Equal(id, old.Id);
         Assert.Equal(850000000m, old.NormalizedPrice);
         Assert.Equal("پژو", old.Manufacturer);
-        Assert.Equal("207", old.Model);
+        Assert.Equal("پژو 207", old.Model);
         Assert.Equal("Matched", old.MatchStatus);
         Assert.Equal(TelegramListingExtractor.CurrentVersion, old.ExtractionVersion);
         Assert.Equal(raw.MessageText, old.RawText);

@@ -129,9 +129,9 @@ public sealed class TelegramChannelService(
                 saved.LastError = null;
                 saved.UpdatedAt = DateTime.UtcNow;
                 await channelRepository.SaveChanges();
-                await queue.EnqueueAsync(saved.Id, cancellationToken);
                 created++;
-                queued++;
+                try { await queue.EnqueueAsync(saved.Id, cancellationToken); queued++; }
+                catch (CarShow.Domain.Telegram.TelegramProcessingBusyException) { /* Pending is durable; backend scheduler retries. */ }
                 continue;
             }
 
@@ -141,13 +141,14 @@ public sealed class TelegramChannelService(
                 NormalizedIdentifier = item.id,
                 Username = item.username,
                 PublicUrl = string.IsNullOrEmpty(item.url) ? null : item.url,
-                Status = TelegramChannelStatus.Pending
+                Status = item.id.StartsWith("+", StringComparison.Ordinal) ? TelegramChannelStatus.AccessRequired : TelegramChannelStatus.Pending,
+                LastError = item.id.StartsWith("+", StringComparison.Ordinal) ? "لینک دعوت خصوصی است؛ دریافت عمومی ممکن نیست." : null
             };
             await channelRepository.Create(channel);
             await channelRepository.SaveChanges();
-            await queue.EnqueueAsync(channel.Id, cancellationToken);
             created++;
-            queued++;
+            try { await queue.EnqueueAsync(channel.Id, cancellationToken); queued++; }
+            catch (CarShow.Domain.Telegram.TelegramProcessingBusyException) { /* Do not abort registration of other sources. */ }
         }
         return new(entries.Length, created, entries.Length - invalid.Count - created, invalid.Count, queued, invalid);
     }
@@ -172,6 +173,25 @@ public sealed class TelegramChannelService(
             .SingleAsync(cancellationToken);
     }
 
+    public async Task<TelegramChannelDto?> UpdateAsync(long id, UpdateTelegramChannelRequest request, CancellationToken ct)
+    {
+        var normalized = Normalize(request.Input);
+        if (normalized is null) return null;
+        var current = await channelRepository.GetAll().AsTracking().SingleOrDefaultAsync(x => x.Id == id && !x.IsDelete, ct);
+        if (current is null) return null;
+        // Changing the Telegram identity creates/reuses a different source row. Old message IDs
+        // remain attached to their original channel; they cannot collide with the new channel.
+        if (current.NormalizedIdentifier != normalized.Value.id)
+        {
+            await SetEnabledAsync(id, false, ct);
+            await ImportAsync(new(request.Input), ct);
+            current = await channelRepository.GetAll().AsTracking().SingleAsync(x => x.NormalizedIdentifier == normalized.Value.id, ct);
+        }
+        current.Title = request.Title.Trim(); current.UpdatedAt = DateTime.UtcNow;
+        await channelRepository.SaveChanges();
+        return await channelRepository.GetAll().Where(x => x.Id == current.Id).Select(ToDto).SingleAsync(ct);
+    }
+
     public async Task<bool> SetEnabledAsync(long id, bool enabled, CancellationToken cancellationToken)
     {
         var channel = await channelRepository.GetAll()
@@ -181,6 +201,8 @@ public sealed class TelegramChannelService(
         {
             return false;
         }
+        if (enabled && channel.LastError?.StartsWith("DuplicateSourceAlias:", StringComparison.Ordinal) == true)
+            throw new ArgumentException("این رکورد تکراری است؛ منبع اصلی مشخص‌شده در آخرین خطا را مدیریت کنید.");
         channel.Enabled = enabled;
         channel.Status = enabled ? TelegramChannelStatus.Pending : TelegramChannelStatus.Paused;
         channel.UpdatedAt = DateTime.UtcNow;
@@ -204,7 +226,8 @@ public sealed class TelegramChannelService(
         await channelRepository.SaveChanges();
         if (enabled)
         {
-            await queue.EnqueueAsync(id, cancellationToken);
+            try { await queue.EnqueueAsync(id, cancellationToken); }
+            catch (CarShow.Domain.Telegram.TelegramProcessingBusyException) { /* Enabled/Pending survives until the scheduler retries. */ }
         }
         return true;
     }
@@ -251,16 +274,17 @@ public sealed class TelegramChannelService(
         return Task.FromResult(result);
     }
 
-    public async Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken, int page = 0)
     {
         return await jobRepository.GetAll().AsNoTracking().Where(x => !x.Channel.IsDelete)
             .OrderByDescending(x => x.CreatedAt)
-            .Take(500)
-            .Select(x => new TelegramJobLogDto(x.Id, x.ChannelId, x.Status.ToString(), x.Attempt, x.CreatedAt, x.CompletedAt, x.Error))
+            .Skip(Math.Clamp(page, 0, 100000) * 50).Take(50)
+            .Select(x => new TelegramJobLogDto(x.Id, x.ChannelId, x.Status.ToString(), x.Attempt, x.CreatedAt, x.CompletedAt, x.Error, x.StartedAt, x.NewRawMessages, x.ExtractedListings,
+                x.AcceptedListings, x.RejectedListings, x.CalculatedPriceGroups, x.PricingCompletedAt, x.RejectionReasons, x.StageErrors, x.ReportVersion))
             .ToListAsync(cancellationToken);
     }
 
-    private static (string id, string username, string url)? Normalize(string input)
+    public static (string id, string username, string url)? Normalize(string input)
     {
         var value = input.Trim();
         if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
@@ -272,6 +296,9 @@ public sealed class TelegramChannelService(
 
             value = uri.AbsolutePath.Trim('/');
         }
+        if (value.StartsWith("s/", StringComparison.OrdinalIgnoreCase)) value = value[2..];
+        if (value.StartsWith("+", StringComparison.Ordinal) && Regex.IsMatch(value[1..], "^[A-Za-z0-9_-]{8,128}$"))
+            return (value, "", $"https://t.me/{value}");
         value = value.TrimStart('@');
         if (!Username.IsMatch(value))
         {

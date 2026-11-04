@@ -137,7 +137,7 @@ public sealed class TelegramCollectionTests
             Assert.Equal("IRT", listing.Currency);
             Assert.Equal(20_000, listing.Mileage);
             Assert.Equal(1402, listing.Year);
-            Assert.Equal("207", listing.Model);
+            Assert.Equal("پژو 207", listing.Model);
             Assert.Equal("پژو", listing.Manufacturer);
         }
         finally
@@ -261,8 +261,9 @@ public sealed class TelegramCollectionTests
             var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
             Assert.Equal(1, await db.TelegramCollectionJobs.CountAsync(x => x.Status == TelegramCollectionJobStatus.AccessRequired));
             Assert.Equal(199, await db.TelegramRawMessages.CountAsync());
-            Assert.Equal(0, await db.CarListings.CountAsync());
-            Assert.Equal(199, await db.TelegramRawMessages.CountAsync(x => x.ProcessingStatus == "Ignored"));
+            Assert.Equal(199, await db.CarListings.CountAsync());
+            Assert.All(await db.CarListings.ToListAsync(), x => { Assert.Null(x.Model); Assert.Equal(850000000m, x.Price); });
+            Assert.Equal(199, await db.TelegramRawMessages.CountAsync(x => x.ProcessingStatus == "Extracted"));
             Assert.Equal(200, await db.TelegramCollectionJobs.CountAsync());
             Console.WriteLine($"200 jobs drained in {stopwatch.Elapsed.TotalSeconds:F2}s; managed memory before={memoryBefore}, after={GC.GetTotalMemory(true)} bytes.");
         }

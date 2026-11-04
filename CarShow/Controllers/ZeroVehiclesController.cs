@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace CarShow.Controllers;
 
+[TypeFilter(typeof(MarketReviewExceptionFilter))]
 [ApiController]
 [Authorize(Roles = "Admin")]
 [Route("api/admin/zero-vehicles")]
@@ -64,7 +65,7 @@ public sealed class ZeroVehiclesController(ZeroVehicleService service) : Control
     [HttpPost("prices/recalculate")]
     public async Task<IActionResult> Recalculate(CancellationToken ct)
     {
-        try { return Ok(new { groups = await service.RecalculateAsync(DateTime.UtcNow, ct) }); }
+        try { await service.RequestRecalculationAsync(ct); return Accepted(new { queued = true, workerEnabled = service.WorkerEnabled, groups = 0 }); }
         catch (TelegramProcessingBusyException) { return Conflict(new { message = "پردازش دیگری فعال است؛ چند لحظه دیگر تلاش کنید." }); }
     }
 }

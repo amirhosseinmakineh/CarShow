@@ -16,10 +16,10 @@ public sealed class TelegramPricingService(
 {
     public async Task ScheduleCollectionAsync(CancellationToken cancellationToken)
     {
-        var interval = TimeSpan.FromMinutes(Math.Max(1, configuration.GetValue("Telegram:CollectionIntervalMinutes", 15)));
+        var interval = TimeSpan.FromMinutes(Math.Max(1, configuration.GetValue("Telegram:CollectionIntervalMinutes", 300)));
         var due = DateTime.UtcNow - interval;
         var channels = await store.Channels.AsNoTracking()
-            .Where(x => x.Enabled && !x.IsDelete && (x.LastAttemptAt == null || x.LastAttemptAt < due))
+            .Where(x => x.Enabled && !x.IsDelete && !x.NormalizedIdentifier.StartsWith("+") && (x.LastAttemptAt == null || x.LastAttemptAt < due))
             .Select(x => x.Id).ToListAsync(cancellationToken);
         foreach (var id in channels)
         {
@@ -38,11 +38,37 @@ public sealed class TelegramPricingService(
         }
     }
 
+    public bool WorkerEnabled => configuration.GetValue("Telegram:WorkersEnabled", true);
+
+    public async Task RequestRecalculationAsync(CancellationToken ct)
+    {
+        await store.RunExclusiveAsync("TelegramDailyPricing", async () => {
+            var state = await GetStateAsync(ct); state.PricingRequestedAt = DateTime.UtcNow;
+        }, ct);
+    }
+
+    public async Task<bool> HasPricingWorkAsync(DateTime nowUtc, CancellationToken ct)
+    {
+        var state = await store.PricingStates.AsNoTracking().SingleOrDefaultAsync(ct);
+        if (state?.LastSuccessAt is null || state.LastError != null) return true;
+        if (state.PricingRequestedAt != null && (state.PricingRequestCompletedAt == null || state.PricingRequestedAt > state.PricingRequestCompletedAt)) return true;
+        if (await store.Messages.AnyAsync(x => !x.IsDelete && !x.Channel.IsDelete
+            && (x.ProcessingStatus == "Pending" || x.ProcessingStatus == "Extracted"
+                || x.ExtractionVersion < TelegramListingExtractor.CurrentVersion), ct)) return true;
+        if (await store.Channels.AnyAsync(x => x.UpdatedAt > state.LastSuccessAt, ct)) return true;
+        var cutoff = OpenWindowStart(nowUtc);
+        if (await store.Cars.AnyAsync(x => x.ManualOverrideUntil <= nowUtc && x.MarketPrice != x.CalculatedMarketPrice, ct)) return true;
+        if (await store.History.AnyAsync(x => !x.IsFinal && x.PriceDay < cutoff, ct)) return true;
+        if (await store.Jobs.AnyAsync(x => x.ReportVersion == 1 && x.CompletedAt != null && x.PricingCompletedAt == null, ct)) return true;
+        return state.RunStartedAt != null && state.RunCompletedAt == null;
+    }
+
     public async Task CalculateAsync(DateTime nowUtc, CancellationToken cancellationToken)
     {
         await store.RunExclusiveAsync("TelegramDailyPricing", async () =>
         {
             var state = await GetStateAsync(cancellationToken);
+            var requestStamp = state.PricingRequestedAt;
             state.LastAttemptAt = nowUtc;
             var catalog = await store.Cars.ToListAsync(cancellationToken);
             await ProcessMessagesAsync(catalog.Where(car => !car.IsDelete).ToList(), nowUtc, cancellationToken);
@@ -50,6 +76,8 @@ public sealed class TelegramPricingService(
             catalog = (await UpdateComparisonsAsync(catalog, nowUtc, cancellationToken)).ToList();
             await store.SaveAsync(cancellationToken);
             await CalculateDaysAsync(catalog, nowUtc, cancellationToken);
+            await CompleteJobReportsAsync(nowUtc, cancellationToken);
+            state.PricingRequestCompletedAt = requestStamp;
             state.LastSuccessAt = nowUtc;
             state.LastError = null;
             if (state.RunStartedAt is not null && state.RunCompletedAt is null)
@@ -68,6 +96,28 @@ public sealed class TelegramPricingService(
         }, cancellationToken);
     }
 
+    private async Task CompleteJobReportsAsync(DateTime now, CancellationToken ct)
+    {
+        var jobs = await store.Jobs.Where(x => x.ReportVersion == 1 && x.CompletedAt != null && x.PricingCompletedAt == null)
+            .OrderBy(x => x.Id).Take(500).ToListAsync(ct);
+        foreach (var job in jobs)
+        {
+            if (job.StartedAt is null) { job.PricingCompletedAt = now; continue; }
+            var raw = store.Messages.Where(x => x.ChannelId == job.ChannelId && x.CollectedAt >= job.StartedAt && x.CollectedAt <= job.CompletedAt);
+            if (await raw.AnyAsync(x => x.ProcessingStatus == "Pending" || x.ProcessingStatus == "Extracted"
+                || x.ExtractionVersion < TelegramListingExtractor.CurrentVersion, ct)) continue;
+            var ids = raw.Select(x => x.Id);
+            var rows = await store.Listings.Where(x => x.RawMessageId != null && ids.Contains(x.RawMessageId.Value)).ToListAsync(ct);
+            job.AcceptedListings = rows.Count(x => x.ProcessingStatus is "Published" or "Stored");
+            job.RejectedListings = rows.Count - job.AcceptedListings;
+            job.CalculatedPriceGroups = rows.Where(x => x.ComparisonStatus == "Compared" && x.CarId != null)
+                .Select(x => (x.CarId, x.PriceDay)).Distinct().Count();
+            job.RejectionReasons = System.Text.Json.JsonSerializer.Serialize(rows.Where(x => x.ProcessingStatus is not ("Published" or "Stored"))
+                .GroupBy(x => x.ReasonCode ?? x.ProcessingStatus).ToDictionary(x => x.Key, x => x.Count()));
+            job.PricingCompletedAt = now;
+        }
+    }
+
     public async Task RecordFailureAsync(string error, CancellationToken cancellationToken)
     {
         await store.RunExclusiveAsync("TelegramDailyPricing", async () =>
@@ -75,6 +125,9 @@ public sealed class TelegramPricingService(
             var state = await GetStateAsync(cancellationToken);
             state.LastAttemptAt = DateTime.UtcNow;
             state.LastError = error;
+            foreach (var job in await store.Jobs.Where(x => x.ReportVersion == 1 && x.CompletedAt != null && x.PricingCompletedAt == null)
+                .OrderBy(x => x.Id).Take(500).ToListAsync(cancellationToken))
+                job.StageErrors = System.Text.Json.JsonSerializer.Serialize(new { Collection = job.Error, Pricing = error });
         }, cancellationToken);
     }
 
@@ -91,6 +144,7 @@ public sealed class TelegramPricingService(
 
     private async Task ProcessMessagesAsync(IReadOnlyList<Car> catalog, DateTime nowUtc, CancellationToken cancellationToken)
     {
+        await extractor.LoadCatalogAsync(cancellationToken);
         var version = TelegramListingExtractor.CurrentVersion;
         var batchSize = Math.Clamp(configuration.GetValue("Telegram:ReprocessBatchSize", 2000), 1, 5000);
         var messages = await store.Messages.Include(x => x.Channel)
@@ -107,8 +161,10 @@ public sealed class TelegramPricingService(
         {
             existing.TryGetValue((message.ChannelId, message.ExternalMessageId), out var listing);
             message.ExtractionVersion = version;
-            // Reprocessing repairs derived candidates, never previously published cars/history.
-            if (listing is not null && (listing.IsDelete || listing.StoredAt != null || listing.ProcessingStatus == "Published"))
+            // Repair legacy derived identities only against their unchanged raw body; protect manual matches and final history.
+            if (listing is not null && (listing.IsDelete || listing.ManuallyMatched
+                || ((listing.StoredAt != null || listing.ProcessingStatus == "Published")
+                    && (listing.ExtractionVersion >= version || listing.RawText != message.MessageText))))
             {
                 listing.ExtractionVersion = version;
                 message.ProcessingStatus = listing.IsDelete ? "Ignored" : "Stored";
@@ -116,6 +172,17 @@ public sealed class TelegramPricingService(
                 continue;
             }
             var parsed = extractor.Extract(message.Channel, message);
+            if (listing is not null && listing.StoredAt != null && listing.ExtractionVersion < version && listing.RawText == message.MessageText)
+            {
+                var identityChanged = parsed is null || parsed.ComparisonKey != listing.ComparisonKey;
+                store.Add(new MarketPriceReview { Scope = "used-listing", TargetId = listing.Id, Action = "ExtractionRepair",
+                    Actor = $"extractor-v{version}", Reason = "بازبینی مشتقات برای تفکیک صحیح سال، تیپ و کارکرد؛ متن خام و تاریخچه نهایی حفظ شد.",
+                    BeforeJson = System.Text.Json.JsonSerializer.Serialize(new { listing.Model, listing.Trim, listing.Year, listing.YearCalendar, listing.Mileage, listing.Price, listing.ComparisonKey, listing.CarId }),
+                    AfterJson = System.Text.Json.JsonSerializer.Serialize(parsed is null ? null : new { parsed.Model, parsed.Trim, parsed.Year, parsed.YearCalendar, parsed.Mileage, parsed.Price, parsed.ComparisonKey }) });
+                var affected = listing.CarId.HasValue ? catalog.FirstOrDefault(x => x.Id == listing.CarId.Value) : null;
+                if (identityChanged && affected is not null && affected.PriceReviewStatus is not ("Approved" or "Rejected"))
+                    affected.PriceReviewStatus = "IdentityNeedsReview";
+            }
             if (parsed is null)
             {
                 message.ProcessingStatus = "Ignored";
@@ -168,6 +235,8 @@ public sealed class TelegramPricingService(
         target.Brand = source.Brand;
         target.Manufacturer = source.Manufacturer;
         target.Trim = source.Trim;
+        target.Transmission = source.Transmission;
+        target.BodyCondition = source.BodyCondition;
         target.Year = source.Year;
         target.YearCalendar = source.YearCalendar;
         target.Mileage = source.Mileage;
@@ -224,7 +293,7 @@ public sealed class TelegramPricingService(
     private async Task<IReadOnlyList<Car>> UpdateComparisonsAsync(IReadOnlyList<Car> existingCars, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var cutoff = OpenWindowStart(nowUtc);
-        var registeredChannels = store.Channels.Where(channel => !channel.IsDelete).Select(channel => channel.Id);
+        var registeredChannels = store.Channels.Where(channel => channel.Enabled && !channel.IsDelete).Select(channel => channel.Id);
         var listings = await store.Listings
             .Where(listing => !listing.IsDelete && listing.ComparisonKey != null
                 && listing.NormalizedPrice > 0 && listing.Currency != null
@@ -235,7 +304,15 @@ public sealed class TelegramPricingService(
 
         foreach (var listing in listings)
         {
-            var reason = TelegramMarketPriceCalculator.ValidationFailure(listing, nowUtc);
+            if (listing.PriceDay < cutoff && listing.AdminDecision != "Approved" && !listing.ManuallyMatched)
+            {
+                MarkExcluded(listing, "LATE_ARRIVAL", "آگهی خارج از پنجره ورود دیرهنگام است؛ تاریخچه نهایی تغییر نمی‌کند.", cutoff);
+                SetRawStatus(rawById, listing, listing.ProcessingStatus, listing.MatchReason);
+                continue;
+            }
+            var reason = TelegramMarketPriceCalculator.ValidationFailure(listing, nowUtc,
+                configuration.GetValue("Telegram:MinimumPriceToman", 10_000_000m),
+                configuration.GetValue("Telegram:MaximumPriceToman", 100_000_000_000m));
             if (reason is not null)
             {
                 MarkExcluded(listing, reason.Value.Code, reason.Value.Message, cutoff);
@@ -250,7 +327,10 @@ public sealed class TelegramPricingService(
         var removedIdentities = existingCars.Where(car => car.IsDelete && car.TelegramIdentityKey != null)
             .Select(car => car.TelegramIdentityKey!).ToHashSet(StringComparer.Ordinal);
         var assignments = new List<(TelegramMarketPriceGroup Group, Car Car)>();
-        foreach (var group in TelegramMarketPriceCalculator.Compare(eligible))
+        foreach (var group in TelegramMarketPriceCalculator.Compare(eligible, new TelegramOutlierOptions(
+            Math.Clamp(configuration.GetValue("Telegram:Outliers:MinimumSamples", 5), 5, 100),
+            Math.Clamp(configuration.GetValue("Telegram:Outliers:MadMultiplier", 3.5m), 1m, 10m),
+            Math.Clamp(configuration.GetValue("Telegram:Outliers:MinimumDeviationPercent", 25m), 1m, 100m))))
         {
             foreach (var duplicate in group.Duplicates)
             {
@@ -264,6 +344,7 @@ public sealed class TelegramPricingService(
                 SetRawStatus(rawById, outlier, outlier.ProcessingStatus, outlier.MatchReason);
             }
 
+            if (group.Samples.Count == 0) continue;
             var representative = group.Samples[0];
             if (removedIdentities.Contains(representative.ComparisonKey!))
             {
@@ -354,7 +435,7 @@ public sealed class TelegramPricingService(
         var observations = await store.Listings.Where(x => !x.IsDelete && x.Car != null && !x.Car.IsDelete && x.MatchStatus == "Matched"
             && x.ComparisonStatus == "Compared" && x.ValidPriceSourceCount > 0
             && x.ComparisonKey != null && x.CarId != null && x.NormalizedPrice > 0
-            && store.Channels.Any(channel => channel.Id == x.ChannelId && !channel.IsDelete))
+            && store.Channels.Any(channel => channel.Id == x.ChannelId && channel.Enabled && !channel.IsDelete))
             .ToListAsync(cancellationToken);
         // Finalized observations still take part in the comparison pass. Their
         // existing history keys must be loaded too, or a later cycle tries to
@@ -400,6 +481,9 @@ public sealed class TelegramPricingService(
     {
         if (history?.IsFinal == true)
         {
+            if (car.MarketPriceDay == day)
+                car.MarketPrice = MarketPricePolicy.Effective(car.CalculatedMarketPrice ?? history.MarketPrice,
+                    car.ManualOverridePrice, car.ManualOverrideUntil, car.PriceReviewStatus, nowUtc);
             return;
         }
         var distinct = observations.GroupBy(x => x.Fingerprint ?? $"message:{x.ChannelId}:{x.SourceMessageId}")
@@ -417,6 +501,7 @@ public sealed class TelegramPricingService(
             };
             store.Add(history);
         }
+        if (car.PriceReviewStatus == "IdentityNeedsReview") car.PriceReviewStatus = "Unreviewed";
         history.MarketPrice = average;
         history.SampleCount = distinct.Count;
         history.IndependentSourceCount = distinct.Select(x => x.ChannelId).Distinct().Count();
@@ -427,7 +512,8 @@ public sealed class TelegramPricingService(
         history.IsFinal = day < cutoff;
         if (car.MarketPriceDay is null || car.MarketPriceDay <= day)
         {
-            car.MarketPrice = average;
+            car.CalculatedMarketPrice = average;
+            car.MarketPrice = MarketPricePolicy.Effective(average, car.ManualOverridePrice, car.ManualOverrideUntil, car.PriceReviewStatus, nowUtc);
             car.MarketPriceDay = day;
             car.PriceSampleCount = distinct.Count;
             car.PriceCalculatedAt = nowUtc;

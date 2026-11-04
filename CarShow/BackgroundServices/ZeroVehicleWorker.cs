@@ -10,6 +10,8 @@ public sealed class ZeroVehicleWorker(IServiceScopeFactory scopes, ILogger<ZeroV
     {
         var nextRecalculation = DateTime.MinValue;
         var nextSchemaCheck = DateTime.MinValue;
+        var nextScheduleCheck = DateTime.MinValue;
+        var recalculationRequested = false;
         var schemaReady = false;
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -22,9 +24,9 @@ public sealed class ZeroVehicleWorker(IServiceScopeFactory scopes, ILogger<ZeroV
                     nextSchemaCheck = DateTime.UtcNow.AddMinutes(1);
                     var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
                     schemaReady = (await db.Database.GetAppliedMigrationsAsync(stoppingToken))
-                        .Contains("20261102050507_ZeroVehicleCarIrPipeline");
+                        .Contains("20261104171652_UsedPriceRecalculationRequests");
                     if (!schemaReady)
-                        logger.LogWarning("Zero vehicle import is paused until migration 20261102050507_ZeroVehicleCarIrPipeline is applied.");
+                        logger.LogWarning("Zero vehicle import is paused until migration 20261104171652_UsedPriceRecalculationRequests is applied.");
                 }
                 if (!schemaReady)
                 {
@@ -32,6 +34,12 @@ public sealed class ZeroVehicleWorker(IServiceScopeFactory scopes, ILogger<ZeroV
                     continue;
                 }
                 var service = scope.ServiceProvider.GetRequiredService<ZeroVehicleService>();
+                if (DateTime.UtcNow >= nextScheduleCheck)
+                {
+                    await service.ScheduleCollectionAsync(DateTime.UtcNow, stoppingToken);
+                    recalculationRequested = await service.RequiresRecalculationAsync(DateTime.UtcNow, stoppingToken);
+                    nextScheduleCheck = DateTime.UtcNow.AddMinutes(1);
+                }
                 runId = await service.ClaimAsync(DateTime.UtcNow, stoppingToken);
                 if (runId.HasValue)
                 {
@@ -39,11 +47,14 @@ public sealed class ZeroVehicleWorker(IServiceScopeFactory scopes, ILogger<ZeroV
                     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
                     timeout.CancelAfter(TimeSpan.FromMinutes(5));
                     await service.ProcessAsync(runId.Value, DateTime.UtcNow, timeout.Token);
+                    nextRecalculation = DateTime.UtcNow.AddHours(24);
+                    recalculationRequested = false;
                 }
-                else if (DateTime.UtcNow >= nextRecalculation)
+                else if (DateTime.UtcNow >= nextRecalculation || recalculationRequested)
                 {
                     await service.RecalculateAsync(DateTime.UtcNow, stoppingToken);
-                    nextRecalculation = DateTime.UtcNow.AddMinutes(15);
+                    nextRecalculation = DateTime.UtcNow.AddHours(24);
+                    recalculationRequested = false;
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }

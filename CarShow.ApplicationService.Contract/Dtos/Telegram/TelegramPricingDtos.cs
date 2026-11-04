@@ -16,7 +16,10 @@ public sealed record TelegramObservationDto(
 public sealed record DailyCarPriceDto(
     long CarId, string Name, decimal MarketPrice, decimal FactoryPrice,
     DateOnly? PriceDay, int SampleCount, DateTime? CalculatedAt, bool IsFinal,
-    int IndependentSourceCount, string ConfidenceLevel);
+    int IndependentSourceCount, string ConfidenceLevel)
+{
+    public string PricingStatus => IndependentSourceCount == 1 ? "SingleSource" : "Calculated";
+}
 
 public sealed record TelegramPricingStateDto(DateTime? LastSuccessAt, DateTime? LastAttemptAt, string? LastError);
 

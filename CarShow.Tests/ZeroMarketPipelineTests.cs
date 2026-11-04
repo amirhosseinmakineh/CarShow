@@ -54,7 +54,7 @@ public sealed class ZeroMarketPipelineTests
         Assert.Equal(4, await db.Set<ZeroVehicleListing>().CountAsync());
         market.Result = new("SourceUnavailable", Reason: "NetworkError");
         await service.RecalculateAsync(Now, default);
-        Assert.Empty(await db.Set<ZeroVehiclePriceGroup>().ToListAsync());
+        Assert.Equal("Unavailable", (await db.Set<ZeroVehiclePriceGroup>().SingleAsync()).PricingStatus);
         Assert.All(await db.Set<ZeroVehicleListing>().ToListAsync(), x => Assert.Null(x.FinalPrice));
         Assert.Empty(await db.Cars.ToListAsync()); Assert.Empty(await db.CarListings.ToListAsync());
     }

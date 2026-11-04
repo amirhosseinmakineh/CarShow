@@ -21,6 +21,9 @@ public sealed class TelegramChannel : BaseEntity<long>
     public TelegramChannelStatus Status { get; set; } = TelegramChannelStatus.Pending;
     public bool Enabled { get; set; } = true;
     public string CollectorType { get; set; } = "telegram";
+    public long? ScanBefore { get; set; }
+    public long? PendingLatestMessageId { get; set; }
+    public long? LatestMessageId { get; set; }
     public DateTime? LastSuccessAt { get; set; }
     public DateTime? LastAttemptAt { get; set; }
     public string? LastError { get; set; }
@@ -49,6 +52,8 @@ public sealed class TelegramRawMessage : BaseEntity<long>
 
 public sealed class CarListing : BaseEntity<long>
 {
+    public string AdminDecision { get; set; } = "Unreviewed";
+    public bool ManuallyMatched { get; set; }
     public int ExtractionVersion { get; set; }
     public long? CarId { get; set; }
     public Car? Car { get; set; }

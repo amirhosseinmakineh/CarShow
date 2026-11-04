@@ -3,28 +3,45 @@ using System.Text;
 using System.Text.RegularExpressions;
 using CarShow.Domain.Models.Telegram;
 using Microsoft.Extensions.Configuration;
+using CarShow.Domain.IRepository;
+using CarShow.Domain.Models.ZeroVehicles;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarShow.ApplicationService.Services;
 
 public interface ITelegramListingExtractor
 {
+    Task LoadCatalogAsync(CancellationToken ct) => Task.CompletedTask;
     CarListing? Extract(TelegramChannel channel, TelegramRawMessage message);
 }
 
 public sealed class TelegramListingExtractor : ITelegramListingExtractor
 {
-    private readonly TelegramVehicleNames vehicleNames;
+    private TelegramVehicleNames vehicleNames;
+    private readonly IConfiguration? configuration;
+    private readonly IZeroVehicleStore? catalogStore;
+    private readonly ITelegramProcessingStore? standardStore;
+    private Dictionary<long, string> companies = [];
+    private IReadOnlyList<ZeroVehicleModel> catalog = [];
 
-    public TelegramListingExtractor(IConfiguration? configuration = null)
+    public TelegramListingExtractor(IConfiguration? configuration = null, IZeroVehicleStore? catalogStore = null, ITelegramProcessingStore? standardStore = null)
     {
+        this.configuration = configuration; this.catalogStore = catalogStore; this.standardStore = standardStore;
         vehicleNames = new TelegramVehicleNames(configuration);
     }
-    public const int CurrentVersion = 5;
+    public async Task LoadCatalogAsync(CancellationToken ct)
+    {
+        if (catalogStore is null) return;
+        catalog = await catalogStore.Models.AsNoTracking().Include(x => x.Trims).ToListAsync(ct);
+        if (standardStore is not null) companies = await standardStore.Companies.AsNoTracking().Where(x => !x.IsDelete).ToDictionaryAsync(x => x.Id, x => x.Name, ct);
+        vehicleNames = new TelegramVehicleNames(configuration, catalog);
+    }
+    public const int CurrentVersion = 7;
     private static readonly Regex PriceRegex = new(
         @"(?:قیمت(?:\s+(?:فروش|نقدی|کل))?|price)\s*[:：=💰💵💶💸🔴🟢]*\s*([-+]?(?:[0-9]{1,3}(?:[. \u00a0\u202f][0-9]{3}){2,}|[0-9,٬]+(?:[.٫][0-9]+)?))\s*(میلیارد|میلیون|هزار|م(?![\p{L}\p{N}]))?(?:\s*و\s*([0-9,٬]+)\s*(میلیون|هزار))?\s*(تومان|ریال|تومن|IRR|IRT)?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex MileageRegex = new(
-        @"(?:کارکرد|کیلومتر|km)\s*[:：]?\s*([0-9,٬]+)\s*(هزار)?",
+        @"(?:کارکرد|کیلومتر|km)\s*[:：]?\s*([0-9,٬]+(?:[.٫][0-9]+)*)\s*(هزار)?(?![0-9,٬.٫])",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex YearRegex = new(
         @"(?:مدل|سال|year)\s*[:：]?\s*([0-9]{4})",
@@ -54,13 +71,19 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             _ => 1m
         };
         // Small bare values are common contact codes, not comparable car prices.
-        var secondary = ParseDecimal(priceMatch.Groups[3].Value) ?? 0m;
+        var parsedSecondary = ParseDecimal(priceMatch.Groups[3].Value);
+        var secondary = parsedSecondary ?? 0m;
         var secondaryMultiplier = priceMatch.Groups[4].Value == "میلیون" ? 1_000_000m : 1_000m;
-        if (price is <= 0 || (multiplier == 1m && price < 10_000m)
+        if (priceMatch.Groups[3].Success && parsedSecondary is null || secondary < 0
+            || secondary > 9_999_999_999_999_999.99m / secondaryMultiplier
+            || price is <= 0 || (multiplier == 1m && price < 10_000m)
             || price > 9_999_999_999_999_999.99m / multiplier)
             price = null;
         else if (price is not null)
+        {
             price = price * multiplier + secondary * secondaryMultiplier;
+            if (price > 9_999_999_999_999_999.99m) price = null;
+        }
         var currency = priceMatch.Groups[5].Value.ToUpperInvariant() switch
         {
             "تومان" or "تومن" or "IRT" => "IRT",
@@ -78,17 +101,22 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             price = null;
             currency = null;
         }
-        var mileageMatch = MileageRegex.Match(text);
+        var mileageText = Regex.Replace(text, @"بدون\s*کارکرد", " ");
+        var mileageMatch = MileageRegex.Match(mileageText);
+        if (!mileageMatch.Success) mileageMatch = Regex.Match(mileageText,
+            @"(?<![0-9])([0-9,٬]+(?:[.٫][0-9]+)*)\s*(هزار)?\s*(?:کیلومتر|km)(?![\p{L}])", RegexOptions.IgnoreCase);
         var mileageValue = ParseDecimal(mileageMatch.Groups[1].Value);
+        if (mileageMatch.Success && Regex.IsMatch(mileageText[(mileageMatch.Index + mileageMatch.Length)..],
+            @"^\s*(?:میلیون|میلیارد|تومان|تومن|ریال|م(?![\p{L}]))")) mileageValue = null;
+        var positiveMileage = mileageValue > 0;
+        var ambiguousMileage = !mileageMatch.Groups[2].Success && Regex.IsMatch(mileageMatch.Groups[1].Value, @"^[0-9]{1,3}[.٫][0-9]{3}$");
         if (mileageMatch.Groups[2].Success)
         {
             mileageValue *= 1000;
         }
 
-        var mileage = mileageValue is >= 0 and <= int.MaxValue ? (int?)mileageValue : null;
-        var yearValue = ParseDecimal(YearRegex.Match(text).Groups[1].Value);
-        var year = yearValue is >= 1300 and <= 1500 or >= 1900 and <= 2100 ? (int?)yearValue : null;
-        var yearCalendar = year is >= 1300 and <= 1500 ? "Jalali" : year is >= 1900 ? "Gregorian" : null;
+        var mileage = !ambiguousMileage && mileageValue is >= 0 and <= int.MaxValue && mileageValue % 1 == 0 ? (int?)mileageValue : null;
+        var (year, yearCalendar, ambiguousYear) = VehicleModelYear.Read(text);
         var modelMatch = ModelRegex.Match(text);
         var knownName = vehicleNames.FindUnique(text, out var ambiguousName, out var rawCarName);
         var explicitName = modelMatch.Success ? CleanIdentityField(modelMatch.Groups[1].Value) : null;
@@ -99,12 +127,12 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             return null;
         var imageUrls = ParseImageUrls(message.MediaMetadata);
         var manufacturer = ExtractManufacturer(text);
-        if (string.IsNullOrWhiteSpace(carName) && !priceMatch.Success)
+        if (string.IsNullOrWhiteSpace(carName) && !priceMatch.Success && !ambiguousName)
             return null;
         var trimMatch = Regex.Match(text, @"(?:تیپ|تریم)\s*[:：]\s*([^\r\n]+)");
         var trim = trimMatch.Success ? CleanIdentityField(trimMatch.Groups[1].Value) :
-            string.Join(" ", new[] { "توربو", "اتومات", "اتوماتیک", "دنده ای", "دنده‌ای", "دستی", "هیبرید", "تیپ 2", "تیپ 5" }
-                .Where(x => text.Contains(x, StringComparison.Ordinal) && (x != "اتومات" || !text.Contains("اتوماتیک", StringComparison.Ordinal))));
+            string.Join(" ", new[] { "توربو", "اتومات", "اتوماتیک", "دنده ای", "دنده‌ای", "دستی", "هیبرید", "تیپ 2", "تیپ 5", "پانوراما", "هیدرولیک", "tu3", "tu5p", "tu5", "mc" }
+                .Where(x => Regex.IsMatch(text, @"(?<![\p{L}\p{N}])" + Regex.Escape(x) + @"(?![\p{L}\p{N}])", RegexOptions.IgnoreCase) && (x != "اتومات" || !text.Contains("اتوماتیک", StringComparison.Ordinal))));
         if (mileage is null && Regex.IsMatch(text, @"(?:کارکرد\s*[:：]?\s*صفر|صفر\s*کیلومتر|بدون\s*کارکرد)", RegexOptions.IgnoreCase))
             mileage = 0;
 
@@ -115,36 +143,66 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
         if (carName == "شاهین" && Regex.IsMatch(text, @"(?<![\p{L}\p{N}])شاهین\s+G(?![\p{L}\p{N}])", RegexOptions.IgnoreCase))
             trim = "G";
 
+        var automatic = Regex.IsMatch(text, @"اتومات(?:یک)?|automatic", RegexOptions.IgnoreCase);
+        var manual = Regex.IsMatch(text, @"دنده\s*ای|دستی|manual", RegexOptions.IgnoreCase);
+        var transmission = automatic && manual ? "Conflict" : automatic ? "Automatic" : manual ? "Manual" : null;
+        var noPaint = Regex.IsMatch(text, @"بدون\s*رنگ|بی\s*رنگ");
+        var fullPaint = Regex.IsMatch(text, @"تمام\s*رنگ|دور\s*رنگ");
+        var bodyCondition = noPaint && fullPaint ? "Conflict" : noPaint ? "NoPaint" : fullPaint ? "FullPaint" : null;
+        var standard = catalog.SingleOrDefault(x => CarListingMatcher.Normalize(x.Name) == CarListingMatcher.Normalize(carName ?? ""));
+        if (standard is not null)
+        {
+            if (manufacturer is null && standard.CompanyId.HasValue) manufacturer = companies.GetValueOrDefault(standard.CompanyId.Value);
+            var candidates = standard.Trims.Where(x => x.Name != "نام‌محور")
+                .Select(x => new { Trim = x, Aliases = x.Aliases.Split('\n', StringSplitOptions.RemoveEmptyEntries).Prepend(x.Name)
+                    .Where(a => Regex.IsMatch(CarListingMatcher.Normalize(text), @"(?<![\p{L}\p{N}])" + Regex.Escape(CarListingMatcher.Normalize(a)) + @"(?![\p{L}\p{N}])")).ToArray() })
+                .Where(x => x.Aliases.Length > 0).ToArray();
+            candidates = candidates.Where(x => !candidates.Any(other => other.Trim.Id != x.Trim.Id
+                && x.Aliases.All(a => other.Aliases.Any(b => b.Length > a.Length && CarListingMatcher.Normalize(b).Contains(CarListingMatcher.Normalize(a), StringComparison.Ordinal))))).ToArray();
+            if (candidates.Length == 1)
+            {
+                var known = CarListingMatcher.NormalizeTrim(candidates[0].Trim.Name + " " + string.Join(" ", candidates[0].Aliases));
+                var explicitTokens = CarListingMatcher.NormalizeTrim(trim ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (explicitTokens.All(token => known.Split(' ').Contains(token)))
+                { trim = candidates[0].Trim.Name; transmission ??= candidates[0].Trim.Transmission; }
+            }
+            else if (candidates.Length > 1) transmission = "Conflict";
+        }
         var normalizedModel = NormalizeModelName(carName, manufacturer);
         var normalizedTrim = string.IsNullOrWhiteSpace(trim) ? null : CarListingMatcher.NormalizeTrim(trim);
         var comparisonKey = normalizedModel is not null
             ? CarListingMatcher.BuildComparisonKey(manufacturer, normalizedModel, normalizedTrim, year,
-                yearCalendar, GetCondition(text, mileage), mileage)
+                yearCalendar, GetCondition(text, mileage, positiveMileage), mileage, bodyCondition, transmission)
             : null;
 
+        var identityTooLong = comparisonKey?.Length > 256 || normalizedTrim?.Length > 128 || manufacturer?.Length > 128;
+        if (identityTooLong) { comparisonKey = null; normalizedModel = null; manufacturer = null; }
         var listing = new CarListing
         {
             ExtractionVersion = CurrentVersion,
             RawMessageId = message.Id,
             PublishedAt = message.MessageDate,
             ReceivedAt = message.CollectedAt,
-            IsUsed = GetCondition(text, mileage),
+            IsUsed = GetCondition(text, mileage, positiveMileage),
             ChannelId = channel.Id,
             SourceChannel = channel.NormalizedIdentifier,
             SourceMessageId = message.ExternalMessageId,
             SourceUrl = message.SourceUrl,
             RawText = message.MessageText,
             Model = normalizedModel,
-            RawCarName = rawCarName ?? explicitName,
+            RawCarName = (rawCarName ?? explicitName) is { } rawName ? rawName[..Math.Min(rawName.Length, 128)] : null,
             NameValidationStatus = normalizedModel is null ? "NeedsReview" : "Validated",
             PriceValidationStatus = price is > 0 && currency is not null ? "Validated" : "NeedsReview",
             ExtractionStatus = normalizedModel is not null && price is > 0 && currency is not null ? "Validated" : "NeedsReview",
             Manufacturer = manufacturer,
+            Brand = manufacturer,
             PrimaryImageUrl = imageUrls.FirstOrDefault(),
             ImageUrls = imageUrls.Count == 0 ? null : string.Join("\n", imageUrls),
             Trim = string.IsNullOrEmpty(trim) ? null : trim,
+            Transmission = transmission,
+            BodyCondition = bodyCondition,
             Price = price,
-            PriceText = priceText,
+            PriceText = priceText is null ? null : priceText[..Math.Min(priceText.Length, 64)],
             Currency = currency,
             Mileage = mileage,
             Year = year,
@@ -165,6 +223,13 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
         {
             listing.ReasonCode = ambiguousName ? "CAR_NAME_AMBIGUOUS" : "CAR_NAME_MISSING";
             listing.MatchReason = "نام خودرو به‌طور قابل‌تأیید مشخص نیست.";
+        }
+        if (identityTooLong) { listing.ReasonCode = "COMPARISON_IDENTITY_TOO_LONG"; listing.MatchReason = "مشخصات استخراج‌شده طول نامعتبر دارد و نیاز به بررسی است."; }
+        if (ambiguousYear)
+        {
+            listing.ComparisonKey = null; listing.Model = null;
+            listing.ReasonCode = "MODEL_YEAR_AMBIGUOUS"; listing.MatchReason = "بیش از یک سال مدل در آگهی دیده می‌شود.";
+            listing.ExtractionStatus = "NeedsReview";
         }
         return listing;
     }
@@ -205,10 +270,11 @@ public sealed class TelegramListingExtractor : ITelegramListingExtractor
             .OrderByDescending(x => x.Length).FirstOrDefault();
     }
 
-    private static bool? GetCondition(string text, int? mileage)
+    private static bool? GetCondition(string text, int? mileage, bool positiveMileage)
     {
+        text = Regex.Replace(text, @"(?:لاستیک|تایر|رنگ|خرج|هزینه|باتری|موتور|گیربکس)\s*(?:(?:ها|های|نو|کاملا|کاملاً|بدنه)\s*|[:：]\s*)*(?:صفر(?:\s*کیلومتر|\s*خشک)?|خشک)|صفر\s*تا\s*صد", " ");
         var isNew = mileage == 0 || Regex.IsMatch(text, @"(?:\bصفر\b|بدون\s*کارکرد|کارکرد\s*[:：]?\s*صفر|\bنو\b)", RegexOptions.IgnoreCase);
-        var isUsed = mileage > 0 || Regex.IsMatch(text, @"دست\s*دوم|کارکرده", RegexOptions.IgnoreCase);
+        var isUsed = mileage > 0 || positiveMileage || Regex.IsMatch(text, @"دست\s*دوم|کارکرده", RegexOptions.IgnoreCase);
         if (isNew == isUsed)
         {
             return null;

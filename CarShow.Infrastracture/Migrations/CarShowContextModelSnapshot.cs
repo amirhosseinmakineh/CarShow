@@ -30,6 +30,10 @@ namespace CarShow.Infrastracture.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<decimal?>("CalculatedMarketPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<long>("CarModelId")
                         .HasColumnType("bigint");
 
@@ -59,6 +63,13 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("ManualOverridePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ManualOverrideUntil")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("MarketPrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -71,6 +82,11 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.Property<DateTime?>("PriceCalculatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("PriceReviewStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<int>("PriceSampleCount")
                         .HasColumnType("int");
@@ -228,6 +244,55 @@ namespace CarShow.Infrastracture.Migrations
                     b.ToTable("Companies");
                 });
 
+            modelBuilder.Entity("CarShow.Domain.Models.MarketPriceReview", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("AfterJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BeforeJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Scope", "TargetId", "CreatedAt");
+
+                    b.ToTable("MarketPriceReview");
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.Order", b =>
                 {
                     b.Property<long>("Id")
@@ -334,6 +399,11 @@ namespace CarShow.Infrastracture.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("AdminDecision")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("BodyCondition")
                         .HasColumnType("nvarchar(max)");
 
@@ -405,6 +475,9 @@ namespace CarShow.Infrastracture.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool?>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ManuallyMatched")
                         .HasColumnType("bit");
 
                     b.Property<string>("Manufacturer")
@@ -562,6 +635,9 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<DateTime?>("LastSuccessAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<long?>("LatestMessageId")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("ListingsExtracted")
                         .HasColumnType("int");
 
@@ -572,11 +648,17 @@ namespace CarShow.Infrastracture.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<long?>("PendingLatestMessageId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("PublicUrl")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("RetryCount")
                         .HasColumnType("int");
+
+                    b.Property<long?>("ScanBefore")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -618,7 +700,13 @@ namespace CarShow.Infrastracture.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int>("AcceptedListings")
+                        .HasColumnType("int");
+
                     b.Property<int>("Attempt")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CalculatedPriceGroups")
                         .HasColumnType("int");
 
                     b.Property<long>("ChannelId")
@@ -633,8 +721,29 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<string>("Error")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("ExtractedListings")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
+
+                    b.Property<int>("NewRawMessages")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PricingCompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RejectedListings")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RejectionReasons")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ReportVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StageErrors")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("StartedAt")
                         .HasColumnType("datetime2");
@@ -673,6 +782,12 @@ namespace CarShow.Infrastracture.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("LastSuccessAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PricingRequestCompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PricingRequestedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("RunCollectionCompletedAt")
@@ -965,13 +1080,26 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<int>("PartIndex")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("RawText")
                         .IsRequired()
                         .HasMaxLength(8000)
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("ResolvedListingId")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("RunId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.HasKey("Id");
 
@@ -989,6 +1117,11 @@ namespace CarShow.Infrastracture.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("AdminDecision")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("Channel")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -999,6 +1132,9 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<int>("ExtractionVersion")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("FinalPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1007,6 +1143,9 @@ namespace CarShow.Infrastracture.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("ManuallyMatched")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("MarketFetchedAt")
                         .HasColumnType("datetime2");
@@ -1047,6 +1186,9 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<DateOnly?>("PriceDay")
+                        .HasColumnType("date");
+
                     b.Property<decimal>("PriceToman")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1058,6 +1200,10 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.Property<DateTime>("PublishedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("RawCarName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("RawPrice")
                         .IsRequired()
@@ -1086,6 +1232,10 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<int?>("Year")
                         .HasColumnType("int");
 
+                    b.Property<string>("YearCalendar")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PublishedAt");
@@ -1113,12 +1263,21 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<long?>("CompanyId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ConfigurationKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -1137,10 +1296,21 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<DateTime>("CalculatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("CalculatedMarketPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Confidence")
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
+
+                    b.Property<decimal?>("ManualOverridePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ManualOverrideUntil")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("MarketPrice")
                         .HasPrecision(18, 2)
@@ -1156,6 +1326,14 @@ namespace CarShow.Infrastracture.Migrations
 
                     b.Property<long>("ModelId")
                         .HasColumnType("bigint");
+
+                    b.Property<DateOnly?>("PriceDay")
+                        .HasColumnType("date");
+
+                    b.Property<string>("PriceReviewStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<string>("PricingStatus")
                         .IsRequired()
@@ -1175,12 +1353,19 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<long>("TrimId")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("Year")
+                        .HasColumnType("int");
+
+                    b.Property<string>("YearCalendar")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ModelId", "TrimId")
-                        .IsUnique();
-
                     b.HasIndex("TrimId", "ModelId");
+
+                    b.HasIndex("ModelId", "TrimId", "Year", "YearCalendar", "PriceDay")
+                        .IsUnique();
 
                     b.ToTable("ZeroVehiclePriceGroups", (string)null);
                 });
@@ -1196,6 +1381,12 @@ namespace CarShow.Infrastracture.Migrations
                     b.Property<decimal>("DeviationPercent")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime?>("LastRecalculatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RecalculationRequestedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -1215,6 +1406,10 @@ namespace CarShow.Infrastracture.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<string>("ConfigurationKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<long>("ModelId")
                         .HasColumnType("bigint");
 
@@ -1222,6 +1417,10 @@ namespace CarShow.Infrastracture.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Transmission")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.HasKey("Id");
 
@@ -1394,6 +1593,14 @@ namespace CarShow.Infrastracture.Migrations
                     b.Navigation("Model");
 
                     b.Navigation("Trim");
+                });
+
+            modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehicleModel", b =>
+                {
+                    b.HasOne("CarShow.Domain.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CarShow.Domain.Models.ZeroVehicles.ZeroVehiclePriceGroup", b =>

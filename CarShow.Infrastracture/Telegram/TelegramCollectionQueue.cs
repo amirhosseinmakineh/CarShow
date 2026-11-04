@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using CarShow.Domain.IRepository;
 using CarShow.Domain.Models.Telegram;
 using CarShow.Infrastracture.Context;
+using CarShow.Infrastracture.Repository;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,11 +26,13 @@ public sealed class TelegramCollectionQueue(IServiceScopeFactory scopeFactory) :
             await using var scope = scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
             var source = await db.TelegramChannels.FindAsync([channelId], cancellationToken);
-            if (source is null || !source.Enabled)
+            if (source is null || !source.Enabled || source.IsDelete || source.NormalizedIdentifier.StartsWith("+", StringComparison.Ordinal))
             {
                 return;
             }
 
+            await new TelegramProcessingStore(db).RunExclusiveAsync("TelegramEnqueue", async () =>
+            {
             var pendingJob = await db.TelegramCollectionJobs.AnyAsync(
                 job => job.ChannelId == channelId
                     && (job.Status == TelegramCollectionJobStatus.Queued
@@ -59,6 +62,8 @@ public sealed class TelegramCollectionQueue(IServiceScopeFactory scopeFactory) :
                 source.UpdatedAt = DateTime.UtcNow;
             }
             await db.SaveChangesAsync(cancellationToken);
+
+            }, cancellationToken);
 
             // SQL is the source of truth; this channel only wakes the single worker.
             await channel.Writer.WriteAsync(channelId, cancellationToken);

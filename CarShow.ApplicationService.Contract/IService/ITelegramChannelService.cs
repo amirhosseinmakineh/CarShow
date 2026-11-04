@@ -8,10 +8,11 @@ public interface ITelegramChannelService
     Task<TelegramChannelSummaryDto> GetSummaryAsync(CancellationToken cancellationToken);
     Task<BulkTelegramChannelImportResult> ImportAsync(BulkTelegramChannelImportRequest request, CancellationToken cancellationToken);
     Task<TelegramChannelDto?> AddAsync(AddTelegramChannelRequest request, CancellationToken cancellationToken);
+    Task<TelegramChannelDto?> UpdateAsync(long id, UpdateTelegramChannelRequest request, CancellationToken ct) => Task.FromResult<TelegramChannelDto?>(null);
     Task<bool> SetEnabledAsync(long id, bool enabled, CancellationToken cancellationToken);
     Task<bool> DeleteAsync(long id, CancellationToken cancellationToken);
     Task<bool> RetryAsync(long id, CancellationToken cancellationToken);
     Task<bool> TestAsync(long id, CancellationToken cancellationToken);
-    Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<TelegramJobLogDto>> GetJobsAsync(CancellationToken cancellationToken, int page = 0);
     Task<TelegramCapabilityDto> GetCapabilitiesAsync(CancellationToken cancellationToken);
 }

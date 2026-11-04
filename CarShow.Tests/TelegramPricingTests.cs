@@ -127,13 +127,13 @@ public sealed class TelegramPricingTests
             await db.SaveChangesAsync();
             await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
             var history = await db.CarPriceHistories.SingleAsync();
-            Assert.Equal(900000000m, history.MarketPrice);
+            Assert.Equal(908333333.33m, history.MarketPrice);
             Assert.Equal(6, history.SampleCount);
             Assert.Equal(77m, car.FactoryPrice);
-            Assert.Equal(900000000m, car.MarketPrice);
+            Assert.Equal(908333333.33m, car.MarketPrice);
             Assert.Equal(new DateOnly(2026, 10, 19), history.PriceDay);
             Assert.Equal(8, await db.CarListings.CountAsync());
-            Assert.Equal(2, await db.CarListings.CountAsync(x => x.MatchStatus == "NeedsReview"));
+            Assert.Equal(1, await db.CarListings.CountAsync(x => x.MatchStatus == "NeedsReview"));
             Assert.All(await db.CarListings.Where(x => x.ProcessingStatus == "Published").ToListAsync(),
                 listing => Assert.Equal(5, listing.ComparedChannelCount));
         }
@@ -150,11 +150,11 @@ public sealed class TelegramPricingTests
             AddMessage(db, channel, "9", "پژو 207 اتومات مدل: 1403 صفر قیمت: 1200 میلیون تومان", Now.AddMinutes(1));
             await db.SaveChangesAsync();
             await service.CalculateAsync(Now.AddMinutes(10), default);
-            Assert.Equal(900000000m, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
-            Assert.Equal(7, (await db.CarPriceHistories.SingleAsync()).SampleCount);
+            Assert.Equal(920000000m, (await db.CarPriceHistories.SingleAsync()).MarketPrice);
+            Assert.Equal(5, (await db.CarPriceHistories.SingleAsync()).SampleCount);
             await service.CalculateAsync(Now.AddDays(1), default);
             Assert.Equal(1, await db.CarPriceHistories.CountAsync());
-            Assert.Equal(900000000m, (await db.Cars.SingleAsync()).MarketPrice);
+            Assert.Equal(920000000m, (await db.Cars.SingleAsync()).MarketPrice);
         }
     }
 
@@ -192,7 +192,7 @@ public sealed class TelegramPricingTests
         {
             NormalizedIdentifier = "@prices",
             Status = TelegramChannelStatus.Active,
-            LastAttemptAt = DateTime.UtcNow.AddHours(-1)
+            LastAttemptAt = DateTime.UtcNow.AddHours(-6)
         });
         await db.SaveChangesAsync();
         var service = scope.ServiceProvider.GetRequiredService<TelegramPricingService>();
@@ -232,7 +232,7 @@ public sealed class TelegramPricingTests
     }
 
     [Fact]
-    public async Task SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource()
+    public async Task SixDistinctMessagesFromOneChannelHaveOneLatestSampleAndOneIndependentSource()
     {
         await using var fixture = await TelegramCollectionTests.Fixture.CreateAsync();
         await using var scope = fixture.Services.CreateAsyncScope();
@@ -246,11 +246,11 @@ public sealed class TelegramPricingTests
 
         await scope.ServiceProvider.GetRequiredService<TelegramPricingService>().CalculateAsync(Now, default);
 
-        Assert.Equal(825000000m, (await db.Cars.SingleAsync()).MarketPrice);
-        Assert.Equal(6, (await db.CarPriceHistories.SingleAsync()).SampleCount);
+        Assert.Equal(850000000m, (await db.Cars.SingleAsync()).MarketPrice);
+        Assert.Equal(1, (await db.CarPriceHistories.SingleAsync()).SampleCount);
         Assert.Equal(1, (await db.CarPriceHistories.SingleAsync()).IndependentSourceCount);
         Assert.Equal("Low", (await db.CarPriceHistories.SingleAsync()).ConfidenceLevel);
-        Assert.Equal(6, await db.CarListings.CountAsync(x => x.ComparisonStatus == "Compared"));
+        Assert.Equal(1, await db.CarListings.CountAsync(x => x.ComparisonStatus == "Compared"));
         Assert.All(await db.CarListings.ToListAsync(), listing => Assert.Equal(0, listing.ComparedChannelCount));
     }
 

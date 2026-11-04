@@ -9,7 +9,7 @@ namespace CarShow.ApplicationService.Services;
 
 public static class CarListingMatcher
 {
-    public static string BuildComparisonKey(string? manufacturer, string model, string? trim, int? year, string? yearCalendar, bool? isUsed, int? mileage = null)
+    public static string BuildComparisonKey(string? manufacturer, string model, string? trim, int? year, string? yearCalendar, bool? isUsed, int? mileage = null, string? bodyCondition = null, string? transmission = null)
     {
         var mileageRange = isUsed == false ? "zero" : mileage switch
         {
@@ -23,6 +23,7 @@ public static class CarListingMatcher
         // Preserve the existing key format for known vehicles so old cars and
         // histories remain reusable after the manufacturer becomes optional.
         var canonical = Normalize(model);
+        if (canonical is "207" or "206" or "405") canonical = "پژو " + canonical;
         var inferred = canonical.StartsWith("پژو ", StringComparison.Ordinal) ? "پژو"
             : canonical.StartsWith("دنا", StringComparison.Ordinal)
                 || canonical.StartsWith("تارا", StringComparison.Ordinal)
@@ -43,9 +44,9 @@ public static class CarListingMatcher
                 || canonical.StartsWith("النترا", StringComparison.Ordinal) ? "هیوندای"
             : canonical.StartsWith("اسپورتیج", StringComparison.Ordinal)
                 || canonical.StartsWith("سراتو", StringComparison.Ordinal) ? "کیا" : null;
-        // Configured models without an established legacy brand use a neutral
-        // component whether or not a manufacturer was mentioned in the ad.
-        var brand = inferred ?? "?";
+        // An unknown brand stays separate from a known brand; managed catalog metadata
+        // supplies the same verified manufacturer when the ad omits its name.
+        var brand = inferred ?? (string.IsNullOrWhiteSpace(manufacturer) ? "?" : Normalize(manufacturer));
         var name = canonical.StartsWith(brand + " ", StringComparison.Ordinal)
             ? canonical[(brand.Length + 1)..] : canonical;
         var identity = string.Join("|", brand, name,
@@ -53,7 +54,10 @@ public static class CarListingMatcher
             year?.ToString(CultureInfo.InvariantCulture) ?? "?",
             isUsed == true ? "used" : isUsed == false ? "new" : "unknown");
         // Keep existing new-car identities stable; used cars require the mileage band.
-        return isUsed == true ? $"{identity}|{mileageRange}" : identity;
+        var key = isUsed == true ? $"{identity}|{mileageRange}" : identity;
+        if (!string.IsNullOrWhiteSpace(transmission) && !Regex.IsMatch(NormalizeTrim(trim ?? ""), @"اتومات|دنده|دستی"))
+            key += $"|gear:{Normalize(transmission)}";
+        return string.IsNullOrWhiteSpace(bodyCondition) ? key : $"{key}|body:{Normalize(bodyCondition)}";
     }
 
     public static string NormalizeTrim(string value)
@@ -61,8 +65,9 @@ public static class CarListingMatcher
         var trim = Normalize(value);
         trim = Regex.Replace(trim, @"\s+(?:قیمت|کارکرد|کیلومتر|مدل|سال)\s*[:：]?.*$", "").Trim();
         trim = trim.Replace("اتوماتیک", "اتومات", StringComparison.Ordinal)
-            .Replace("دنده‌ای", "دنده ای", StringComparison.Ordinal);
-        return Regex.Replace(trim, @"\s+", " ").Trim();
+            .Replace("دنده‌ای", "دنده ای", StringComparison.Ordinal)
+            .Replace("دستی", "دنده ای", StringComparison.Ordinal);
+        return string.Join(" ", Regex.Split(trim.Trim(), @"\s+").Distinct().Order(StringComparer.Ordinal));
     }
 
     public static string Normalize(string value)
@@ -98,8 +103,13 @@ public static class CarListingMatcher
         listing.ValidatedAt = DateTime.UtcNow;
         listing.ComparisonKey = !string.IsNullOrWhiteSpace(listing.Model)
                 ? BuildComparisonKey(listing.Manufacturer, listing.Model, listing.Trim, listing.Year,
-                    listing.YearCalendar, listing.IsUsed, listing.Mileage)
+                    listing.YearCalendar, listing.IsUsed, listing.Mileage, listing.BodyCondition, listing.Transmission)
                 : null;
+        if (listing.ComparisonKey?.Length > 256 || listing.Trim?.Length > 128 || listing.Manufacturer?.Length > 128)
+        {
+            listing.ComparisonKey = null; listing.MatchStatus = listing.ProcessingStatus = "NeedsReview";
+            listing.ReasonCode = "COMPARISON_IDENTITY_TOO_LONG"; listing.MatchReason = "طول مشخصات برای تطبیق معتبر نیست."; return;
+        }
         if (listing.Price is null or <= 0 || listing.Currency is not ("IRT" or "IRR"))
         {
             listing.MatchStatus = "NeedsReview";
@@ -111,6 +121,15 @@ public static class CarListingMatcher
             return;
         }
 
+        var expectedBrand = listing.ComparisonKey?.Split('|')[0];
+        var actualBrand = string.IsNullOrWhiteSpace(listing.Manufacturer) ? null : Normalize(listing.Manufacturer);
+        if (expectedBrand is not (null or "?") && actualBrand is not null && actualBrand != expectedBrand
+            && !(expectedBrand == "پژو" && actualBrand == "ایران خودرو"))
+        {
+            listing.ComparisonKey = null; listing.MatchStatus = listing.ProcessingStatus = "NeedsReview";
+            listing.ReasonCode = "BRAND_MODEL_CONFLICT"; listing.MatchReason = "برند ذکرشده با مدل شناسایی‌شده سازگار نیست.";
+            return;
+        }
         var extractionReason = listing.ReasonCode;
         listing.ReasonCode = null;
         listing.NormalizedPrice = listing.Currency == "IRR" ? listing.Price / 10m : listing.Price;
@@ -118,19 +137,22 @@ public static class CarListingMatcher
         if (listing.ComparisonKey is null)
         {
             listing.MatchStatus = "NeedsReview";
-            listing.ReasonCode = extractionReason == "CAR_NAME_AMBIGUOUS" ? extractionReason
+            listing.ReasonCode = extractionReason is "CAR_NAME_AMBIGUOUS" or "MODEL_YEAR_AMBIGUOUS" or "COMPARISON_IDENTITY_TOO_LONG" or "BRAND_MODEL_CONFLICT" ? extractionReason
                 : "CAR_NAME_MISSING";
             listing.MatchReason = listing.ReasonCode switch
             {
                 "CAR_NAME_MISSING" => "نام خودرو مشخص نیست.",
                 "CAR_NAME_AMBIGUOUS" => "بیش از یک خودروی متفاوت در پیام دیده می‌شود.",
+                "MODEL_YEAR_AMBIGUOUS" => "سال مدل مبهم است.",
+                "COMPARISON_IDENTITY_TOO_LONG" => "مشخصات استخراج‌شده طول نامعتبر دارد.",
                 _ => "نام خودرو مشخص نیست."
             };
             listing.ProcessingStatus = "NeedsReview";
             return;
         }
 
-        var normalizedText = Normalize(listing.RawText);
+        var content = Regex.Replace(listing.RawText, @"https?://(?:t\.me|telegram\.me)/[^\s]+|@[a-zA-Z][a-zA-Z0-9_]{4,31}", " ", RegexOptions.IgnoreCase);
+        var normalizedText = Normalize(content);
         listing.Fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(listing.ComparisonKey + "|" + normalizedText)));
 
         var candidates = catalog.Where(car => !car.IsDelete

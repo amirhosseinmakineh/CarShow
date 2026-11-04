@@ -95,7 +95,7 @@ internal sealed class TelegramVehicleCatalog
             Year = listing.Year,
             YearCalendar = listing.YearCalendar,
             TelegramIdentityKey = identity,
-            Name = string.Join(" ", new[] { companyName, modelName, trimName, listing.Year?.ToString() }
+            Name = string.Join(" ", new[] { companyName != null && CarListingMatcher.Normalize(modelName).StartsWith(CarListingMatcher.Normalize(companyName) + " ", StringComparison.Ordinal) ? null : companyName, modelName, trimName, listing.Year?.ToString() }
                 .Where(part => !string.IsNullOrWhiteSpace(part))),
             Slug = $"telegram-{digest}",
             ImageName = listing.PrimaryImageUrl ?? string.Empty,
