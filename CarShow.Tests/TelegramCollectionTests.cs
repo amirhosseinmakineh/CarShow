@@ -65,6 +65,47 @@ public sealed class TelegramCollectionTests
     }
 
     [Fact]
+    public async Task BulkEnableDisablePreservesOtherSourcesAndRejectsUnknownIds()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITelegramChannelService>();
+        await service.ImportAsync(new("@channel_one @channel_two @channel_three"), default);
+        var channels = await service.GetChannelsAsync(default);
+        var selected = channels.Take(2).Select(x => x.Id).ToArray();
+
+        Assert.Equal(2, await service.SetEnabledBulkAsync(new([selected[0], selected[0], selected[1]], false), default));
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        Assert.Equal(2, await db.TelegramChannels.CountAsync(x => !x.Enabled && x.Status == TelegramChannelStatus.Paused));
+        Assert.Equal(1, await db.TelegramChannels.CountAsync(x => x.Enabled));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SetEnabledBulkAsync(new([selected[0], long.MaxValue], true), default));
+        Assert.Equal(2, await db.TelegramChannels.CountAsync(x => !x.Enabled));
+        Assert.Equal(2, await service.SetEnabledBulkAsync(new(selected, true), default));
+        Assert.Equal(3, await db.TelegramChannels.CountAsync(x => x.Enabled));
+    }
+
+    [Fact]
+    public async Task PrivateInviteReimportAndEnableRemainAccessRequired()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITelegramChannelService>();
+        var imported = await service.ImportAsync(new("https://t.me/+kF0Dpp9cMl45MjNk"), default);
+        Assert.Equal(1, imported.Created);
+        Assert.Equal(0, imported.Queued);
+        var channel = Assert.Single(await service.GetChannelsAsync(default));
+        Assert.Equal(nameof(TelegramChannelStatus.AccessRequired), channel.Status);
+        Assert.True(await service.DeleteAsync(channel.Id, default));
+        var restored = await service.ImportAsync(new("https://t.me/+kF0Dpp9cMl45MjNk"), default);
+        Assert.Equal(1, restored.Created);
+        Assert.Equal(0, restored.Queued);
+        Assert.True(await service.SetEnabledAsync(channel.Id, true, default));
+        var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+        Assert.Equal(TelegramChannelStatus.AccessRequired, (await db.TelegramChannels.SingleAsync()).Status);
+        Assert.Empty(await db.TelegramCollectionJobs.ToListAsync());
+    }
+
+    [Fact]
     public async Task RemovingChannelHidesItWithoutCascadingStoredMessagesAndCanBeReadded()
     {
         await using var fixture = await Fixture.CreateAsync();

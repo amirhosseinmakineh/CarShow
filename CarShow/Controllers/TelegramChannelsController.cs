@@ -74,6 +74,12 @@ public sealed class TelegramChannelsController(ITelegramChannelService service) 
         return updated ? NoContent() : NotFound();
     }
 
+    [HttpPatch("enabled/bulk")]
+    public async Task<IActionResult> EnabledBulk(BulkTelegramChannelEnabledRequest request, CancellationToken cancellationToken)
+    {
+        return Ok(new { updated = await service.SetEnabledBulkAsync(request, cancellationToken) });
+    }
+
     [HttpPost("{id:long}/retry")]
     public async Task<IActionResult> Retry(long id, CancellationToken cancellationToken)
     {

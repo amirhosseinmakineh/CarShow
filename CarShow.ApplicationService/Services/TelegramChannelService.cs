@@ -124,13 +124,15 @@ public sealed class TelegramChannelService(
 
                 saved.IsDelete = false;
                 saved.Enabled = true;
-                saved.Status = TelegramChannelStatus.Pending;
+                saved.Status = item.id.StartsWith("+", StringComparison.Ordinal)
+                    ? TelegramChannelStatus.AccessRequired : TelegramChannelStatus.Pending;
                 saved.RetryCount = 0;
-                saved.LastError = null;
+                saved.LastError = item.id.StartsWith("+", StringComparison.Ordinal)
+                    ? "لینک دعوت خصوصی است؛ دریافت عمومی ممکن نیست." : null;
                 saved.UpdatedAt = DateTime.UtcNow;
                 await channelRepository.SaveChanges();
                 created++;
-                try { await queue.EnqueueAsync(saved.Id, cancellationToken); queued++; }
+                try { if (saved.Status != TelegramChannelStatus.AccessRequired) { await queue.EnqueueAsync(saved.Id, cancellationToken); queued++; } }
                 catch (CarShow.Domain.Telegram.TelegramProcessingBusyException) { /* Pending is durable; backend scheduler retries. */ }
                 continue;
             }
@@ -147,7 +149,7 @@ public sealed class TelegramChannelService(
             await channelRepository.Create(channel);
             await channelRepository.SaveChanges();
             created++;
-            try { await queue.EnqueueAsync(channel.Id, cancellationToken); queued++; }
+            try { if (channel.Status != TelegramChannelStatus.AccessRequired) { await queue.EnqueueAsync(channel.Id, cancellationToken); queued++; } }
             catch (CarShow.Domain.Telegram.TelegramProcessingBusyException) { /* Do not abort registration of other sources. */ }
         }
         return new(entries.Length, created, entries.Length - invalid.Count - created, invalid.Count, queued, invalid);
@@ -204,12 +206,13 @@ public sealed class TelegramChannelService(
         if (enabled && channel.LastError?.StartsWith("DuplicateSourceAlias:", StringComparison.Ordinal) == true)
             throw new ArgumentException("این رکورد تکراری است؛ منبع اصلی مشخص‌شده در آخرین خطا را مدیریت کنید.");
         channel.Enabled = enabled;
-        channel.Status = enabled ? TelegramChannelStatus.Pending : TelegramChannelStatus.Paused;
+        var privateInvite = channel.NormalizedIdentifier.StartsWith("+", StringComparison.Ordinal);
+        channel.Status = enabled ? privateInvite ? TelegramChannelStatus.AccessRequired : TelegramChannelStatus.Pending : TelegramChannelStatus.Paused;
         channel.UpdatedAt = DateTime.UtcNow;
         if (enabled)
         {
             channel.RetryCount = 0;
-            channel.LastError = null;
+            channel.LastError = privateInvite ? "لینک دعوت خصوصی است؛ دریافت عمومی ممکن نیست." : null;
         }
         else
         {
@@ -224,12 +227,32 @@ public sealed class TelegramChannelService(
             }
         }
         await channelRepository.SaveChanges();
-        if (enabled)
+        if (enabled && !privateInvite)
         {
             try { await queue.EnqueueAsync(id, cancellationToken); }
             catch (CarShow.Domain.Telegram.TelegramProcessingBusyException) { /* Enabled/Pending survives until the scheduler retries. */ }
         }
         return true;
+    }
+
+    public async Task<int> SetEnabledBulkAsync(BulkTelegramChannelEnabledRequest request, CancellationToken cancellationToken)
+    {
+        var ids = request.ChannelIds?.Distinct().ToArray() ?? [];
+        if (ids.Length == 0 || ids.Length > 500 || ids.Any(id => id <= 0))
+            throw new ArgumentException("بین ۱ تا ۵۰۰ شناسه معتبر انتخاب کنید.");
+
+        var found = await channelRepository.GetAll().AsNoTracking()
+            .CountAsync(channel => ids.Contains(channel.Id) && !channel.IsDelete, cancellationToken);
+        if (found != ids.Length)
+            throw new ArgumentException("یک یا چند کانال انتخاب‌شده پیدا نشد؛ فهرست را به‌روز کنید.");
+
+        var updated = 0;
+        foreach (var id in ids)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (await SetEnabledAsync(id, request.Enabled, cancellationToken)) updated++;
+        }
+        return updated;
     }
 
     public async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken)

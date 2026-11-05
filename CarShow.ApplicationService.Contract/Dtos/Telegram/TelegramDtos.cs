@@ -4,6 +4,7 @@ namespace CarShow.ApplicationService.Contract.Dtos.Telegram;
 
 public sealed record BulkTelegramChannelImportRequest(
     [Required, StringLength(100000)] string Input);
+public sealed record BulkTelegramChannelEnabledRequest([Required] long[] ChannelIds, bool Enabled);
 public sealed record UpdateTelegramChannelRequest([Required, StringLength(256)] string Input, [StringLength(512)] string Title);
 public sealed record AddTelegramChannelRequest(
     [Required, StringLength(256)] string Input);
