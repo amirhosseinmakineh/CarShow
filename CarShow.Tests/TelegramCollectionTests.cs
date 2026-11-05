@@ -142,6 +142,35 @@ public sealed class TelegramCollectionTests
     }
 
     [Fact]
+    public async Task NetworkCollectionDoesNotHoldADatabaseWriteTransaction()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var fixture = await Fixture.CreateAsync("<div class=\"tgme_channel_history\"></div>",
+            onRequest: async () => { started.TrySetResult(); await release.Task; });
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITelegramChannelService>();
+        await service.ImportAsync(new("@example"), default);
+        var channelId = (await service.GetChannelsAsync(default))[0].Id;
+        var collection = fixture.Services.GetRequiredService<TelegramCollectionService>()
+            .ProcessChannelAsync(channelId, default);
+        try
+        {
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await using var other = new SqliteConnection(fixture.ConnectionString + ";Default Timeout=1");
+            await other.OpenAsync();
+            await using var command = other.CreateCommand();
+            command.CommandText = "BEGIN IMMEDIATE; ROLLBACK;";
+            await command.ExecuteNonQueryAsync();
+        }
+        finally
+        {
+            release.TrySetResult();
+            await collection;
+        }
+    }
+
+    [Fact]
     public async Task WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry()
     {
         const string preview = """
@@ -229,6 +258,39 @@ public sealed class TelegramCollectionTests
     }
 
     [Fact]
+    public async Task StartupOnAnotherInstanceDoesNotStealFreshProcessingJob()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        long channelId;
+        await using (var scope = fixture.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+            var channel = new TelegramChannel
+            {
+                TelegramIdentifier = "example", NormalizedIdentifier = "example",
+                Username = "example", PublicUrl = "https://t.me/example",
+                Status = TelegramChannelStatus.Processing
+            };
+            db.TelegramChannels.Add(channel);
+            await db.SaveChangesAsync();
+            channelId = channel.Id;
+            db.TelegramCollectionJobs.Add(new TelegramCollectionJob
+            {
+                ChannelId = channelId, Status = TelegramCollectionJobStatus.Processing,
+                StartedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+        await fixture.Services.GetRequiredService<TelegramCollectionService>().RecoverAsync(default);
+        await using var check = fixture.Services.CreateAsyncScope();
+        var verification = check.ServiceProvider.GetRequiredService<CarShowContext>();
+        Assert.Equal(TelegramCollectionJobStatus.Processing,
+            (await verification.TelegramCollectionJobs.SingleAsync()).Status);
+        Assert.Equal(TelegramChannelStatus.Processing,
+            (await verification.TelegramChannels.SingleAsync()).Status);
+    }
+
+    [Fact]
     public async Task RestartRecoversPersistedJobsWithAnEmptyMemoryQueue()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -249,7 +311,8 @@ public sealed class TelegramCollectionTests
             {
                 ChannelId = channel.Id,
                 Status = TelegramCollectionJobStatus.Processing,
-                Attempt = 1
+                Attempt = 1,
+                StartedAt = DateTime.UtcNow.AddHours(-1)
             });
             await db.SaveChangesAsync();
         }
@@ -263,7 +326,7 @@ public sealed class TelegramCollectionTests
             await using var scope = fixture.Services.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
             Assert.Contains(await db.TelegramCollectionJobs.ToListAsync(),
-                job => job.Error == "Collection interrupted by application restart.");
+                job => job.Error == "Collection lease expired; collection was restarted.");
         }
         finally
         {
@@ -317,8 +380,10 @@ public sealed class TelegramCollectionTests
     internal sealed class Fixture(SqliteConnection connection, ServiceProvider services) : IAsyncDisposable
     {
         public ServiceProvider Services { get; } = services;
+        public string ConnectionString => connection.ConnectionString;
 
-        public static async Task<Fixture> CreateAsync(string? preview = null, string? inaccessibleUsername = null)
+        public static async Task<Fixture> CreateAsync(string? preview = null, string? inaccessibleUsername = null,
+            Func<Task>? onRequest = null)
         {
             var connection = new SqliteConnection($"Data Source={Path.Combine(Path.GetTempPath(), $"telegram-tests-{Guid.NewGuid():N}.db")}");
             await connection.OpenAsync();
@@ -340,7 +405,7 @@ public sealed class TelegramCollectionTests
             services.AddScoped<TelegramCollectionService>();
             services.AddScoped<TelegramPricingService>();
             services.AddSingleton<TelegramCollectionWorker>();
-            services.AddSingleton<IHttpClientFactory>(new FixtureHttpClientFactory(preview, inaccessibleUsername));
+            services.AddSingleton<IHttpClientFactory>(new FixtureHttpClientFactory(preview, inaccessibleUsername, onRequest));
             var provider = services.BuildServiceProvider();
             await using var scope = provider.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<CarShowContext>().Database.EnsureCreatedAsync();
@@ -374,25 +439,26 @@ public sealed class TelegramCollectionTests
     }
 
     // Test-only HTTP fixtures exercise the production HTML collector; no fake provider is registered in the application.
-    private sealed class FixtureHttpClientFactory(string? preview, string? inaccessibleUsername) : IHttpClientFactory
+    private sealed class FixtureHttpClientFactory(string? preview, string? inaccessibleUsername, Func<Task>? onRequest) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name)
         {
-            return new HttpClient(new FixtureHandler(preview, inaccessibleUsername));
+            return new HttpClient(new FixtureHandler(preview, inaccessibleUsername, onRequest));
         }
     }
 
-    private sealed class FixtureHandler(string? preview, string? inaccessibleUsername) : HttpMessageHandler
+    private sealed class FixtureHandler(string? preview, string? inaccessibleUsername, Func<Task>? onRequest) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (onRequest is not null) await onRequest();
             var status = request.RequestUri?.AbsolutePath == $"/s/{inaccessibleUsername}"
                 ? HttpStatusCode.Forbidden
                 : preview is null ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK;
-            return Task.FromResult(new HttpResponseMessage(status)
+            return new HttpResponseMessage(status)
             {
                 Content = new StringContent(preview ?? "Temporarily unavailable")
-            });
+            };
         }
     }
 }

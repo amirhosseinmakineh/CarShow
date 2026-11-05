@@ -61,11 +61,18 @@ public sealed class ZeroVehicleService(IZeroVehicleStore store, ITelegramCollect
     // Claim with a database lock so multiple API instances cannot consume the same run.
     public async Task<long?> ClaimAsync(DateTime now, CancellationToken ct)
     {
+        // The worker polls every two seconds. Avoid opening a transaction and
+        // taking the distributed lock when there is no queued or expired work.
+        var staleBefore = now.AddMinutes(-10);
+        if (!await store.Runs.AnyAsync(x => x.Status == "Queued"
+                || (x.Status == "Processing" && x.StartedAt < staleBefore), ct))
+            return null;
+
         long? id = null;
         await store.ExclusiveAsync(async () =>
         {
             // A crashed worker can be resumed after its lease expires. Inserts are idempotent.
-            var stale = await store.Runs.Where(x => x.Status == "Processing" && x.StartedAt < now.AddMinutes(-10)).ToListAsync(ct);
+            var stale = await store.Runs.Where(x => x.Status == "Processing" && x.StartedAt < staleBefore).ToListAsync(ct);
             foreach (var item in stale) item.Status = "Queued";
             await store.SaveAsync(ct);
             var run = await store.Runs.Where(x => x.Status == "Queued").OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
