@@ -355,7 +355,7 @@ namespace CarShow.Infrastracture.Migrations
                     UPDATE c SET Enabled = 0, Status = N'Paused', LastError = N'DuplicateSourceAlias: use canonical source ' + CONVERT(nvarchar(32),p.SourceId), UpdatedAt = SYSUTCDATETIME()
                     FROM TelegramChannels c JOIN @Matches m ON m.SourceId = c.Id JOIN @PrimarySources p ON p.Identifier = m.Identifier WHERE c.Id <> p.SourceId;
                     UPDATE c SET NormalizedIdentifier = p.Identifier, TelegramIdentifier = p.Identifier,
-                     Username = CASE WHEN LEFT(p.Identifier,1) = '+' THEN N'' ELSE p.Identifier END, IsDelete = 0, UpdatedAt = SYSUTCDATETIME()
+                     Username = CASE WHEN LEFT(p.Identifier,1) = '+' THEN N'' ELSE p.Identifier END, UpdatedAt = SYSUTCDATETIME()
                     FROM TelegramChannels c JOIN @PrimarySources p ON p.SourceId = c.Id;
 
                     UPDATE c SET Enabled = 0, Status = N'Paused', UpdatedAt = SYSUTCDATETIME()
@@ -369,9 +369,8 @@ namespace CarShow.Infrastracture.Migrations
                      CASE WHEN LEFT(a.Identifier,1) = '+' THEN N'Private invite: public preview access is unavailable.' ELSE NULL END
                     FROM @Approved a WHERE NOT EXISTS (SELECT 1 FROM TelegramChannels c WHERE c.NormalizedIdentifier = a.Identifier);
                     -- Existing approved sources retain their manager-selected enabled/deleted state.
+                    -- A deleted approved source remains historical until an admin explicitly reimports it.
                     -- ZeroVehicleChannels remains a checkpoint table only; it is not a source authority.
-                    UPDATE c SET IsDelete = 0, UpdatedAt = SYSUTCDATETIME() FROM TelegramChannels c
-                    WHERE c.IsDelete = 1 AND EXISTS (SELECT 1 FROM @Approved a WHERE a.Identifier = c.NormalizedIdentifier);
                     """);
             }
         }
