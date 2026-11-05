@@ -4,8 +4,8 @@
 
 | مخزن | شاخه / Commit ثبت‌شده | PR | تداخل با مقصد |
 | --- | --- | --- | --- |
-| Backend `CarShow` | `codex/carshow-p0-review-20261104` / `5383d8e0cca8008b12e244a9c152f02817e4b139` | https://github.com/amirhosseinmakineh/CarShow/pull/33 (Draft) | GitHub: `clean` |
-| Production Frontend `mayaCarFrontProduc` | همان شاخه / `65c9e6d142d5446e6c898f52bd4fdd914ef3baa1` | https://github.com/amirhosseinmakineh/mayaCarFrontProduc/pull/43 (Draft) | GitHub: `clean` |
+| Backend `CarShow` | `codex/carshow-p0-review-20261104` / تغییرات عملیاتی تا `ba1d754e4ac555ce8f1dd20ab181c17a2ecab0af` | https://github.com/amirhosseinmakineh/CarShow/pull/33 (Draft) | GitHub: `clean` |
+| Production Frontend `mayaCarFrontProduc` | همان شاخه / `963bcf018cc804a9d60c8a2b6c64fd1da40a021a` | https://github.com/amirhosseinmakineh/mayaCarFrontProduc/pull/43 (Draft) | GitHub: `clean` |
 | `mayaCarFront` | بدون Branch | ندارد | نامرتبط؛ مخزن بدون سورس |
 
 | قابلیت / Gate | وضعیت | شاهد و محدودیت |
