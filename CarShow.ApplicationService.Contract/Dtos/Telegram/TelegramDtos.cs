@@ -4,6 +4,8 @@ namespace CarShow.ApplicationService.Contract.Dtos.Telegram;
 
 public sealed record BulkTelegramChannelImportRequest(
     [Required, StringLength(100000)] string Input);
+public sealed record BulkTelegramChannelEnabledRequest([Required] long[] ChannelIds, bool Enabled);
+public sealed record UpdateTelegramChannelRequest([Required, StringLength(256)] string Input, [StringLength(512)] string Title);
 public sealed record AddTelegramChannelRequest(
     [Required, StringLength(256)] string Input);
 public sealed record TelegramChannelDto(
@@ -65,7 +67,12 @@ public sealed record TelegramJobLogDto(
     int Attempt,
     DateTime CreatedAt,
     DateTime? CompletedAt,
-    string? Error);
+    string? Error, DateTime? StartedAt = null, int NewRawMessages = 0, int ExtractedListings = 0,
+    int AcceptedListings = 0, int RejectedListings = 0, int CalculatedPriceGroups = 0,
+    DateTime? PricingCompletedAt = null, string? RejectionReasons = null, string? StageErrors = null, int ReportVersion = 0)
+{
+    public double? DurationSeconds => StartedAt.HasValue && CompletedAt.HasValue ? (CompletedAt.Value - StartedAt.Value).TotalSeconds : null;
+}
 
 public sealed record TelegramCapabilityDto(
     string Provider,

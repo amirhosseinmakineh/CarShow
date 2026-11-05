@@ -1,0 +1,93 @@
+{
+  "baseline": {
+    "counters": {
+      "total": "192",
+      "executed": "192",
+      "passed": "180",
+      "failed": "12",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "failed": [
+      {
+        "test": "CarShow.Tests.TelegramPricingTests.SeparatesUsedAndNewAndRejectsAmbiguousAndWrongTrim",
+        "message": "Assert.Equal() Failure: Values differ\nExpected: 2\nActual:   null"
+      },
+      {
+        "test": "CarShow.Tests.TelegramCollectionTests.WorkerUsesCollectorPersistsMessagesAndDoesNotDuplicateOnRetry",
+        "message": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"207\"\nActual:   \"پژو 207\"\n           ↑ (pos 0)"
+      },
+      {
+        "test": "CarShow.Tests.TelegramAllChannelPricingTests.LargeBatchUsesEveryChannelWithoutTenThousandRowTruncation",
+        "message": "Assert.Equal() Failure: Values differ\nExpected: 20000\nActual:   200"
+      },
+      {
+        "test": "CarShow.Tests.TelegramPricingTests.SixDistinctMessagesFromOneChannelRemainSixSamplesButOneIndependentSource",
+        "message": "Assert.Equal() Failure: Values differ\nExpected: 825000000\nActual:   850000000"
+      },
+      {
+        "test": "CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: \"پژو ٢٠٧ اتومات مدل: ۱۴۰۳ صفر قیمت: ٨٥٠٠ میلیون ریا\"···, expected: 850000000)",
+        "message": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Matched\"\nActual:   \"Unmatched\"\n           ↑ (pos 0)"
+      },
+      {
+        "test": "CarShow.Tests.TelegramPricingTests.MatchesCompanyModelTrimAndNormalizesMoney(text: \"پژو ۲۰۷ اتومات مدل: ۱۴۰۳ صفر قیمت: ۸۵۰ میلیون توما\"···, expected: 850000000)",
+        "message": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Matched\"\nActual:   \"Unmatched\"\n           ↑ (pos 0)"
+      },
+      {
+        "test": "CarShow.Tests.TelegramReprocessingTests.ActualDenaMessageWithoutPriceDoesNotTreatDeliveryDaysAsMoney",
+        "message": "Assert.NotNull() Failure: Value is null"
+      },
+      {
+        "test": "CarShow.Tests.TelegramPricingTests.EmptyDataKeepsPreviousPriceAndLateMessageDoesNotReopenFinalDay",
+        "message": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"Late\"\nActual:   \"Matched\"\n           ↑ (pos 0)"
+      },
+      {
+        "test": "CarShow.Tests.TelegramPricingTests.PublicationDateWinsOverReceiptAndFinalDayCannotBeReopened",
+        "message": "Assert.Equal() Failure: Values differ\nExpected: 7\nActual:   0"
+      },
+      {
+        "test": "CarShow.Tests.TelegramReprocessingTests.RepairsLegacyInvalidCandidateInPlaceAndDoesNotReparseAgain",
+        "message": "Assert.Equal() Failure: Strings differ\n           ↓ (pos 0)\nExpected: \"207\"\nActual:   \"پژو 207\"\n           ↑ (pos 0)"
+      },
+      {
+        "test": "CarShow.Tests.TelegramPricingTests.RealPipelineAveragesDistinctObservationsAndRerunsWithoutDuplicatingHistory",
+        "message": "Assert.Equal() Failure: Values differ\nExpected: 900000000\nActual:   908333333.33"
+      },
+      {
+        "test": "CarShow.Tests.TelegramCollectionTests.WorkerDrains200JobsIncludingAnInaccessibleChannel",
+        "message": "Assert.Equal() Failure: Values differ\nExpected: 0\nActual:   199"
+      }
+    ]
+  },
+  "current": {
+    "counters": {
+      "total": "243",
+      "executed": "243",
+      "passed": "243",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "failed": []
+  }
+}

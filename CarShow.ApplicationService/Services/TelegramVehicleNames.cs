@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CarShow.Domain.Models.ZeroVehicles;
 using Microsoft.Extensions.Configuration;
 
 namespace CarShow.ApplicationService.Services;
@@ -48,7 +49,7 @@ internal sealed class TelegramVehicleNames
     ];
     private readonly (string Name, Regex[] Patterns)[] patterns;
 
-    public TelegramVehicleNames(IConfiguration? configuration)
+    public TelegramVehicleNames(IConfiguration? configuration, IEnumerable<ZeroVehicleModel>? catalog = null)
     {
         // Operators can extend the catalog via Telegram:VehicleAliases:<canonical>:<index>
         // without editing code or redeploying the extraction rules.
@@ -56,7 +57,16 @@ internal sealed class TelegramVehicleNames
             .Select(section => new Entry(section.Key,
                 section.GetChildren().Select(alias => alias.Value).Where(value => !string.IsNullOrWhiteSpace(value))
                     .Select(value => value!).Prepend(section.Key).ToArray())) ?? [];
-        patterns = Entries.Concat(configured).Select(entry =>
+        var managed = (catalog ?? []).ToArray();
+        // A managed alias can deliberately replace a legacy shorthand (e.g. "کمری"
+        // belongs to the managed "تویوتا کمری"). Retaining both entries would
+        // classify the same advertisement as two different cars.
+        patterns = Entries.Where(entry => !managed.Any(x =>
+                CarListingMatcher.Normalize(x.ConfigurationKey ?? x.Name) == CarListingMatcher.Normalize(entry.Name)
+                || x.Aliases.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Any(alias => CarListingMatcher.Normalize(alias) == CarListingMatcher.Normalize(entry.Name))))
+            .Concat(configured).Concat(managed.Select(x => new Entry(x.Name, x.Aliases.Split('\n', StringSplitOptions.RemoveEmptyEntries).Prepend(x.Name).ToArray())))
+            .Select(entry =>
         (entry.Name, entry.Aliases.Select(alias => new Regex(
             $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(CarListingMatcher.Normalize(alias).Replace("+", " پلاس", StringComparison.Ordinal))}(?![\p{{L}}\p{{N}}])",
             RegexOptions.Compiled | RegexOptions.IgnoreCase)).ToArray())).ToArray();
@@ -71,7 +81,7 @@ internal sealed class TelegramVehicleNames
                 Match = entry.Patterns.Select(pattern => pattern.Match(normalized))
                     .Where(match => match.Success).OrderByDescending(match => match.Length).FirstOrDefault()
             }).Where(entry => entry.Match is not null)
-            .GroupBy(entry => entry.Name).Select(group => group.OrderByDescending(entry => entry.Match!.Length).First())
+            .GroupBy(entry => CarListingMatcher.Normalize(entry.Name)).Select(group => group.OrderByDescending(entry => entry.Match!.Length).First())
             .ToArray();
         // An abbreviated base model inside its more specific variant is not a second car.
         matches = matches.Where(entry => !matches.Any(other => other.Name != entry.Name

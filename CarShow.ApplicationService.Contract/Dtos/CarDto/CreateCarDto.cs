@@ -8,7 +8,7 @@ namespace CarShow.ApplicationService.Contract.Dtos.CarDto
         public bool IsUsed { get; set; }
         public long CarModelId { get; set; }
         public string StartDate { get; set; } = string.Empty;
-        public float Price { get; set; }
+        public decimal Price { get; set; }
         public IFormFile? ImageName { get; set; }
         public string Description { get; set; } = string.Empty;
         public long? TipId { get; set; }

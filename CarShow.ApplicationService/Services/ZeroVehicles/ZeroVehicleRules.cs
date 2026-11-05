@@ -40,6 +40,7 @@ public sealed record ZeroValidationResult(ZeroVehicleListing? Listing, string? R
 
 public static class ZeroVehicleRules
 {
+    public const int ExtractionVersion = 2;
     public static string Normalize(string text)
     {
         var result = new StringBuilder(text.Length);
@@ -100,8 +101,8 @@ public static class ZeroVehicleRules
         models = models.Where(model => !models.Any(other => other.Id != model.Id && Normalize(other.Name).StartsWith(Normalize(model.Name) + " ", StringComparison.Ordinal))).ToArray();
         if (models.Length != 1) return new(null, "MODEL_UNKNOWN_OR_AMBIGUOUS");
         var model = models[0];
-        var trimDefinitions = options.Catalog.FirstOrDefault(x => x.Name == model.Name)?.Trims;
-        var trims = model.Trims.Where(trim => TrimConstraintsMatch(text, trimDefinitions?.FirstOrDefault(x => x.Name == trim.Name)))
+        var trimDefinitions = options.Catalog.FirstOrDefault(x => x.Name == model.ConfigurationKey || x.Name == model.Name)?.Trims;
+        var trims = model.Trims.Where(trim => TrimConstraintsMatch(text, trimDefinitions?.FirstOrDefault(x => x.Name == trim.ConfigurationKey || x.Name == trim.Name)))
             .Select(trim => new { Trim = trim, Matches = Aliases(trim.Name, trim.Aliases).Where(alias => ContainsAlias(text, alias)).Select(Normalize).ToArray() }).Where(x => x.Matches.Length > 0).ToArray();
         trims = trims.Where(item => !trims.Any(other => other.Trim.Id != item.Trim.Id && item.Matches.All(shorter => other.Matches.Any(longer => longer != shorter && ContainsAlias(longer, shorter))))).ToArray();
         // Model and price are sufficient. Missing trim must not discard a zero vehicle.
@@ -110,18 +111,35 @@ public static class ZeroVehicleRules
         var extracted = ExtractPrice(message.Text, options);
         if (extracted.Candidates.Count == 0) return new(null, "PRICE_INVALID");
         var price = extracted.Candidates[0];
-        var yearMatch = Regex.Match(text, @"(?:مدل|سال|year)\s*[:：]?\s*([0-9]{4})(?![0-9])");
-        int? year = int.TryParse(yearMatch.Groups[1].Value, out var y) && (y is >= 1300 and <= 1500 or >= 1900 and <= 2100) ? y : null;
+        var (year, yearCalendar, ambiguousYear) = VehicleModelYear.Read(text);
+        if (ambiguousYear) return new(null, "MODEL_YEAR_AMBIGUOUS");
         var originalName = model.Name + (selectedTrim.Name == "نام‌محور" ? "" : " " + selectedTrim.Name);
         return new(new ZeroVehicleListing
         {
+            ExtractionVersion = ExtractionVersion, RawCarName = RawModelName(message.Text, model),
             ModelId = model.Id, TrimId = selectedTrim.Id, OriginalName = originalName[..Math.Min(originalName.Length, 256)],
             PriceToman = decimal.Round(price, 2), RawPrice = extracted.Raw,
-            PriceCandidates = System.Text.Json.JsonSerializer.Serialize(extracted.Candidates), Year = year, Channel = channel, ExternalMessageId = message.ExternalMessageId,
+            PriceCandidates = System.Text.Json.JsonSerializer.Serialize(extracted.Candidates), Year = year,
+            YearCalendar = yearCalendar,
+            PriceDay = CarListingMatcher.TehranDay(message.MessageDate), Channel = channel, ExternalMessageId = message.ExternalMessageId,
             PublishedAt = DateTime.SpecifyKind(message.MessageDate, DateTimeKind.Utc), ReceivedAt = now,
             SourceUrl = message.SourceUrl is { Length: <= 2048 } ? message.SourceUrl : null, RawText = message.Text,
             Fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))
         }, null);
+    }
+    private static string? RawModelName(string raw, ZeroVehicleModel model)
+    {
+        var matches = new List<Match>();
+        foreach (var alias in Aliases(model.Name, model.Aliases))
+        {
+            var pattern = Regex.Escape(alias);
+            for (var digit = 0; digit <= 9; digit++) pattern = pattern.Replace(digit.ToString(), $"[{digit}{(char)('۰' + digit)}{(char)('٠' + digit)}]", StringComparison.Ordinal);
+            pattern = pattern.Replace(@"\ ", @"[\s\u200c]*");
+            var match = Regex.Match(raw, @"(?<![\p{L}\p{N}])" + pattern + @"(?![\p{L}\p{N}])", RegexOptions.IgnoreCase);
+            if (match.Success) matches.Add(match);
+        }
+        var value = matches.OrderByDescending(x => x.Length).FirstOrDefault()?.Value;
+        return value is null ? null : value[..Math.Min(value.Length, 256)];
     }
     public sealed record PriceExtraction(string Raw, IReadOnlyList<decimal> Candidates);
     public static PriceExtraction ExtractPrice(string raw, ZeroVehicleOptions options)
@@ -138,7 +156,11 @@ public static class ZeroVehicleRules
         var unit = match.Groups["scale"].Value;
         var multiplier = unit switch { "میلیارد" => 1_000_000_000m, "میلیون" or "م" => 1_000_000m, "هزار" => 1000m, _ => 1m };
         if (amount > options.MaximumPriceToman * 10 / multiplier) return new(match.Value, []);
-        var value = amount.Value * multiplier + (Number(match.Groups["remainder"].Value) ?? 0) * (match.Groups["remainderScale"].Value == "میلیون" ? 1_000_000m : 1000m);
+        var remainder = Number(match.Groups["remainder"].Value);
+        var remainderMultiplier = match.Groups["remainderScale"].Value == "میلیون" ? 1_000_000m : 1000m;
+        if (match.Groups["remainder"].Success && (remainder is null || remainder < 0 || remainder > options.MaximumPriceToman * 10 / remainderMultiplier))
+            return new(match.Value, []);
+        var value = amount.Value * multiplier + (remainder ?? 0) * remainderMultiplier;
         if (match.Groups["currency"].Value is "ریال" or "irr") value /= 10;
         var candidates = new List<decimal> { value };
         // Decimal shorthand is uncertain until exactly one interpretation fits the reference.

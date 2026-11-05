@@ -46,20 +46,24 @@ public sealed class TelegramCollectionService(
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ITelegramProcessingStore>();
         var channels = new List<TelegramChannel>();
+        var staleBefore = DateTime.UtcNow.AddMinutes(-Math.Max(15,
+            configuration.GetValue("Telegram:ProcessingLeaseMinutes", 15)));
         await db.RunExclusiveAsync("TelegramCollection", async () =>
         {
+            var interruptedJobs = await db.Jobs
+                .Where(job => job.Status == TelegramCollectionJobStatus.Processing
+                    && (!job.StartedAt.HasValue || job.StartedAt < staleBefore))
+                .ToListAsync(cancellationToken);
+            var staleChannelIds = interruptedJobs.Select(job => job.ChannelId).ToArray();
             channels = await db.Channels
                 .Where(x => !x.IsDelete && x.Enabled
-                    && (x.Status == TelegramChannelStatus.Pending || x.Status == TelegramChannelStatus.Processing))
-                .ToListAsync(cancellationToken);
-    
-            var interruptedJobs = await db.Jobs
-                .Where(job => job.Status == TelegramCollectionJobStatus.Processing)
+                    && (x.Status == TelegramChannelStatus.Pending
+                        || (x.Status == TelegramChannelStatus.Processing && staleChannelIds.Contains(x.Id))))
                 .ToListAsync(cancellationToken);
             foreach (var job in interruptedJobs)
             {
                 job.Status = TelegramCollectionJobStatus.Failed;
-                job.Error = "Collection interrupted by application restart.";
+                job.Error = "Collection lease expired; collection was restarted.";
                 job.CompletedAt = DateTime.UtcNow;
             }
     
@@ -135,6 +139,9 @@ public sealed class TelegramCollectionService(
             return;
         }
 
+        // Claim the durable job in a short transaction. HTTP collection can take up to
+        // Telegram:TimeoutSeconds and must not hold a SQL transaction or app lock open.
+        var claimed = false;
         await db.RunExclusiveAsync("TelegramCollection", async () =>
         {
             job = await db.Jobs.Where(x => x.ChannelId == channelId && x.Status == TelegramCollectionJobStatus.Queued)
@@ -149,11 +156,36 @@ public sealed class TelegramCollectionService(
             channel.LastAttemptAt = DateTime.UtcNow;
             channel.UpdatedAt = DateTime.UtcNow;
             await db.SaveAsync(cancellationToken);
+            claimed = true;
+        }, cancellationToken);
 
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var timeoutSeconds = Math.Clamp(configuration.GetValue("Telegram:TimeoutSeconds", 120), 1, 600);
-            timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-            var result = await collector.CollectChannelAsync(channel.NormalizedIdentifier, timeout.Token);
+        if (!claimed)
+        {
+            return;
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var timeoutSeconds = Math.Clamp(configuration.GetValue("Telegram:TimeoutSeconds", 120), 1, 600);
+        timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        var messageLimit = Math.Clamp(configuration.GetValue("Telegram:HistoryLimit", 500), 1, 500);
+        var result = await collector.CollectChannelAsync(channel.NormalizedIdentifier, messageLimit, channel.ScanBefore, timeout.Token);
+        await extractor.LoadCatalogAsync(cancellationToken);
+
+        await db.RunExclusiveAsync("TelegramCollection", async () =>
+        {
+            if (result.Success && result.Messages.Count > 0)
+            {
+                var ids = result.Messages.Select(x => long.TryParse(x.ExternalMessageId, out var value) ? value : 0).Where(x => x > 0).ToArray();
+                if (ids.Length > 0)
+                {
+                    var latest = Math.Max(channel.PendingLatestMessageId ?? 0, ids.Max());
+                    if (channel.LatestMessageId.HasValue && ids.Min() > channel.LatestMessageId
+                        && result.Messages.Count == messageLimit && result.NextBefore.HasValue)
+                    { channel.ScanBefore = result.NextBefore; channel.PendingLatestMessageId = latest; }
+                    else
+                    { channel.LatestMessageId = Math.Max(channel.LatestMessageId ?? 0, latest); channel.ScanBefore = null; channel.PendingLatestMessageId = null; }
+                }
+            }
             var (insertedMessages, insertedListings) = await StoreMessagesAsync(
                 db, extractor, channel, result, cancellationToken);
 
@@ -195,6 +227,8 @@ public sealed class TelegramCollectionService(
         channel.UpdatedAt = DateTime.UtcNow;
         job.CompletedAt = DateTime.UtcNow;
         job.Error = result.Error;
+        job.NewRawMessages = insertedMessages; job.ExtractedListings = insertedListings;
+        if (result.Error != null) job.StageErrors = System.Text.Json.JsonSerializer.Serialize(new { Collection = result.Error });
         job.Status = result.AccessRequired
             ? TelegramCollectionJobStatus.AccessRequired
             : result.Success

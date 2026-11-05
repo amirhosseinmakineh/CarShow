@@ -18,7 +18,8 @@ public sealed class TelegramPricingWorker(
                 await using var scope = scopeFactory.CreateAsyncScope();
                 var service = scope.ServiceProvider.GetRequiredService<TelegramPricingService>();
                 await service.ScheduleCollectionAsync(stoppingToken);
-                await service.CalculateAsync(DateTime.UtcNow, stoppingToken);
+                if (await service.HasPricingWorkAsync(DateTime.UtcNow, stoppingToken))
+                    await service.CalculateAsync(DateTime.UtcNow, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

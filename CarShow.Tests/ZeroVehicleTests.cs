@@ -111,25 +111,27 @@ public sealed class ZeroVehicleTests
         Assert.Equal(1, replay.Duplicates); Assert.Equal(0, replay.Stored); Assert.Equal(3, await f.Db.Set<ZeroVehicleListing>().CountAsync());
     }
     [Fact]
-    public async Task UsesCarIrAndIndependentChannelsToComputeMeanAcrossYears()
+    public async Task UsesCarIrAndIndependentChannelsWithinEachYearAndPreservesStaleHistory()
     {
         await using var f = await Fixture.Create();
         await f.Import("channel_one", "پژو 207 دنده ای صفر مدل: 1404 قیمت: 800 میلیون تومان");
         var single = await f.Db.Set<ZeroVehiclePriceGroup>().SingleAsync(); Assert.Equal(850000000m, single.ReferencePrice); Assert.Equal(1, single.SampleCount);
         await f.Import("channel_two", "پژو 207 دنده ای صفر مدل: 1405 قیمت: 1000 میلیون تومان");
-        Assert.Equal(900000000m, single.ReferencePrice); Assert.Equal(2, single.SampleCount);
+        Assert.Equal(850000000m, single.ReferencePrice); Assert.Equal(1, single.SampleCount);
+        Assert.Equal(2, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
         await f.Import("channel_three", "پژو 207 دنده ای صفر قیمت: 900 میلیون تومان");
         await f.Import("channel_four", "پژو 207 دنده ای صفر قیمت: 9000 میلیون تومان");
-        Assert.Equal(900000000m, single.ReferencePrice); Assert.Equal(3, single.SampleCount);
-        Assert.Equal(800000000m, single.MinPrice); Assert.Equal(1000000000m, single.MaxPrice);
+        Assert.Equal(850000000m, single.ReferencePrice); Assert.Equal(1, single.SampleCount);
+        Assert.Equal(800000000m, single.MinPrice); Assert.Equal(900000000m, single.MaxPrice);
         Assert.Equal("Outlier", (await f.Db.Set<ZeroVehicleListing>().SingleAsync(x => x.Channel == "channel_four")).PricingStatus);
         await f.Import("channel_five", "پژو 207 اتومات پانوراما صفر قیمت: 1200 میلیون تومان");
-        Assert.Equal(2, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
+        Assert.Equal(4, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
         var duplicate = await f.Import("channel_six", "پژو 207 دنده ای صفر قیمت: 900 میلیون تومان");
-        Assert.Equal(1, duplicate.Stored); Assert.Equal(3, single.SampleCount);
+        Assert.Equal(1, duplicate.Stored); Assert.Equal(1, single.SampleCount);
         Assert.Single(await f.Db.Set<ZeroVehicleListing>().Where(x => x.Channel == "channel_six" || x.Channel == "channel_three").Where(x => x.PricingStatus == "DuplicateContent").ToListAsync());
         await f.Service.RecalculateAsync(Now.AddDays(8), default);
-        Assert.Empty(await f.Db.Set<ZeroVehiclePriceGroup>().ToListAsync());
+        Assert.Equal(4, await f.Db.Set<ZeroVehiclePriceGroup>().CountAsync());
+        Assert.All(await f.Db.Set<ZeroVehiclePriceGroup>().ToListAsync(), x => Assert.Equal("Unavailable", x.PricingStatus));
         Assert.All(await f.Db.Set<ZeroVehicleListing>().ToListAsync(), x => Assert.Equal("Stale", x.PricingStatus));
     }
     [Fact]
@@ -174,7 +176,7 @@ public sealed class ZeroVehicleTests
         var page = await client.GetFromJsonAsync<ZeroPage<ZeroListingDto>>("/api/admin/zero-vehicles/listings?page=0&pageSize=1");
         Assert.Single(page!.Items); Assert.Equal(1, page.Total);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/admin/zero-vehicles/listings/{page.Items[0].Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/admin/zero-vehicles/prices/recalculate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/admin/zero-vehicles/prices/recalculate", null)).StatusCode);
     }
     [Fact]
     public async Task ZeroImportLeavesExistingPipelineAndRowsUnchanged()
@@ -248,12 +250,14 @@ public sealed class ZeroVehicleTests
         }
     }
     [Fact]
-    public async Task LatestValidQuotePerChannelContributesWithoutSplittingYears()
+    public async Task LatestValidQuotePerChannelContributesSeparatelyForEachYear()
     {
         await using var f = await Fixture.Create();
         await f.Import("same_channel", "پژو 207 دنده ای صفر مدل: 1404 قیمت: 800 میلیون تومان", "پژو 207 دنده ای صفر مدل: 1405 قیمت: 1000 میلیون تومان");
-        var group = await f.Db.Set<ZeroVehiclePriceGroup>().SingleAsync();
-        Assert.Equal(1, group.SampleCount); Assert.Equal(1, group.SourceCount); Assert.Equal(950000000m, group.ReferencePrice);
+        var groups = await f.Db.Set<ZeroVehiclePriceGroup>().OrderBy(x => x.Year).ToListAsync();
+        Assert.Equal(2, groups.Count);
+        Assert.All(groups, group => { Assert.Equal(1, group.SampleCount); Assert.Equal(1, group.SourceCount); });
+        Assert.Equal(850000000m, groups[0].ReferencePrice); Assert.Equal(950000000m, groups[1].ReferencePrice);
     }
 
     [Theory]

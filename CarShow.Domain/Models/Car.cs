@@ -20,6 +20,10 @@ namespace CarShow.Domain.Models
         public DateOnly? MarketPriceDay { get; set; }
         public int PriceSampleCount { get; set; }
         public DateTime? PriceCalculatedAt { get; set; }
+        public decimal? CalculatedMarketPrice { get; set; }
+        public decimal? ManualOverridePrice { get; set; }
+        public DateTime? ManualOverrideUntil { get; set; }
+        public string PriceReviewStatus { get; set; } = "Unreviewed";
         public decimal MarketPrice { get; set; }
         public decimal FactoryPrice { get; set; }
 

@@ -12,7 +12,7 @@ namespace CarShow.ApplicationService.Contract.Dtos.CarDto
         public string Name { get; set; } = string.Empty;
         public string carModeName { get; set; } = string.Empty;
         public string StartDate { get; set; } = string.Empty;
-        public float Price { get; set; }
+        public decimal Price { get; set; }
         public DateOnly? MarketPriceDay { get; set; }
         public int PriceSampleCount { get; set; }
         public DateTime? PriceCalculatedAt { get; set; }

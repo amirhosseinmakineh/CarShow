@@ -32,6 +32,13 @@ namespace CarShow.Infrastracture.Context
         {
             base.OnModelCreating(modelBuilder);
             ZeroVehicleConfiguration.Configure(modelBuilder);
+            modelBuilder.Entity<MarketPriceReview>(e => {
+                e.Property(x => x.Scope).HasMaxLength(32);
+                e.Property(x => x.Action).HasMaxLength(32);
+                e.Property(x => x.Actor).HasMaxLength(256);
+                e.Property(x => x.Reason).HasMaxLength(1024);
+                e.HasIndex(x => new { x.Scope, x.TargetId, x.CreatedAt });
+            });
 
             // The initial database migration created this column as TipName.
             // Keep the CLR property named Name while targeting the existing schema.
@@ -42,6 +49,9 @@ namespace CarShow.Infrastracture.Context
             modelBuilder.Entity<Car>(entity =>
             {
                 entity.Property(x => x.MarketPrice).HasColumnType("decimal(18,2)");
+                entity.Property(x => x.CalculatedMarketPrice).HasPrecision(18, 2);
+                entity.Property(x => x.ManualOverridePrice).HasPrecision(18, 2);
+                entity.Property(x => x.PriceReviewStatus).HasMaxLength(32);
                 entity.Property(x => x.FactoryPrice).HasColumnType("decimal(18,2)");
                 entity.Property(x => x.TelegramIdentityKey).HasMaxLength(256);
                 entity.Property(x => x.YearCalendar).HasMaxLength(16);
@@ -79,6 +89,7 @@ namespace CarShow.Infrastracture.Context
                 entity.HasIndex(x => new { x.ChannelId, x.SourceMessageId }).IsUnique();
                 entity.HasIndex(x => x.RawMessageId).IsUnique().HasFilter("[RawMessageId] IS NOT NULL");
                 entity.HasIndex(x => new { x.CarId, x.PriceDay });
+                entity.Property(x => x.AdminDecision).HasMaxLength(32);
                 entity.Property(x => x.MatchStatus).HasMaxLength(32);
                 entity.Property(x => x.ProcessingStatus).HasMaxLength(32);
                 entity.Property(x => x.ComparisonStatus).HasMaxLength(32);

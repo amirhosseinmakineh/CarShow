@@ -44,6 +44,8 @@ public sealed class TelegramProcessingStore(CarShowContext db) : ITelegramProces
                         @LockOwner='Transaction', @LockTimeout=0;
                     IF @result < 0 THROW 51000, 'Telegram processing is already running.', 1;
                     """, cancellationToken);
+                if (resource is "TelegramDailyPricing" or "TelegramEnqueue")
+                    await db.Database.ExecuteSqlRawAsync("DECLARE @s int; EXEC @s = sp_getapplock @Resource='TelegramPricingState', @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=0; IF @s < 0 THROW 51000, 'Pricing state is busy.', 1;", cancellationToken);
             }
             catch (SqlException exception) when (exception.Number == 51000)
             {
