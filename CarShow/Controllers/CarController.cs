@@ -17,9 +17,9 @@ namespace CarShow.Controllers
             this.servicce = servicce;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAllCars(decimal? minPrice, decimal? maxPrice, string? company, bool? isUsed = null, int pageSize = 10, int pageNumber = 0, string? model = null, string? trim = null, int? year = null, int? minMileage = null, int? maxMileage = null, string? sort = null)
+        public async Task<IActionResult> GetAllCars(float? minPrice,float? maxPrice,string? company,int pageSize = 10,int pageNumber = 0)
         {
-            var result = await servicce.GetAllCars(minPrice, maxPrice, company, isUsed, pageSize, pageNumber, model, trim, year, minMileage, maxMileage, sort);
+            var result = await servicce.GetAllCars(minPrice,maxPrice,company,pageSize,pageNumber);
             return Ok(result);
         }
 
@@ -36,11 +36,10 @@ namespace CarShow.Controllers
             return Ok(dto);
         }
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCar(long id)
         {
            var result = await servicce.DeleteCar(id);
-            return result.IsSuccess ? NoContent() : NotFound(result);
+            return Ok(result);
         }
         [HttpGet("GetCarDetail/{carId}")] // حذف /{carId} از اینجا
         public async Task<IActionResult> GetCarDetail(long carId) // اضافه کردن FromQuery
