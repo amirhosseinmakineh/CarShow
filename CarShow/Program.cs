@@ -9,17 +9,27 @@ using CarShow.Infrastracture.Context;
 using CarShow.Infrastracture.Crawlers;
 using CarShow.Infrastracture.Repository;
 using CarShow.Security.Token;
+using CarShow.Infrastracture.Telegram;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.OpenApi;
+using CarShow.Swagger;
 var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    }));
+builder.Services.ConfigureSwaggerGen(options => options.OperationFilter<BearerOperationFilter>());
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 {
     var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -30,6 +40,7 @@ builder.Services.AddDbContext<CarShowContext>(options => { options.UseSqlServer(
 builder.Services.AddHttpClient<ICarIrCrawlerService, CarIrCrawlerService>(client => { client.Timeout = TimeSpan.FromMinutes(2); client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 CarShowCrawler/1.0"); });
 builder.Services.AddScoped<ICarDataSource>(sp => sp.GetRequiredService<ICarIrCrawlerService>());
 builder.Services.AddScoped<ICarCrawlerSyncService, CarCrawlerSyncService>();
+builder.Services.AddHttpClient<TelegramCarService>(client => client.Timeout = TimeSpan.FromSeconds(15));
 // Keep the pre-Telegram crawler opt-in during the code rollback. The live
 // database and its configuration are not part of this rollback.
 if (builder.Configuration.GetValue("Crawler:Enabled", false))
