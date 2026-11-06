@@ -1,4 +1,3 @@
-using CarShow.Infrastracture.Telegram;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,19 +6,20 @@ namespace CarShow.Controllers;
 [ApiController]
 [Route("api/telegram-cars")]
 [Authorize(Roles = "Admin")]
-public sealed class TelegramCarController(TelegramCarService scanner) : ControllerBase
+public sealed class TelegramCarController(TelegramCarService scanner, ILogger<TelegramCarController> logger) : ControllerBase
 {
-    /// <summary>Reads approved public Telegram pages and returns extracted name, year and price in toman. No database writes.</summary>
     [HttpGet("scan")]
-    public async Task<ActionResult<TelegramScanResult>> Scan(
-        [FromQuery] string? channel = null,
-        [FromQuery] int maxMessagesPerChannel = 20,
+    public async Task<ActionResult<List<TelegramCar>>> Scan(
+        [FromQuery] int maxMessagesPerChannel = 500,
         CancellationToken cancellationToken = default)
     {
-        if (maxMessagesPerChannel is < 1 or > 500)
-            return BadRequest("maxMessagesPerChannel must be between 1 and 500.");
-        if (channel is not null && !TelegramCarService.Channels.Contains(channel.Trim().TrimStart('@'), StringComparer.OrdinalIgnoreCase))
-            return BadRequest("Only approved public channel usernames can be scanned. Private invites require Telegram access.");
-        return Ok(await scanner.GetCarsAsync(maxMessagesPerChannel, channel, cancellationToken));
+        if (maxMessagesPerChannel <= 0)
+            return BadRequest("maxMessagesPerChannel must be positive.");
+
+        var cars = await scanner.GetCarsAsync(
+            maxMessagesPerChannel,
+            message => logger.LogInformation("Telegram car scan: {Message}", message),
+            cancellationToken);
+        return Ok(cars);
     }
 }

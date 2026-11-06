@@ -9,7 +9,6 @@ using CarShow.Infrastracture.Context;
 using CarShow.Infrastracture.Crawlers;
 using CarShow.Infrastracture.Repository;
 using CarShow.Security.Token;
-using CarShow.Infrastracture.Telegram;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
