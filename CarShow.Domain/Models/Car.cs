@@ -2,7 +2,9 @@ namespace CarShow.Domain.Models
 {
     public class Car : BaseEntity<long>
     {
-        public long CompanyId { get; set; }
+        // Existing Telegram rows may not have a company. Keep those rows intact
+        // while the pre-Telegram listing selects only catalog cars.
+        public long? CompanyId { get; set; }
         public long CarModelId { get; set; }
         public long? TipId { get; set; }
 
@@ -17,7 +19,7 @@ namespace CarShow.Domain.Models
         public string SourceUrl { get; set; } = string.Empty;
         public DateTime LastUpdated { get; set; }
 
-        public Company Company { get; set; } = null!;
+        public Company? Company { get; set; }
         public CarModel CarModel { get; set; } = null!;
         public Tip? Tip { get; set; }
     }

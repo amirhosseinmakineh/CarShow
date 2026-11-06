@@ -91,7 +91,7 @@ namespace CarShow.ApplicationService.Services
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
-            var query = carRepository.GetAll();
+            var query = carRepository.GetAll().Where(c => c.CompanyId.HasValue);
 
             if (minPrice.HasValue)
                 query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
@@ -109,7 +109,7 @@ namespace CarShow.ApplicationService.Services
                 if (companyIds.Count == 0)
                     return new List<CarDto>();
 
-                query = query.Where(c => companyIds.Contains(c.CompanyId));
+                query = query.Where(c => c.CompanyId.HasValue && companyIds.Contains(c.CompanyId.Value));
             }
 
             var rows = await query
@@ -135,7 +135,8 @@ namespace CarShow.ApplicationService.Services
             if (rows.Count == 0)
                 return new List<CarDto>();
 
-            var companyIdsForRows = rows.Select(x => x.CompanyId).Distinct().ToList();
+            var companyIdsForRows = rows.Where(x => x.CompanyId.HasValue)
+                .Select(x => x.CompanyId!.Value).Distinct().ToList();
             var modelIdsForRows = rows.Select(x => x.CarModelId).Distinct().ToList();
             var tipIdsForRows = rows.Where(x => x.TipId.HasValue).Select(x => x.TipId!.Value).Distinct().ToList();
 
@@ -162,7 +163,9 @@ namespace CarShow.ApplicationService.Services
                 SourceUrl = c.SourceUrl,
                 LastUpdated = c.LastUpdated,
                 carModeName = modelNames.GetValueOrDefault(c.CarModelId, string.Empty),
-                CompanyName = companyNames.GetValueOrDefault(c.CompanyId, string.Empty),
+                CompanyName = c.CompanyId.HasValue
+                    ? companyNames.GetValueOrDefault(c.CompanyId.Value, string.Empty)
+                    : string.Empty,
                 tipName = c.TipId.HasValue ? tipNames.GetValueOrDefault(c.TipId.Value, string.Empty) : string.Empty
             }).ToList();
         }
