@@ -2,12 +2,8 @@ namespace CarShow.Domain.Models
 {
     public class Car : BaseEntity<long>
     {
-        public bool? IsUsed { get; set; }
-        // Telegram-derived catalog identity is scoped by year to prevent price histories
-        // for different model years from being combined. Null is retained for legacy cars.
-        public int? Year { get; set; }
-        public string? YearCalendar { get; set; }
-        public string? TelegramIdentityKey { get; set; }
+        // Existing Telegram rows may not have a company. Keep those rows intact
+        // while the pre-Telegram listing selects only catalog cars.
         public long? CompanyId { get; set; }
         public long CarModelId { get; set; }
         public long? TipId { get; set; }
@@ -17,13 +13,6 @@ namespace CarShow.Domain.Models
         public string ImageName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
 
-        public DateOnly? MarketPriceDay { get; set; }
-        public int PriceSampleCount { get; set; }
-        public DateTime? PriceCalculatedAt { get; set; }
-        public decimal? CalculatedMarketPrice { get; set; }
-        public decimal? ManualOverridePrice { get; set; }
-        public DateTime? ManualOverrideUntil { get; set; }
-        public string PriceReviewStatus { get; set; } = "Unreviewed";
         public decimal MarketPrice { get; set; }
         public decimal FactoryPrice { get; set; }
 

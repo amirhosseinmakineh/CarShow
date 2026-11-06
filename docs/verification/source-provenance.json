@@ -1,7 +1,0 @@
-{
-  "liveHtmlUrl": "https://car.ir/prices",
-  "liveHtmlSha256": "84c35c4b9318dd4a8ed4b2b2b0e4d3e02bfd4f44a29f50b74a4b9e76fa9db00f",
-  "recordedFixture": "CarShow.Tests/Fixtures/carir-prices-20261102.html",
-  "fixtureSha256": "00cf50c80653f5485171803281be396c34f7b46140f73c11ca0813e019102354",
-  "note": "Recorded fixture is real saved table HTML; controlled HTTP tests are NOT live tests. Live query and live-E2E JSON contain their own timestamps."
-}
