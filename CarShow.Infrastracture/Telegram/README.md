@@ -1,8 +1,7 @@
-# Telegram car scan (on demand)
+# Telegram car scan API
 
-`GET /api/telegram-cars/scan?channel=autopalermo&maxMessagesPerChannel=20`
-requires an Admin JWT. Omit `channel` to scan all 84 approved public usernames (at most eight HTTP requests concurrently). The response contains `cars` with `name`, `year`, `price` in toman, `channel`, `messageId`, `messageUrl`, plus per-channel `channels` counts and errors. The private invite is intentionally excluded: the public `t.me/s/` page cannot read it. This operation does not persist cars, write to the database, change the existing crawler, or run in the background.
+`GET /api/telegram-cars/scan?maxMessagesPerChannel=500` calls the provided `TelegramCarService.GetCarsAsync` unchanged and returns its `List<TelegramCar>` (only `Name`, `Year`, `Price` in toman). It requires an Admin JWT; Swagger has a Bearer authorization control. The service scans all 84 public usernames in the exact order of the supplied array. Progress/errors from its optional `log` callback go to the application log. It is an on-demand HTTP endpoint, with no database writes, migration or scheduler.
 
-For a quick isolated check, use one channel and a small limit. All-channel scans can take longer than a gateway timeout; results are returned only when the request finishes. Telegram can return HTTP 200 with an unavailable page, which is reported in `error` rather than as zero cars.
+A complete scan may take much longer than an HTTP proxy timeout: there is at least an 800 ms delay after each of the 84 channels. Use a small `maxMessagesPerChannel` for testing, but the per-channel delay still applies. The `t.me/+...` private invite was not in the supplied code and is not supported by Telegram's public `/s/` pages.
 
-Local checks: `dotnet run --project tests/TelegramCarScanner.Tests/TelegramCarScanner.Tests.csproj`. Pass `-- --live` for an optional public Telegram fetch. The live check is network-dependent.
+Local parser checks: `dotnet run --project tests/TelegramCarScanner.Tests/TelegramCarScanner.Tests.csproj`.
