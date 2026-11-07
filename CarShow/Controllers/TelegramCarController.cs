@@ -85,6 +85,37 @@ public sealed class TelegramCarController(
             : Conflict(new { id, message = "A scan is already running. Poll this job instead." });
     }
 
+    // Admin-only diagnostic: return a few real, unmodified Telegram texts so
+    // a NoMatches channel can be diagnosed without guessing its price format.
+    // It never writes to the database or publishes the messages publicly.
+    [HttpGet("scan-preview")]
+    public async Task<ActionResult> ScanPreview(
+        [FromQuery] string channel,
+        [FromQuery] int maxMessages = 5,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(channel) ||
+            !TelegramCarService.ApprovedChannels.Contains(channel, StringComparer.OrdinalIgnoreCase))
+            return BadRequest("channel must be an approved public Telegram username.");
+
+        if (maxMessages is < 1 or > 10)
+            return BadRequest("maxMessages must be between 1 and 10.");
+
+        var samples = new List<TelegramMessageSample>();
+        var diagnostics = new List<string>();
+        var cars = await scanner.GetCarsAsync(maxMessages,
+            diagnostics.Add, cancellationToken, channel,
+            sample => samples.Add(sample));
+
+        return Ok(new
+        {
+            Channel = channel,
+            Messages = samples,
+            Cars = cars,
+            Diagnostics = diagnostics
+        });
+    }
+
     [HttpGet("scan-jobs/{id:guid}")]
     public ActionResult<TelegramScanStatus> GetScanJob(Guid id)
     {
