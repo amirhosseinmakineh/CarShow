@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Net;
 
 var method = typeof(TelegramCarService).GetMethod("ExtractCars", BindingFlags.NonPublic | BindingFlags.Static)!;
 List<TelegramCar> Parse(string text) => ((IEnumerable<TelegramCar>)method.Invoke(null, [text])!).ToList();
@@ -19,4 +20,32 @@ Check(Parse("دنا مدل ۱۴۰۱\nقیمت ۹٬۰۰۰٬۰۰۰٬۰۰۰ ریا�
 Check(Parse("دنا مدل ۱۴۰۱\nقیمت ۲۹۵۰").Count == 0, "Bare ambiguous price ignored");
 var channels = (string[])typeof(TelegramCarService).GetField("Channels", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
 Check(channels.Length == 84 && channels.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 84, "Approved public usernames unique");
+var requested = new List<Uri>();
+using (var client = new HttpClient(new StubTelegramHandler(requested)))
+using (var service = new TelegramCarService(client))
+{
+    var scanned = await service.GetCarsAsync(1, selectedChannel: "AUTOPALERMO");
+    Check(requested.Count == 1 && requested[0].AbsolutePath == "/s/autopalermo" &&
+          scanned.Single().Price == 900_000_000m, "Single approved channel scan");
+    try
+    {
+        await service.GetCarsAsync(1, selectedChannel: "not_approved");
+        throw new Exception("Unknown channel was accepted");
+    }
+    catch (ArgumentException) { Check(true, "Unknown channel rejected"); }
+}
 Console.WriteLine($"{passed} checks passed");
+
+sealed class StubTelegramHandler(List<Uri> requested) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        requested.Add(request.RequestUri!);
+        const string html = "<div class='tgme_widget_message' data-post='autopalermo/42'>" +
+            "<div class='tgme_widget_message_text'>پژو ۲۰۷ مدل ۱۴۰۱<br>قیمت ۹۰۰ میلیون</div></div>";
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(html)
+        });
+    }
+}

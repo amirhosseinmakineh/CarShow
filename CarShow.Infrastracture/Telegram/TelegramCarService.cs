@@ -103,6 +103,8 @@ public sealed class TelegramCarService : IDisposable
         "irankhodromonirikashan"
     ];
 
+    public static IReadOnlyList<string> ApprovedChannels { get; } = Array.AsReadOnly(Channels);
+
     private static readonly Regex YearRegex = new(
         @"(?<!\d)(?:13\d{2}|14\d{2}|20\d{2})(?!\d)",
         RegexOptions.Compiled);
@@ -137,15 +139,22 @@ public sealed class TelegramCarService : IDisposable
     public async Task<List<TelegramCar>> GetCarsAsync(
         int maxMessagesPerChannel = 500,
         Action<string>? log = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? selectedChannel = null)
     {
         if (maxMessagesPerChannel <= 0)
             throw new ArgumentOutOfRangeException(
                 nameof(maxMessagesPerChannel));
 
+        if (selectedChannel is not null &&
+            !Channels.Contains(selectedChannel, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException("Channel is not in the approved public list.", nameof(selectedChannel));
+
         var cars = new List<TelegramCar>();
 
-        foreach (var channel in Channels)
+        foreach (var channel in selectedChannel is null
+            ? Channels
+            : Channels.Where(x => x.Equals(selectedChannel, StringComparison.OrdinalIgnoreCase)))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
