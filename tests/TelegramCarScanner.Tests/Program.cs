@@ -27,12 +27,17 @@ Check(Parse("دنا مدل ۱۴۰۲\nقیمت ۹۰۰۰۰۰۰۰۰ تومان").Si
 var channels = (string[])typeof(TelegramCarService).GetField("Channels", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
 Check(channels.Length == 84 && channels.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 84, "Approved public usernames unique");
 var requested = new List<Uri>();
+var samples = new List<TelegramMessageSample>();
 using (var client = new HttpClient(new StubTelegramHandler(requested)))
 using (var service = new TelegramCarService(client))
 {
-    var scanned = await service.GetCarsAsync(1, selectedChannel: "AUTOPALERMO");
+    var scanned = await service.GetCarsAsync(1, selectedChannel: "AUTOPALERMO",
+        onMessage: samples.Add);
     Check(requested.Count == 1 && requested[0].AbsolutePath == "/s/autopalermo" &&
           scanned.Single().Price == 900_000_000m, "Single approved channel scan");
+    Check(samples.Count == 1 && samples[0].Channel == "autopalermo" &&
+          samples[0].MessageId == 42 && samples[0].Text.Contains("قیمت ۹۰۰ میلیون"),
+        "Raw Telegram text available to admin preview");
     try
     {
         await service.GetCarsAsync(1, selectedChannel: "not_approved");

@@ -10,6 +10,8 @@ public sealed record TelegramCar(
     decimal Price
 );
 
+public sealed record TelegramMessageSample(string Channel, long MessageId, string Text);
+
 public sealed class TelegramCarService : IDisposable
 {
     private readonly HttpClient _httpClient;
@@ -140,7 +142,8 @@ public sealed class TelegramCarService : IDisposable
         int maxMessagesPerChannel = 500,
         Action<string>? log = null,
         CancellationToken cancellationToken = default,
-        string? selectedChannel = null)
+        string? selectedChannel = null,
+        Action<TelegramMessageSample>? onMessage = null)
     {
         if (maxMessagesPerChannel <= 0)
             throw new ArgumentOutOfRangeException(
@@ -263,6 +266,9 @@ public sealed class TelegramCarService : IDisposable
 
                         if (string.IsNullOrWhiteSpace(messageText))
                             continue;
+
+                        onMessage?.Invoke(new TelegramMessageSample(
+                            channel, message.Id, messageText));
 
                         foreach (var car in ExtractCars(messageText))
                         {
