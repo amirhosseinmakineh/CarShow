@@ -18,6 +18,12 @@ Check(Parse("دنا مدل ۱۴۰۱ مدل ۱۴۰۲\nقیمت ۹۰۰ میلیو�
 Check(Parse("تارا مدل ۱۴۰۲\nقسط ۲۵ میلیون\nقیمت ۸۵۰ میلیون").Single().Price == 850_000_000m, "Installment ignored");
 Check(Parse("دنا مدل ۱۴۰۱\nقیمت ۹٬۰۰۰٬۰۰۰٬۰۰۰ ریال").Single().Price == 900_000_000m, "Rial conversion");
 Check(Parse("دنا مدل ۱۴۰۱\nقیمت ۲۹۵۰").Count == 0, "Bare ambiguous price ignored");
+Check(Parse("دنا اتومات سفید مدل ۱۴۰۲\nقیمت تماس ۰۹۱۹۷۱۵۶۰۰۷").Count == 0,
+    "Contact number after price label is not a price");
+Check(Parse("کرولا الیت نیو فیس مدل ۲۰۲۶\nقیمت ۹۱۲۳۴۴۹۶۸۴").Count == 0,
+    "Mobile number without zero is not a bare price");
+Check(Parse("دنا مدل ۱۴۰۲\nقیمت ۹۰۰۰۰۰۰۰۰ تومان").Single().Price == 900_000_000m,
+    "Explicit full toman price remains valid");
 var channels = (string[])typeof(TelegramCarService).GetField("Channels", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
 Check(channels.Length == 84 && channels.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 84, "Approved public usernames unique");
 var requested = new List<Uri>();

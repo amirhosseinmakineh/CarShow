@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using CarShow.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +8,10 @@ namespace CarShow.Controllers;
 [ApiController]
 [Route("api/telegram-cars")]
 [Authorize(Roles = "Admin")]
-public sealed class TelegramCarController(TelegramCarService scanner, ILogger<TelegramCarController> logger) : ControllerBase
+public sealed class TelegramCarController(
+    TelegramCarService scanner,
+    TelegramCarScanJobManager jobs,
+    ILogger<TelegramCarController> logger) : ControllerBase
 {
     [HttpGet("scan")]
     public async Task<ActionResult<List<TelegramCar>>> Scan(
@@ -21,6 +25,9 @@ public sealed class TelegramCarController(TelegramCarService scanner, ILogger<Te
         if (channel is not null &&
             !TelegramCarService.ApprovedChannels.Contains(channel, StringComparer.OrdinalIgnoreCase))
             return BadRequest("channel must be an approved public Telegram username.");
+
+        if (channel is null && maxMessagesPerChannel > 20)
+            return BadRequest("For more than 20 messages per channel, start a scan job with POST /api/telegram-cars/scan-jobs and poll its status.");
 
         var cars = new ConcurrentBag<TelegramCar>();
         var failures = new ConcurrentBag<string>();
@@ -58,5 +65,41 @@ public sealed class TelegramCarController(TelegramCarService scanner, ILogger<Te
                 statusCode: StatusCodes.Status502BadGateway);
 
         return Ok(cars.ToList());
+    }
+
+    [HttpPost("scan-jobs")]
+    public ActionResult StartScanJob(
+        [FromQuery] int maxMessagesPerChannel = 100,
+        [FromQuery] string? channel = null)
+    {
+        if (maxMessagesPerChannel is < 1 or > 500)
+            return BadRequest("maxMessagesPerChannel must be between 1 and 500.");
+
+        if (channel is not null &&
+            !TelegramCarService.ApprovedChannels.Contains(channel, StringComparer.OrdinalIgnoreCase))
+            return BadRequest("channel must be an approved public Telegram username.");
+
+        var (id, started) = jobs.Start(maxMessagesPerChannel, channel);
+        return started
+            ? AcceptedAtAction(nameof(GetScanJob), new { id }, new { id, status = "Running" })
+            : Conflict(new { id, message = "A scan is already running. Poll this job instead." });
+    }
+
+    [HttpGet("scan-jobs/{id:guid}")]
+    public ActionResult<TelegramScanStatus> GetScanJob(Guid id)
+    {
+        var status = jobs.GetStatus(id);
+        return status is null ? NotFound() : Ok(status);
+    }
+
+    [HttpGet("scan-jobs/{id:guid}/cars")]
+    public ActionResult<List<TelegramCar>> GetScanJobCars(Guid id)
+    {
+        var status = jobs.GetStatus(id);
+        if (status is null)
+            return NotFound();
+        if (status.Status == "Running")
+            return Conflict("The scan is still running. Poll /scan-jobs/{id} for progress.");
+        return Ok(jobs.GetCars(id));
     }
 }

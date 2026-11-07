@@ -40,6 +40,7 @@ builder.Services.AddHttpClient<ICarIrCrawlerService, CarIrCrawlerService>(client
 builder.Services.AddScoped<ICarDataSource>(sp => sp.GetRequiredService<ICarIrCrawlerService>());
 builder.Services.AddScoped<ICarCrawlerSyncService, CarCrawlerSyncService>();
 builder.Services.AddHttpClient<TelegramCarService>(client => client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton<CarShow.Services.TelegramCarScanJobManager>();
 // Keep the pre-Telegram crawler opt-in during the code rollback. The live
 // database and its configuration are not part of this rollback.
 if (builder.Configuration.GetValue("Crawler:Enabled", false))
