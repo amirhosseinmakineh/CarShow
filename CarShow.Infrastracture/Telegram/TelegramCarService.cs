@@ -356,7 +356,11 @@ public sealed class TelegramCarService : IDisposable
 
             var priceMatch = PriceRegex.Match(pricePart);
 
-            if (!priceMatch.Success)
+            // A label followed by prose/contact details is not an asking price.
+            // Looking for a number later in the line used to turn phone numbers
+            // into seemingly valid multi-billion-toman prices.
+            if (!priceMatch.Success ||
+                !string.IsNullOrWhiteSpace(pricePart[..priceMatch.Index]))
             {
                 if (block.Count > 8)
                     block.RemoveAt(0);
@@ -468,6 +472,14 @@ public sealed class TelegramCarService : IDisposable
 
         var unit = match.Groups["unit"].Value;
         var currency = match.Groups["currency"].Value;
+
+        var digits = Regex.Replace(match.Groups["number"].Value, @"\D", "");
+        // Iranian mobile numbers, with or without their leading zero, cannot
+        // be treated as bare prices even when a generic 'price' label exists.
+        if (unit.Length == 0 && currency.Length == 0 &&
+            (Regex.IsMatch(digits, @"^09\d{9}$") ||
+             Regex.IsMatch(digits, @"^9\d{9}$")))
+            return false;
 
         var multiplier = unit switch
         {
