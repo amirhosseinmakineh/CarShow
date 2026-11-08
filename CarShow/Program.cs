@@ -17,6 +17,9 @@ using System.Text;
 using Microsoft.OpenApi;
 using CarShow.Swagger;
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHostedService<CarShow.Services.ClinicLicenseRuntime>();
+builder.Services.AddHttpClient("ClinicLicensing", client => client.Timeout = TimeSpan.FromSeconds(20))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false });
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
@@ -63,6 +66,7 @@ if (secretKey.Length < 32) throw new InvalidOperationException("JwtSettings:Secr
 builder.Services.AddAuthentication(options => { options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; }).AddJwtBearer(options => { options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSetting["Issuer"], ValidAudience = jwtSetting["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) }; });
 builder.Services.AddAuthorization();
 var app = builder.Build();
+app.UseMiddleware<CarShow.Services.ClinicLicenseGateway>();
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
 app.UseCors("Frontend");
