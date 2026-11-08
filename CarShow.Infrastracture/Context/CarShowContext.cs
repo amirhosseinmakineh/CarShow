@@ -39,11 +39,13 @@ namespace CarShow.Infrastracture.Context
                 entity.HasOne(x => x.Company)
                     .WithMany(x => x.Cars)
                     .HasForeignKey(x => x.CompanyId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(x => x.CarModel)
                     .WithMany(x => x.Cars)
                     .HasForeignKey(x => x.CarModelId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(x => x.Tip)
