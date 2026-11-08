@@ -137,7 +137,7 @@ namespace CarShow.ApplicationService.Services
 
             var companyIdsForRows = rows.Where(x => x.CompanyId.HasValue)
                 .Select(x => x.CompanyId!.Value).Distinct().ToList();
-            var modelIdsForRows = rows.Select(x => x.CarModelId).Distinct().ToList();
+            var modelIdsForRows = rows.Where(x => x.CarModelId.HasValue).Select(x => x.CarModelId!.Value).Distinct().ToList();
             var tipIdsForRows = rows.Where(x => x.TipId.HasValue).Select(x => x.TipId!.Value).Distinct().ToList();
 
             var companyNames = await companyRepository.GetAll()
@@ -162,7 +162,7 @@ namespace CarShow.ApplicationService.Services
                 FactoryPrice = c.FactoryPrice,
                 SourceUrl = c.SourceUrl,
                 LastUpdated = c.LastUpdated,
-                carModeName = modelNames.GetValueOrDefault(c.CarModelId, string.Empty),
+                carModeName = c.CarModelId.HasValue ? modelNames.GetValueOrDefault(c.CarModelId.Value, string.Empty) : string.Empty,
                 CompanyName = c.CompanyId.HasValue
                     ? companyNames.GetValueOrDefault(c.CompanyId.Value, string.Empty)
                     : string.Empty,

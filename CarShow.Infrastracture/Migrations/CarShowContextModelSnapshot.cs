@@ -30,13 +30,13 @@ namespace CarShow.Infrastracture.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<long>("CarModelId")
+                    b.Property<long?>("CarModelId")
                         .HasColumnType("bigint");
 
                     b.Property<long>("CategoryId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("CompanyId")
+                    b.Property<long?>("CompanyId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("Description")
@@ -61,7 +61,7 @@ namespace CarShow.Infrastracture.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long>("TipId")
+                    b.Property<long?>("TipId")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -319,8 +319,7 @@ namespace CarShow.Infrastracture.Migrations
                     b.HasOne("CarShow.Domain.Models.Model", "CarModel")
                         .WithMany("Cars")
                         .HasForeignKey("CarModelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CarShow.Domain.Models.Category", "Category")
                         .WithMany("Car")
@@ -331,14 +330,12 @@ namespace CarShow.Infrastracture.Migrations
                     b.HasOne("CarShow.Domain.Models.Company", "Company")
                         .WithMany("Cars")
                         .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CarShow.Domain.Models.Tip", "Tip")
                         .WithMany("Cars")
                         .HasForeignKey("TipId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CarModel");
 
