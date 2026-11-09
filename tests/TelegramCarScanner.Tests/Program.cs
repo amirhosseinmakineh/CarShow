@@ -50,81 +50,119 @@ while (root != null && !File.Exists(Path.Combine(root.FullName, "CarShow.slnx"))
 if (root != null)
 {
     var source = File.ReadAllText(Path.Combine(root.FullName, "CarShow/Controllers/TelegramImportController.cs")).Replace("\r\n", "\n");
-    var algorithm = source[source.IndexOf("        private static HttpClient CreateHttpClient()", StringComparison.Ordinal)..].Trim().Replace("public static bool TryConvertPrice(", "private static bool TryConvertPrice(");
-    Check(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(algorithm))) == "bcb9a1d7da1b60273b182bfd64b845ed85c1ac619c5c7ed4ae6e1988408eacbd", "Reader/parser/normalization/converter/builder match attached SHA-256");
+    var readerAndParser = source[source.IndexOf("        private static HttpClient CreateHttpClient()", StringComparison.Ordinal)..source.IndexOf("        private static class CarPriceReferenceBuilder", StringComparison.Ordinal)];
+    var priceConverter = source[source.IndexOf("            public static bool TryConvertPrice(", StringComparison.Ordinal)..source.IndexOf("            private static bool IsValidPrice(", StringComparison.Ordinal)];
+    Check(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(readerAndParser))) == "f2d7e8a7535eb9ef983d602895d8029d27e7f2deb9ad1fdbcc78a0bdb8e2695f", "Attached reader and parser unchanged");
+    Check(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(priceConverter))) == "fe5b09ec5eff09407af798213a9a0afe8911319537b17d10a0910df711a03122", "Attached price converter unchanged");
     Check(!File.Exists(Path.Combine(root.FullName, "CarShow.Infrastracture/Telegram/TelegramCarService.cs")) && !File.Exists(Path.Combine(root.FullName, "CarShow/Services/TelegramCarScanJobManager.cs")) && !File.Exists(Path.Combine(root.FullName, "CarShow/Controllers/TelegramCarController.cs")), "Old Telegram execution paths removed");
 }
-// Real file-backed relational database, never EF InMemory.
-var databasePath = Path.Combine(Path.GetTempPath(), $"carshow-insert-{Guid.NewGuid():N}.db");
-var options = new DbContextOptionsBuilder<CarShowContext>().UseSqlite($"Data Source={databasePath};Foreign Keys=True").Options;
+// Each scenario uses a real file-backed relational database and reopens it to read results.
 TelegramImportController Controller(CarShowContext db, HttpClient client) => new(NullLogger<TelegramImportController>.Instance, db, client);
+async Task RunScenario(ScanCase scenario, int expectedParsed, int expectedReferences, decimal[] expectedPrices)
+{
+    var databasePath = Path.Combine(Path.GetTempPath(), $"carshow-reference-{Guid.NewGuid():N}.db");
+    var options = new DbContextOptionsBuilder<CarShowContext>().UseSqlite($"Data Source={databasePath};Foreign Keys=True").Options;
+    try
+    {
+        await using (var db = new CarShowContext(options))
+        {
+            await db.Database.EnsureCreatedAsync();
+            db.Cars.Add(new Car { Name = "Existing row", MarketPrice = 123m });
+            await db.SaveChangesAsync();
+            foreach (var property in new[] { "CarModelId", "CompanyId", "TipId" })
+            {
+                var entity = db.Model.FindEntityType(typeof(Car))!;
+                Check(entity.FindProperty(property)!.IsNullable && !entity.GetForeignKeys().Single(f => f.Properties.Single().Name == property).IsRequired,
+                    property + " and relationship optional");
+            }
+            if (scenario == ScanCase.Normal)
+            {
+                var services = new ServiceCollection();
+                services.AddSingleton(db);
+                services.AddSingleton<Microsoft.Extensions.Logging.ILogger<TelegramImportController>>(NullLogger<TelegramImportController>.Instance);
+                services.AddHttpClient();
+                using var provider = services.BuildServiceProvider();
+                var factory = ActivatorUtilities.CreateFactory(typeof(TelegramImportController), Type.EmptyTypes);
+                var activated = (TelegramImportController)factory(provider, []);
+                var actualClient = (HttpClient)type.GetField("TelegramClient", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(activated)!;
+                Check(actualClient.Timeout == TimeSpan.FromSeconds(30) && actualClient.DefaultRequestHeaders.UserAgent.ToString().Contains("Chrome/120.0.0.0"),
+                    "MVC activation retains attached HTTP timeout and User-Agent");
+            }
+            using var client = new HttpClient(new TelegramStub(scenario));
+            var response = await Controller(db, client).Get(CancellationToken.None);
+            if (expectedReferences == 0)
+            {
+                Check(response.Result is ObjectResult { StatusCode: 422 }, scenario + ": no references returns 422");
+                var payload = JsonSerializer.Serialize(((ObjectResult)response.Result!).Value);
+                using var json = JsonDocument.Parse(payload);
+                Check(json.RootElement.GetProperty("SavedCars").GetInt32() == 0 && json.RootElement.GetProperty("ParsedCars").GetInt32() == expectedParsed &&
+                      json.RootElement.GetProperty("ReferenceCount").GetInt32() == 0, scenario + ": 422 reports zero saved/reference cars");
+            }
+            else
+            {
+                Check(response.Result is OkObjectResult, scenario + ": references returned successfully");
+                var payload = JsonSerializer.Serialize(((OkObjectResult)response.Result!).Value);
+                using var json = JsonDocument.Parse(payload);
+                Check(json.RootElement.GetProperty("SavedCars").GetInt32() == expectedReferences &&
+                      json.RootElement.GetProperty("ParsedCars").GetInt32() == expectedParsed &&
+                      json.RootElement.GetProperty("ReferenceCount").GetInt32() == expectedReferences &&
+                      json.RootElement.GetProperty("References").GetArrayLength() == expectedReferences,
+                      scenario + ": API distinguishes parser count, references and saved rows");
+            }
+        }
+        await using (var db = new CarShowContext(options))
+        {
+            var rows = await db.Cars.AsNoTracking().OrderBy(c => c.Id).ToListAsync();
+            Check(rows.Count == 1 + expectedReferences && rows[0].Name == "Existing row" && rows[0].MarketPrice == 123m,
+                scenario + ": reopened database preserves existing row and stores only references");
+            var finalCars = rows.Skip(1).ToList();
+            Check(finalCars.Select(c => c.MarketPrice).Order().SequenceEqual(expectedPrices.Order()),
+                scenario + ": stored reference prices in toman");
+            Check(finalCars.All(c => c.CompanyId is null && c.CarModelId is null && c.TipId is null),
+                scenario + ": saved references have null catalog IDs");
+            foreach (var row in finalCars)
+            {
+                using var details = JsonDocument.Parse(row.Description);
+                Check(details.RootElement.GetProperty("Type").GetString() == "TelegramPriceReference" &&
+                      details.RootElement.GetProperty("Year").GetString() is not null &&
+                      details.RootElement.GetProperty("AdvertisementCount").GetInt32() >= 2 &&
+                      details.RootElement.GetProperty("ReferencePriceBillion").GetDecimal() * 1_000_000_000m == row.MarketPrice,
+                      scenario + ": persisted year and final comparison details match MarketPrice");
+            }
+        }
+    }
+    finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); File.Delete(databasePath); }
+}
+await RunScenario(ScanCase.Singleton, 1, 0, []);
+await RunScenario(ScanCase.Normal, 3, 1, [1_600_000_000m]);
+await RunScenario(ScanCase.DifferentYear, 2, 0, []);
+await RunScenario(ScanCase.Invalid, 2, 0, []);
+await RunScenario(ScanCase.MultipleGroups, 4, 2, [1_600_000_000m, 1_850_000_000m]);
+
+var failurePath = Path.Combine(Path.GetTempPath(), $"carshow-failures-{Guid.NewGuid():N}.db");
+var failureOptions = new DbContextOptionsBuilder<CarShowContext>().UseSqlite($"Data Source={failurePath};Foreign Keys=True").Options;
 try
 {
-    await using (var db = new CarShowContext(options))
-    {
-        await db.Database.EnsureCreatedAsync();
-        db.Cars.Add(new Car { Name = "Existing row", MarketPrice = 123m });
-        await db.SaveChangesAsync();
-        foreach (var property in new[] { "CarModelId", "CompanyId", "TipId" })
-        {
-            var entity = db.Model.FindEntityType(typeof(Car))!;
-            Check(entity.FindProperty(property)!.IsNullable && !entity.GetForeignKeys().Single(f => f.Properties.Single().Name == property).IsRequired, property + " and relationship optional");
-        }
-        var services = new ServiceCollection();
-        services.AddSingleton(db);
-        services.AddSingleton<Microsoft.Extensions.Logging.ILogger<TelegramImportController>>(NullLogger<TelegramImportController>.Instance);
-        services.AddHttpClient();
-        using (var provider = services.BuildServiceProvider())
-        {
-            var factory = ActivatorUtilities.CreateFactory(typeof(TelegramImportController), Type.EmptyTypes);
-            var activated = (TelegramImportController)factory(provider, []);
-            var actualClient = (HttpClient)type.GetField("TelegramClient", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(activated)!;
-            Check(actualClient.Timeout == TimeSpan.FromSeconds(30) && actualClient.DefaultRequestHeaders.UserAgent.ToString().Contains("Chrome/120.0.0.0"), "MVC activation retains attached HTTP timeout and User-Agent");
-        }
-        using var client = new HttpClient(new TelegramStub(ScanCase.Normal));
-        Check((await Controller(db, client).Get(CancellationToken.None)).Result is OkObjectResult, "Successful attached scan returns references");
-    }
-    await using (var db = new CarShowContext(options))
-    {
-        var rows = await db.Cars.AsNoTracking().OrderBy(c => c.Id).ToListAsync();
-        Check(rows.Count == 4 && rows[0].Name == "Existing row" && rows[0].MarketPrice == 123m, "Reopen DB: existing row preserved, three parser ads inserted");
-        var imported = rows.Skip(1).ToList();
-        Check(imported.All(c => c.CarModelId is null), "Read back null CarModelId");
-        Check(imported.All(c => c.CompanyId is null), "Read back null CompanyId");
-        Check(imported.All(c => c.TipId is null), "Read back null TipId");
-        Check(imported.Select(c => c.MarketPrice).Order().SequenceEqual(new[] { 1_500_000_000m, 1_700_000_000m, 1_800_000_000m }), "Individual prices persisted, not average");
-        Check(imported.Select(c => JsonSerializer.Deserialize<ParsedCar>(c.Description)!.Year).Order().SequenceEqual(new[] { "1402", "1403", "1403" }), "Exact years read back from Description JSON");
-    }
-    await using (var db = new CarShowContext(options))
-    {
-        using var client = new HttpClient(new TelegramStub(ScanCase.Unpriced));
-        Check((await Controller(db, client).Get(CancellationToken.None)).Result is ObjectResult { StatusCode: 422 }, "No reference returns attached 422 response");
-    }
-    await using (var db = new CarShowContext(options))
-    {
-        var row = await db.Cars.AsNoTracking().OrderByDescending(c => c.Id).FirstAsync();
-        var raw = JsonSerializer.Deserialize<ParsedCar>(row.Description)!;
-        Check(await db.Cars.CountAsync() == 5 && raw.Year is null && raw.Price is null && row.MarketPrice == 0m, "Missing price/year parser ad saved and read back");
-    }
+    await using (var db = new CarShowContext(failureOptions)) await db.Database.EnsureCreatedAsync();
     foreach (var failure in new[] { ScanCase.HttpFailure, ScanCase.PartialFailure, ScanCase.NoPosts, ScanCase.Timeout })
     {
-        await using var db = new CarShowContext(options);
+        await using var db = new CarShowContext(failureOptions);
         using var client = new HttpClient(new TelegramStub(failure));
-        Check((await Controller(db, client).Get(CancellationToken.None)).Result is ObjectResult { StatusCode: 502 }, failure + " returns retrieval failure");
-        await using var verify = new CarShowContext(options);
-        Check(await verify.Cars.CountAsync() == 5, failure + " inserts nothing");
+        Check((await Controller(db, client).Get(CancellationToken.None)).Result is ObjectResult { StatusCode: 502 }, failure + ": retrieval failure returns 502");
+        await using var verify = new CarShowContext(failureOptions);
+        Check(await verify.Cars.AsNoTracking().CountAsync() == 0, failure + ": failed scan does not insert");
     }
-    await using (var db = new CarShowContext(options))
+    await using (var db = new CarShowContext(failureOptions))
     {
         using var client = new HttpClient(new TelegramStub(ScanCase.Normal));
         await Controller(db, client).GetDiagnostics(CancellationToken.None);
-        Check(await db.Cars.CountAsync() == 5, "Diagnostics never insert");
+        Check(await db.Cars.CountAsync() == 0, "Diagnostics never insert");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         try { await Controller(db, client).Get(cancelled.Token); throw new Exception("Cancellation not propagated"); }
         catch (OperationCanceledException) { Check(true, "Caller cancellation propagated"); }
     }
 }
-finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); File.Delete(databasePath); }
+finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); File.Delete(failurePath); }
 var migration = new MakeCarCatalogReferencesOptional();
 var alters = migration.UpOperations.OfType<AlterColumnOperation>().ToList();
 Check(alters.Count == 3 && alters.All(x => x.Table == "Cars" && x.IsNullable && x.ClrType == typeof(long)), "Migration alters only three Cars reference columns");
@@ -138,7 +176,7 @@ await using (var sql = new CarShowContext(sqlOptions))
 }
 Console.WriteLine($"ALL {count} CHECKS PASSED. Insert/read-back used SQLite; SQL Server migration generated, not applied to a live server.");
 
-enum ScanCase { Normal, Unpriced, HttpFailure, PartialFailure, NoPosts, Timeout }
+enum ScanCase { Normal, Singleton, DifferentYear, Invalid, MultipleGroups, HttpFailure, PartialFailure, NoPosts, Timeout }
 sealed class TelegramStub(ScanCase scenario) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -148,9 +186,14 @@ sealed class TelegramStub(ScanCase scenario) : HttpMessageHandler
         if (scenario == ScanCase.Timeout) throw new TaskCanceledException("Simulated connection timeout");
         if (scenario == ScanCase.HttpFailure || (scenario == ScanCase.PartialFailure && channel == "davoodkelasii")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway));
         if (scenario == ScanCase.NoPosts) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<html>Unavailable</html>") });
-        var html = channel == "autopalermo"
-            ? scenario == ScanCase.Unpriced ? Post(channel, 2, "دنا") : Post(channel, 2, "پژو 207 مدل 1403<br>قیمت 1500 میلیون<br>دنا مدل 1402<br>قیمت 1800 میلیون") + Post(channel, 1, "پژو 207 اتومات مدل 1403<br>قیمت 1700 میلیون")
-            : Post(channel, 1, "");
+        var html = channel == "autopalermo" ? scenario switch
+        {
+            ScanCase.Singleton => Post(channel, 1, "پژو 207 مدل 1403<br>قیمت 1500 میلیون"),
+            ScanCase.DifferentYear => Post(channel, 2, "پژو 207 مدل 1403<br>قیمت 1500 میلیون") + Post(channel, 1, "پژو 207 مدل 1402<br>قیمت 1700 میلیون"),
+            ScanCase.Invalid => Post(channel, 2, "دنا مدل 1403") + Post(channel, 1, "پژو 207<br>قیمت 1500 میلیون"),
+            ScanCase.MultipleGroups => Post(channel, 2, "پژو 207 مدل 1403<br>قیمت 1500 میلیون<br>دنا مدل 1402<br>قیمت 1800 میلیون") + Post(channel, 1, "پژو 207 اتومات مدل 1403<br>قیمت 1700 میلیون<br>دنا مدل 1402<br>قیمت 1900 میلیون"),
+            _ => Post(channel, 2, "پژو 207 مدل 1403<br>قیمت 1500 میلیون<br>دنا مدل 1402<br>قیمت 1800 میلیون") + Post(channel, 1, "پژو 207 اتومات مدل 1403<br>قیمت 1700 میلیون")
+        } : Post(channel, 1, "");
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(html) });
     }
     static string Post(string channel, int id, string text) => $"<div data-post='{channel}/{id}'><div class='tgme_widget_message_text'>{text}</div></div>";
