@@ -63,13 +63,14 @@ namespace CarShow.Controllers
                 cancellationToken,
                 channelErrors);
 
-            // Connection failures must never be reported as a successful import.
-            if (channelErrors.Count > 0)
+            // A failed channel must not discard the successfully retrieved channels.
+            if (messagesByChannel.Keys.All(channelErrors.ContainsKey))
                 return StatusCode(502, new { Message = "Telegram retrieval failed; no cars were saved.", ChannelErrors = channelErrors });
 
             // 2) Parse each message. A message may contain multiple cars.
-            var parsedCars = messagesByChannel.Values
-                .SelectMany(messages => messages)
+            var parsedCars = messagesByChannel
+                .Where(channel => !channelErrors.ContainsKey(channel.Key))
+                .SelectMany(channel => channel.Value)
                 .SelectMany(TelegramCarParser.Parse)
                 .ToList();
 
@@ -111,11 +112,13 @@ namespace CarShow.Controllers
                 });
             }
 
-            return Ok(new
+            return StatusCode(channelErrors.Count > 0 ? 207 : 200, new
             {
+                Status = channelErrors.Count > 0 ? "PartialSuccess" : "Completed",
                 ParsedCars = parsedCars.Count,
                 ReferenceCount = priceReferences.Count,
                 SavedCars = savedCars,
+                ChannelErrors = channelErrors,
                 References = priceReferences
             });
         }
@@ -159,8 +162,9 @@ namespace CarShow.Controllers
             var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var channels = await GetLast100MessagesAsync(
                 Channels, cancellationToken, channelErrors);
-            var cars = channels.Values
-                .SelectMany(messages => messages)
+            var cars = channels
+                .Where(channel => !channelErrors.ContainsKey(channel.Key))
+                .SelectMany(channel => channel.Value)
                 .SelectMany(TelegramCarParser.Parse)
                 .ToList();
 
@@ -171,11 +175,12 @@ namespace CarShow.Controllers
             var stats = CarPriceReferenceBuilder.Diagnose(cars);
             var references = CarPriceReferenceBuilder.Build(cars);
 
-            if (channelErrors.Count > 0)
+            if (channels.Keys.All(channelErrors.ContainsKey))
                 return StatusCode(502, new { Message = "Telegram retrieval failed.", ChannelErrors = channelErrors });
 
-            return Ok(new
+            return StatusCode(channelErrors.Count > 0 ? 207 : 200, new
             {
+                Status = channelErrors.Count > 0 ? "PartialSuccess" : "Completed",
                 Channels = channels.Select(channel => new
                 {
                     Name = channel.Key,
@@ -197,12 +202,12 @@ namespace CarShow.Controllers
                     .Where(car => !string.IsNullOrWhiteSpace(car.Price) &&
                                   !string.IsNullOrWhiteSpace(car.Year))
                     .Take(12)
-                    .Select(car => new { car.Name, car.Year, car.Price })
+                    .Select(car => new { car.Name, Year = FormatDiagnosticYear(car.Year), car.Price })
                     .ToList(),
                 Examples = cars.Take(12).Select(car => new
                 {
                     car.Name,
-                    car.Year,
+                    Year = FormatDiagnosticYear(car.Year),
                     car.Price
                 }).ToList()
             });
@@ -225,8 +230,31 @@ namespace CarShow.Controllers
                 metrics.GroupsBeforeMinimumCount,
                 metrics.GroupsWithTwoOrMoreAds,
                 ReferenceCount = references.Count,
-                References = references
+                References = references.Select(reference => new CarPriceReference
+                {
+                    Name = reference.Name,
+                    Year = FormatDiagnosticYear(reference.Year),
+                    AdvertisementCount = reference.AdvertisementCount,
+                    ComparedPricesBillion = reference.ComparedPricesBillion,
+                    MinPriceBillion = reference.MinPriceBillion,
+                    MaxPriceBillion = reference.MaxPriceBillion,
+                    ReferencePriceBillion = reference.ReferencePriceBillion,
+                    ReferencePriceText = reference.ReferencePriceText
+                }).ToList()
             });
+        }
+
+        // Manufacturing years have no month/day or time zone. A Gregorian year spans
+        // two Persian years; presenting a single Persian year would invent precision.
+        private static string? FormatDiagnosticYear(string? year)
+        {
+            if (year == null || !int.TryParse(year, out var value) || value < 2000 || value > 2099)
+                return year;
+            var calendar = new PersianCalendar();
+            var first = calendar.GetYear(new DateTime(value, 1, 1));
+            var last = calendar.GetYear(new DateTime(value, 12, 31));
+            return first == last ? first.ToString(CultureInfo.InvariantCulture)
+                : first.ToString(CultureInfo.InvariantCulture) + "/" + last.ToString(CultureInfo.InvariantCulture);
         }
 
         // =========================================================
