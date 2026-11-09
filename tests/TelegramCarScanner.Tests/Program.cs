@@ -90,6 +90,13 @@ async Task RunScenario(ScanCase scenario, int expectedParsed, int expectedRefere
             }
             using var client = new HttpClient(new TelegramStub(scenario));
             var response = await Controller(db, client).Get(CancellationToken.None);
+            if (scenario == ScanCase.PartialFailure)
+            {
+                var partial = (ObjectResult)response.Result!;
+                using var json = JsonDocument.Parse(JsonSerializer.Serialize(partial.Value));
+                Check(partial.StatusCode == 207 && json.RootElement.GetProperty("Status").GetString() == "PartialSuccess" &&
+                    json.RootElement.GetProperty("ChannelErrors").TryGetProperty("davoodkelasii", out _), "Partial scan exposes channel error without discarding healthy references");
+            }
             if (expectedReferences == 0)
             {
                 Check(response.Result is ObjectResult { StatusCode: 422 }, scenario + ": no references returns 422");
@@ -100,8 +107,8 @@ async Task RunScenario(ScanCase scenario, int expectedParsed, int expectedRefere
             }
             else
             {
-                Check(response.Result is OkObjectResult, scenario + ": references returned successfully");
-                var payload = JsonSerializer.Serialize(((OkObjectResult)response.Result!).Value);
+                Check(response.Result is ObjectResult { StatusCode: 200 or 207 }, scenario + ": references returned successfully");
+                var payload = JsonSerializer.Serialize(((ObjectResult)response.Result!).Value);
                 using var json = JsonDocument.Parse(payload);
                 Check(json.RootElement.GetProperty("SavedCars").GetInt32() == expectedReferences &&
                       json.RootElement.GetProperty("ParsedCars").GetInt32() == expectedParsed &&
@@ -135,6 +142,7 @@ async Task RunScenario(ScanCase scenario, int expectedParsed, int expectedRefere
 }
 await RunScenario(ScanCase.Singleton, 1, 0, []);
 await RunScenario(ScanCase.Normal, 3, 1, [1_600_000_000m]);
+await RunScenario(ScanCase.PartialFailure, 3, 1, [1_600_000_000m]);
 await RunScenario(ScanCase.DifferentYear, 2, 0, []);
 await RunScenario(ScanCase.Invalid, 2, 0, []);
 await RunScenario(ScanCase.MultipleGroups, 4, 2, [1_600_000_000m, 1_850_000_000m]);
@@ -144,7 +152,7 @@ var failureOptions = new DbContextOptionsBuilder<CarShowContext>().UseSqlite($"D
 try
 {
     await using (var db = new CarShowContext(failureOptions)) await db.Database.EnsureCreatedAsync();
-    foreach (var failure in new[] { ScanCase.HttpFailure, ScanCase.PartialFailure, ScanCase.NoPosts, ScanCase.Timeout })
+    foreach (var failure in new[] { ScanCase.HttpFailure, ScanCase.NoPosts, ScanCase.Timeout })
     {
         await using var db = new CarShowContext(failureOptions);
         using var client = new HttpClient(new TelegramStub(failure));
@@ -155,8 +163,34 @@ try
     await using (var db = new CarShowContext(failureOptions))
     {
         using var client = new HttpClient(new TelegramStub(ScanCase.Normal));
-        await Controller(db, client).GetDiagnostics(CancellationToken.None);
-        Check(await db.Cars.CountAsync() == 0, "Diagnostics never insert");
+        var diagnostics = (ObjectResult)await Controller(db, client).GetDiagnostics(CancellationToken.None);
+        Check(diagnostics.StatusCode == 200, "GET diagnostics executes successfully");
+        using (var partialClient = new HttpClient(new TelegramStub(ScanCase.PartialFailure)))
+        {
+            var partialDiagnostics = (ObjectResult)await Controller(db, partialClient).GetDiagnostics(CancellationToken.None);
+            Check(partialDiagnostics.StatusCode == 207, "GET diagnostics reports partial retrieval explicitly");
+        }
+        using (var yearClient = new HttpClient(new TelegramStub(ScanCase.Gregorian)))
+        {
+            var yearDiagnostics = (ObjectResult)await Controller(db, yearClient).GetDiagnostics(CancellationToken.None);
+            using var json = JsonDocument.Parse(JsonSerializer.Serialize(yearDiagnostics.Value));
+            Check(json.RootElement.GetProperty("Examples")[0].GetProperty("Year").GetString() == "1402/1403" &&
+                json.RootElement.GetProperty("ValidExamples")[0].GetProperty("Year").GetString() == "1402/1403", "GET diagnostics converts both example year fields at output only");
+        }
+        var years = new List<ParsedCar>
+        {
+            new() { Name = "پژو 207", Year = "2024", Price = "1.5 میلیارد" },
+            new() { Name = "پژو 207", Year = "2024", Price = "1.7 میلیارد" }
+        };
+        var parsedDiagnostics = (OkObjectResult)Controller(db, client).DiagnoseParsedCars(years);
+        using (var json = JsonDocument.Parse(JsonSerializer.Serialize(parsedDiagnostics.Value)))
+        {
+            Check(json.RootElement.GetProperty("References")[0].GetProperty("Year").GetString() == "1402/1403", "POST diagnostics displays Gregorian manufacturing year as Persian range");
+            Check(json.RootElement.GetProperty("References")[0].GetProperty("ReferencePriceBillion").GetDecimal() == 1.6m, "Display conversion preserves reference calculation");
+        }
+        Check(years.All(car => car.Year == "2024"), "Display conversion never mutates internal years");
+        Check(Controller(db, client).DiagnoseParsedCars(null!) is BadRequestObjectResult, "POST diagnostics null input rejected");
+        Check(await db.Cars.CountAsync() == 0, "Both diagnostics endpoints never insert");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         try { await Controller(db, client).Get(cancelled.Token); throw new Exception("Cancellation not propagated"); }
         catch (OperationCanceledException) { Check(true, "Caller cancellation propagated"); }
@@ -176,7 +210,7 @@ await using (var sql = new CarShowContext(sqlOptions))
 }
 Console.WriteLine($"ALL {count} CHECKS PASSED. Insert/read-back used SQLite; SQL Server migration generated, not applied to a live server.");
 
-enum ScanCase { Normal, Singleton, DifferentYear, Invalid, MultipleGroups, HttpFailure, PartialFailure, NoPosts, Timeout }
+enum ScanCase { Normal, Singleton, DifferentYear, Invalid, MultipleGroups, Gregorian, HttpFailure, PartialFailure, NoPosts, Timeout }
 sealed class TelegramStub(ScanCase scenario) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -188,6 +222,7 @@ sealed class TelegramStub(ScanCase scenario) : HttpMessageHandler
         if (scenario == ScanCase.NoPosts) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<html>Unavailable</html>") });
         var html = channel == "autopalermo" ? scenario switch
         {
+            ScanCase.Gregorian => Post(channel, 2, "پژو 207 مدل 2024<br>قیمت 1.5 میلیارد") + Post(channel, 1, "پژو 207 مدل 2024<br>قیمت 1.7 میلیارد"),
             ScanCase.Singleton => Post(channel, 1, "پژو 207 مدل 1403<br>قیمت 1500 میلیون"),
             ScanCase.DifferentYear => Post(channel, 2, "پژو 207 مدل 1403<br>قیمت 1500 میلیون") + Post(channel, 1, "پژو 207 مدل 1402<br>قیمت 1700 میلیون"),
             ScanCase.Invalid => Post(channel, 2, "دنا مدل 1403") + Post(channel, 1, "پژو 207<br>قیمت 1500 میلیون"),
