@@ -1,7 +1,6 @@
-using HtmlAgilityPack;
 using CarShow.Domain.Models;
 using CarShow.Infrastracture.Context;
-using System.Text.Json;
+using HtmlAgilityPack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -10,9 +9,11 @@ using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Net.WebRequestMethods;
 
 namespace CarShow.Controllers
 {
@@ -23,14 +24,94 @@ namespace CarShow.Controllers
     {
         private static readonly string[] Channels =
         {
-            "autopalermo",
-            "davoodkelasii",
-            "tajcarsefr",
-            "autozamanzade",
-            "miladforoud",
-            "autoland41",
-            "haminkhodroo",
-            "adib_khodro_qom"
+"autopalermo                                         ",
+"davoodkelasii                                       ",
+"tajcarsefr                                          ",
+"autozamanzade                                       ",
+"Miladforoud                                         ",
+"autoland41                                          ",
+"autoland41                                          ",
+"haminkhodroo                                        ",
+"adib_khodro_qom                                     ",
+"gallery20moradi                                     ",
+"car_sales_gandomi                                   ",
+"autosolhi                                           ",
+"BehzadSaberi_OxinKhodro                             ",
+"auto_ap                                             ",
+"avatttgalry                                         ",
+"TehranKhodro97                                      ",
+"Mohamadrezamansoor                                  ",
+"payamkhodrooo                                       ",
+"payamkhodrooo                                       ",
+"AUTO_TEYMOURI                                       ",
+"hahabbesharaty                                      ",
+"AutoEsmieh                                          ",
+"omidabbasicarsale                                   ",
+"otoeiliya                                           ",
+"autogalerymhmood                                    ",
+"kharid0forosh0mashin                                ",
+"eshraghicar                                         ",
+"irankodroohadiali                                   ",
+"NamayeshgahdaranTehran21                            ",
+"NamayeshgahdaranTehran21                            ",
+"hashemi_car2                                        ",
+"bazarkhodroh                                        ",
+"modern_khodrooooo                                   ",
+"thehhrankhodrow                                     ",
+"Autoplack                                           ",
+"automarkethamidnasiri                               ",
+"goroohmashin                                        ",
+"khodro_mashin_tehran_divar_bama                     ",
+"otosefr_Farzadakbari                                ",
+"RAFIEICAR                                           ",
+"hhirsa                                              ",
+"wolfkhodro                                          ",
+"Sefidgarali                                         ",
+"ARADKHODRO96                                        ",
+"Payamrahnama                                        ",
+"uotobehroz                                          ",
+"autoluxy                                            ",
+"otoadelkhani                                        ",
+"Autogorgangolbini                                   ",
+"ehsaaant                                            ",
+"AutoRamin9787                                       ",
+"automeysamsaghi                                     ",
+"auto_dayy                                           ",
+"shakiba_iran_16                                     ",
+"Hoseinbabaieqom                                     ",
+"auto_royal_meshkin                                  ",
+"auto_najafiqom                                      ",
+"mehrdadloghmanii                                    ",
+"alavicarexhibition                                  ",
+"mamatir_khodro_hosseini                             ",
+"grohcobrotehran                                     ",
+"khazarrkhodro                                       ",
+"auto_1abdolmaleki1                                  ",
+"autopasdaran                                        ",
+"hakimghailarrr                                      ",
+"auto_yektaa                                         ",
+"jamshidsamadiiii                                    ",
+"auto_jahan                                          ",
+"ilam98khodro                                        ",
+"autosardarr                                         ",
+"khodro_nasri                                        ",
+"+kF0Dpp9cMl45MjNk                                   ",
+"autovalayati                                        ",
+"outorashidiyan                                      ",
+"sahracar                                            ",
+"arasmehri                                           ",
+"parsiankhodroqolizade                               ",
+"kiu2016                                             ",
+"arsinkhodro                                         ",
+"bakshabadi                                          ",
+"automojtaba66                                       ",
+"AutoEightAsgarinia                                  ",
+"keyvancar                                           ",
+"pejman2616                                          ",
+"auto_tabrizi                                        ",
+"hesamfatemikaraj                                    ",
+"autofezolahi                                        ",
+"IRANKHODROMONIRIKASHAN                              "
         };
 
         private static readonly HttpClient DefaultTelegramClient = CreateHttpClient();
