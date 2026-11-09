@@ -1,4 +1,4 @@
-name: Rollback build
+name: Backend build and scanner checks
 
 on:
   pull_request:
@@ -14,3 +14,5 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet build CarShow.slnx --configuration Release
+      - run: dotnet build tests/TelegramCarScanner.Tests/TelegramCarScanner.Tests.csproj --configuration Release
+      - run: dotnet run --project tests/TelegramCarScanner.Tests/TelegramCarScanner.Tests.csproj --configuration Release --no-build --no-restore

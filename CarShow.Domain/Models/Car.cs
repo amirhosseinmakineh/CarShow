@@ -5,7 +5,7 @@ namespace CarShow.Domain.Models
         // Existing Telegram rows may not have a company. Keep those rows intact
         // while the pre-Telegram listing selects only catalog cars.
         public long? CompanyId { get; set; }
-        public long CarModelId { get; set; }
+        public long? CarModelId { get; set; }
         public long? TipId { get; set; }
 
         public string Name { get; set; } = string.Empty;
@@ -20,7 +20,7 @@ namespace CarShow.Domain.Models
         public DateTime LastUpdated { get; set; }
 
         public Company? Company { get; set; }
-        public CarModel CarModel { get; set; } = null!;
+        public CarModel? CarModel { get; set; }
         public Tip? Tip { get; set; }
     }
 }

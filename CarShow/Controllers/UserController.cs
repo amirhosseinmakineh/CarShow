@@ -1,4 +1,4 @@
-﻿using CarShow.ApplicationService.Contract.Dtos.User;
+using CarShow.ApplicationService.Contract.Dtos.User;
 using CarShow.ApplicationService.Contract.IService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +35,7 @@ namespace CarShow.Controllers
             var result = userService.GetAllUsers(pageSize, pageNumber);
             return Ok(result);
         }
+        [Authorize(Roles = "Admin")]
         [HttpPost("CreateUser")]
         public async Task<IActionResult> CreateUser(CreateUserDto dto)
         {
