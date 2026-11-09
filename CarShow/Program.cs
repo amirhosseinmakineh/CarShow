@@ -42,7 +42,11 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITipService, TipService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IModelService, ModelService>();
-builder.Services.AddScoped<IInstallmentCalculator, InstallmentCalculator>();
+
+builder.Services.AddScoped<
+    IInstallmentCalculator,
+    InstallmentCalculator>();
+
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
@@ -51,11 +55,25 @@ var secretKey = Encoding.UTF8.GetBytes(jwtSetting["SecretKey"] ?? throw new Inva
 if (secretKey.Length < 32) throw new InvalidOperationException("JwtSettings:SecretKey must be at least 32 UTF-8 bytes.");
 builder.Services.AddAuthentication(options => { options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; }).AddJwtBearer(options => { options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSetting["Issuer"], ValidAudience = jwtSetting["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) }; });
 builder.Services.AddAuthorization();
+
+// ==============================
+// Health Checks
+// ==============================
+
+builder.Services
+    .AddHealthChecks()
+    .AddDbContextCheck<CarShowContext>("sqlserver");
+
+// ==============================
+// Build
+// ==============================
+
 var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
 app.UseCors("Frontend");
 app.UseStaticFiles();
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
