@@ -73,11 +73,11 @@ namespace CarShow.Controllers
                 .SelectMany(TelegramCarParser.Parse)
                 .ToList();
 
-            // Persist parser output before the reference builder filters/groups it.
-            await SaveParsedCarsAsync(parsedCars, cancellationToken);
-
             // 3) Group same car name + same manufacturing year and calculate reference prices.
             var priceReferences = CarPriceReferenceBuilder.Build(parsedCars);
+
+            // Only reference groups, never raw advertisements, become Cars rows.
+            var savedCars = await SaveReferenceCarsAsync(priceReferences, cancellationToken);
 
             _logger.LogInformation(
                 "Telegram scan completed. Channels: {ChannelCount}, Messages: {MessageCount}, Parsed cars: {CarCount}, Reference groups: {ReferenceCount}",
@@ -100,8 +100,9 @@ namespace CarShow.Controllers
                 {
                     Message = "No reference prices could be calculated from the retrieved posts.",
                     TotalMessages = messagesByChannel.Values.Sum(x => x.Count),
-                    SavedCars = parsedCars.Count,
+                    SavedCars = savedCars,
                     ParsedCars = parsedCars.Count,
+                    ReferenceCount = priceReferences.Count,
                     ValidCars = metrics.ValidCars,
                     GroupsBeforeMinimumCount = metrics.GroupsBeforeMinimumCount,
                     GroupsWithTwoOrMoreAds = metrics.GroupsWithTwoOrMoreAds,
@@ -110,20 +111,35 @@ namespace CarShow.Controllers
                 });
             }
 
-            return Ok(priceReferences);
+            return Ok(new
+            {
+                ParsedCars = parsedCars.Count,
+                ReferenceCount = priceReferences.Count,
+                SavedCars = savedCars,
+                References = priceReferences
+            });
         }
 
-        // Mapping only: no catalog matching or additional parser/price rules.
-        // Cars has no year column; preserve all raw parser fields in Description JSON.
-        private async Task SaveParsedCarsAsync(List<ParsedCar> parsedCars, CancellationToken cancellationToken)
+        // Cars has no year column; keep final comparison details in Description JSON.
+        private async Task<int> SaveReferenceCarsAsync(List<CarPriceReference> priceReferences, CancellationToken cancellationToken)
         {
-            var rows = parsedCars.Select(parsed => new Car
+            if (priceReferences.Count == 0)
+                return 0;
+
+            var rows = priceReferences.Select(reference => new Car
             {
-                Name = parsed.Name,
-                Description = JsonSerializer.Serialize(parsed),
-                MarketPrice = CarPriceReferenceBuilder.TryConvertPrice(parsed.Price, out var priceBillion)
-                    ? priceBillion * 1_000_000_000m
-                    : 0m,
+                Name = reference.Name,
+                Description = JsonSerializer.Serialize(new
+                {
+                    Type = "TelegramPriceReference",
+                    reference.Year,
+                    reference.AdvertisementCount,
+                    reference.ComparedPricesBillion,
+                    reference.MinPriceBillion,
+                    reference.MaxPriceBillion,
+                    reference.ReferencePriceBillion
+                }),
+                MarketPrice = reference.ReferencePriceBillion * 1_000_000_000m,
                 CompanyId = null,
                 CarModelId = null,
                 TipId = null,
@@ -132,6 +148,7 @@ namespace CarShow.Controllers
 
             _db.Cars.AddRange(rows);
             await _db.SaveChangesAsync(cancellationToken);
+            return rows.Count;
         }
 
         // Troubleshooting only: GET /api/telegram-cars/diagnostics
@@ -786,23 +803,24 @@ namespace CarShow.Controllers
                     .Where(group => group.Count() >= 2)
                     .Select(group =>
                     {
-                        var prices = group
-                            .Select(car => car.PriceBillion)
+                        // Convert every valid price to toman before averaging.
+                        var pricesToman = group
+                            .Select(car => car.PriceBillion * 1_000_000_000m)
                             .OrderBy(price => price)
                             .ToList();
 
-                        var average = Round(prices.Average());
+                        var average = Round(pricesToman.Average() / 1_000_000_000m);
 
                         return new CarPriceReference
                         {
                             Name = group.Key.ModelKey,
                             Year = group.Key.Year,
-                            AdvertisementCount = prices.Count,
-                            ComparedPricesBillion = prices
-                                .Select(Round)
+                            AdvertisementCount = pricesToman.Count,
+                            ComparedPricesBillion = pricesToman
+                                .Select(price => Round(price / 1_000_000_000m))
                                 .ToList(),
-                            MinPriceBillion = Round(prices.First()),
-                            MaxPriceBillion = Round(prices.Last()),
+                            MinPriceBillion = Round(pricesToman.First() / 1_000_000_000m),
+                            MaxPriceBillion = Round(pricesToman.Last() / 1_000_000_000m),
                             ReferencePriceBillion = average,
                             ReferencePriceText = average.ToString(
                                 "0.000",
