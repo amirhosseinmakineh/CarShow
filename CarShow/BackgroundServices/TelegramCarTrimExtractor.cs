@@ -7,60 +7,103 @@ using System.Text.RegularExpressions;
 namespace CarShow.BackgroundServices;
 
 /// <summary>
-/// Extracts only explicit trim evidence from an advertisement. Never guesses a trim.
-/// A null result means unknown or conflicting trim and must not be priced.
+/// Conservative, model-aware trim recognition. Null means unknown or contradictory;
+/// no trim is inferred from price, model year or generic sales descriptions.
 /// </summary>
 public static class TelegramCarTrimExtractor
 {
+    private static readonly (string Canonical, string Pattern)[] Variants =
+    {
+        ("V1", @"v\s*1|وی\s*1"), ("V2", @"v\s*2|وی\s*2"),
+        ("V3", @"v\s*3|وی\s*3"), ("V4", @"v\s*4|وی\s*4"),
+        ("TU5P", @"tu\s*5\s*p"), ("TU5", @"tu\s*5"), ("TU3", @"tu\s*3"),
+        ("EF7P", @"ef\s*7\s*p"), ("EF7", @"ef\s*7"),
+        ("GLX", @"glx"), ("SLX", @"slx"), ("LX", @"lx"),
+        ("EX", @"ex"), ("CVT", @"cvt"),
+        ("اتومات", @"اتوماتیک|اتومات|اتو|automatic|auto"),
+        ("دستی", @"دستی|دنده\s*ای|manual"),
+        ("توربو", @"توربو|turbo"),
+        ("پلاس", @"پلاس|plus"), ("پرو", @"پرو|pro"),
+        ("پرایم", @"پرایم|prime"), ("الیت", @"الیت|elite"),
+        ("اکسلنت", @"اکسلنت|excellent")
+    };
+
+    // Model families whose numeric version is a meaningful identity component.
+    private static readonly string[] NumericFamilies =
+    {
+        "اریزو", "تیگو", "هایما", "ام وی ام", "فیدلیتی"
+    };
+
     public static string? Extract(string? vehicleName, string? advertisementText = null)
     {
         if (string.IsNullOrWhiteSpace(vehicleName)) return null;
-        // Vehicle header is the trusted source: body text may describe other vehicles.
-        var text = Normalize(vehicleName);
-        var codes = new List<string>();
+        var header = Normalize(vehicleName);
+        var body = Normalize(advertisementText ?? string.Empty);
+        var model = IdentifyModel(header);
+        var headerTokens = Recognize(header, model);
+        var bodyTokens = Recognize(RemoveNoise(body), model);
 
-        // Version codes must be separate tokens, not part of years, phone numbers or prices.
-        AddMatches(text, @"(?<![a-z0-9])v[1-9](?:\d)?(?![a-z0-9])", codes);
-        AddMatches(text, @"(?<![a-z0-9])(?:tu3|tu5|tu5p|ef7|ef7p|glx|slx|lx|ex|cvt)(?![a-z0-9])", codes);
-        AddMatches(text, @"(?<![a-z0-9])(?:x22|x33|x55|x77|s5|s7|j4|j7)(?![a-z0-9])", codes);
+        // Reject contradictory explicit gearbox and version claims, including
+        // disagreements between title and the corresponding vehicle's body.
+        var all = headerTokens.Concat(bodyTokens).Distinct(StringComparer.Ordinal).ToList();
+        if (all.Contains("اتومات") && all.Contains("دستی")) return null;
+        if (all.Count(x => Regex.IsMatch(x, @"^V[1-4]$")) > 1) return null;
+        if (all.Count(x => x is "TU3" or "TU5" or "TU5P") > 1) return null;
+        if (all.Count(x => x is "EF7" or "EF7P") > 1) return null;
+        if (all.Count(x => x is "GLX" or "SLX" or "LX" or "EX") > 1) return null;
 
-        // Numeric model versions require an explicit model family, so price digits
-        // cannot accidentally be interpreted as trim numbers.
-        var numbered = Regex.Match(text, @"\b(?:اریزو|آریزو|تیگو|فیدلیتی|هایما|ام وی ام)\s*(?<n>[357689])\b");
-        if (numbered.Success) codes.Add(numbered.Groups["n"].Value);
+        // A generic description such as "full", "zero", or "ready to deliver"
+        // is never a trim. A model's numeric version is kept distinct.
+        if (all.Count == 0) return null;
+        return string.Join(" ", all.OrderBy(x => x, StringComparer.Ordinal));
+    }
 
-        var automatic = Has(text, @"(?:اتوماتیک|اتومات|اتو|automatic|auto)");
-        var manual = Has(text, @"(?:دستی|دنده ای|manual)");
-        if (automatic && manual) return null;
-        if (automatic) codes.Add("اتومات");
-        if (manual) codes.Add("دستی");
+    private static List<string> Recognize(string text, string model)
+    {
+        var tokens = new List<string>();
+        if (string.IsNullOrWhiteSpace(text)) return tokens;
 
-        foreach (var (pattern, value) in new (string, string)[]
+        // Only vehicle-specific version codes are recognized in the appropriate family.
+        foreach (var (canonical, pattern) in Variants)
         {
-            (@"توربو", "توربو"), (@"پلاس|plus", "پلاس"),
-            (@"پرو|pro", "پرو"), (@"پرایم|prime", "پرایم"),
-            (@"الیت|elite", "الیت"), (@"اکسلنت|excellent", "اکسلنت"),
-            (@"فول", "فول"), (@"نیمه فول", "نیمه فول")
-        })
-            if (Has(text, pattern)) codes.Add(value);
+            if (canonical.StartsWith("V", StringComparison.Ordinal) && model != "تارا")
+                continue;
+            if (Has(text, pattern)) tokens.Add(canonical);
+        }
 
-        // "Full" is not a reliable trim on its own.
-        if (codes.Count == 0 || (codes.Count == 1 && codes[0] == "فول"))
-            return null;
+        if (NumericFamilies.Contains(model, StringComparer.Ordinal))
+        {
+            var match = Regex.Match(text,
+                @"(?<![\p{L}\p{N}])" + Regex.Escape(model) +
+                @"\s*(?<version>[357689])(?![\p{L}\p{N}])");
+            if (match.Success) tokens.Add("نسخه " + match.Groups["version"].Value);
+        }
 
-        return string.Join(" ", codes.Distinct(StringComparer.Ordinal)
-            .OrderBy(x => x, StringComparer.Ordinal));
+        // Avoid interpreting a model number (X55, J7 etc.) as a generic trim:
+        // the full model name remains part of the car identity.
+        return tokens;
+    }
+
+    private static string IdentifyModel(string header)
+    {
+        foreach (var family in NumericFamilies.Concat(new[] { "تارا" }))
+            if (Has(header, Regex.Escape(family))) return family;
+        return string.Empty;
+    }
+
+    private static string RemoveNoise(string text)
+    {
+        // Exclude price, phone, mileage and year lines, which may contain
+        // misleading tokens. Keep actual descriptive lines intact.
+        return string.Join(" ", text.Split('\n')
+            .Where(line => !Regex.IsMatch(line,
+                @"(?:قیمت|مبلغ|تومان|میلیارد|میلیون|شماره|تماس|09\d{9}|کارکرد|کیلومتر|^\s*مدل\s*(?:13|14|20)\d{2}\s*$)")));
     }
 
     private static bool Has(string text, string pattern) =>
-        Regex.IsMatch(text, @"(?<![\p{L}\p{N}])(?:" + pattern + @")(?![\p{L}\p{N}])",
+        Regex.IsMatch(text, @"(?<![\p{L}\p{N}])(?:" + pattern +
+            @")(?![\p{L}\p{N}])",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-    private static void AddMatches(string text, string pattern, List<string> codes)
-    {
-        foreach (Match match in Regex.Matches(text, pattern, RegexOptions.IgnoreCase))
-            codes.Add(match.Value);
-    }
 
     private static string Normalize(string value)
     {
@@ -76,6 +119,6 @@ public static class TelegramCarTrimExtractor
                 '\u200c' => ' ',
                 _ => char.ToLowerInvariant(c)
             });
-        return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+        return Regex.Replace(sb.ToString(), @"[^\S\n]+", " ").Trim();
     }
 }
