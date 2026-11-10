@@ -42,12 +42,22 @@ public static class TelegramCarTrimExtractor
         var model = IdentifyModel(header);
         var headerTokens = Recognize(header, model);
         var bodyTokens = Recognize(RemoveNoise(body), model);
+        // If two different numeric versions are explicitly named, reject the ad.
+        if (NumericFamilies.Contains(model, StringComparer.Ordinal))
+        {
+            var versions = Regex.Matches(header + " " + RemoveNoise(body),
+                @"(?<![\p{L}\p{N}])" + Regex.Escape(model) +
+                @"\s*([357689])(?![\p{L}\p{N}])")
+                .Cast<Match>().Select(match => match.Groups[1].Value).Distinct().ToList();
+            if (versions.Count > 1) return null;
+        }
 
         // Reject contradictory explicit gearbox and version claims, including
         // disagreements between title and the corresponding vehicle's body.
         var all = headerTokens.Concat(bodyTokens).Distinct(StringComparer.Ordinal).ToList();
         if (all.Contains("اتومات") && all.Contains("دستی")) return null;
         if (all.Count(x => Regex.IsMatch(x, @"^V[1-4]$")) > 1) return null;
+        if (all.Count(x => x.StartsWith("نسخه ", StringComparison.Ordinal)) > 1) return null;
         if (all.Count(x => x is "TU3" or "TU5" or "TU5P") > 1) return null;
         if (all.Count(x => x is "EF7" or "EF7P") > 1) return null;
         if (all.Count(x => x is "GLX" or "SLX" or "LX" or "EX") > 1) return null;
