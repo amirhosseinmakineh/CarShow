@@ -706,7 +706,7 @@ namespace CarShow.BackgroundServices
                         Name = name,
                         Price = ExtractPrice(block),
                         Year = ExtractYear(block),
-                        Trim = TelegramCarTrimExtractor.Extract(name)
+                        Trim = TelegramCarTrimExtractor.Extract(name, block)
                     });
                 }
 
