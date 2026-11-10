@@ -16,8 +16,8 @@ public static class TelegramCarTrimExtractor
     {
         ("V1", @"v\s*1|وی\s*1"), ("V2", @"v\s*2|وی\s*2"),
         ("V3", @"v\s*3|وی\s*3"), ("V4", @"v\s*4|وی\s*4"),
-        ("TU5P", @"tu\s*5\s*p"), ("TU5", @"tu\s*5"), ("TU3", @"tu\s*3"),
-        ("EF7P", @"ef\s*7\s*p"), ("EF7", @"ef\s*7"),
+        ("TU5P", @"tu\s*5\s*p"), ("TU5", @"tu\s*5(?!\s*p)"), ("TU3", @"tu\s*3"),
+        ("EF7P", @"ef\s*7\s*p"), ("EF7", @"ef\s*7(?!\s*p)"),
         ("GLX", @"glx"), ("SLX", @"slx"), ("LX", @"lx"),
         ("EX", @"ex"), ("CVT", @"cvt"),
         ("اتومات", @"اتوماتیک|اتومات|اتو|automatic|auto"),
@@ -25,13 +25,22 @@ public static class TelegramCarTrimExtractor
         ("توربو", @"توربو|turbo"),
         ("پلاس", @"پلاس|plus"), ("پرو", @"پرو|pro"),
         ("پرایم", @"پرایم|prime"), ("الیت", @"الیت|elite"),
-        ("اکسلنت", @"اکسلنت|excellent")
+        ("اکسلنت", @"اکسلنت|excellent"),
+        ("پرستیژ", @"پرستیژ|prestige"), ("پرمیوم", @"پرمیوم|premium"),
+        ("لاکچری", @"لاکچری|luxury"), ("اسپرت", @"اسپرت|sport"),
+        ("GT", @"gt"), ("GDI", @"gdi"), ("TGDI", @"tgdi"),
+        ("AWD", @"awd|چهار\s*چرخ\s*متحرک"), ("4WD", @"4wd|دو\s*دیفرانسیل"),
+        ("هیبرید", @"هیبرید|hybrid|hev"), ("PHEV", @"phev|پلاگین\s*هیبرید"),
+        ("EV", @"ev|برقی"), ("فیس لیفت", @"فیس\s*لیفت|facelift"),
+        ("نیوفیس", @"نیو\s*فیس|new\s*face"), ("تیپ 2", @"تیپ\s*2"),
+        ("تیپ 3", @"تیپ\s*3"), ("تیپ 5", @"تیپ\s*5"),
+        ("تیپ 6", @"تیپ\s*6")
     };
 
     // Model families whose numeric version is a meaningful identity component.
     private static readonly string[] NumericFamilies =
     {
-        "اریزو", "تیگو", "هایما", "ام وی ام", "فیدلیتی"
+        "اریزو", "تیگو", "هایما", "ام وی ام"
     };
 
     public static string? Extract(string? vehicleName, string? advertisementText = null)
@@ -60,6 +69,9 @@ public static class TelegramCarTrimExtractor
         if (all.Count(x => x.StartsWith("نسخه ", StringComparison.Ordinal)) > 1) return null;
         if (all.Count(x => x is "TU3" or "TU5" or "TU5P") > 1) return null;
         if (all.Count(x => x is "EF7" or "EF7P") > 1) return null;
+        if (all.Contains("GDI") && all.Contains("TGDI")) all.Remove("GDI");
+        if (all.Contains("هیبرید") && all.Contains("PHEV")) all.Remove("هیبرید");
+        if (all.Contains("EV") && (all.Contains("هیبرید") || all.Contains("PHEV"))) return null;
         if (all.Count(x => x is "GLX" or "SLX" or "LX" or "EX") > 1) return null;
 
         // A generic description such as "full", "zero", or "ready to deliver"
@@ -76,7 +88,7 @@ public static class TelegramCarTrimExtractor
         // Only vehicle-specific version codes are recognized in the appropriate family.
         foreach (var (canonical, pattern) in Variants)
         {
-            if (canonical.StartsWith("V", StringComparison.Ordinal) && model != "تارا")
+            if (Regex.IsMatch(canonical, @"^V[1-4]$") && model != "تارا")
                 continue;
             if (Has(text, pattern)) tokens.Add(canonical);
         }
