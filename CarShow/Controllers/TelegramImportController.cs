@@ -1,3 +1,4 @@
+using CarShow.BackgroundServices;
 using CarShow.Domain.Models;
 using CarShow.Infrastracture.Context;
 using HtmlAgilityPack;
@@ -133,16 +134,17 @@ namespace CarShow.Controllers
             TelegramClient = telegramClient;
         }
 
-        [HttpGet("scan")]
+        // Invoked by the scheduled worker, not by an HTTP request.
+        [NonAction]
         public async Task<ActionResult<List<CarPriceReference>>> Get(
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, Action<int, int>? progress = null)
         {
             // 1) Read the last 100 public messages from each channel.
             var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var messagesByChannel = await GetLast100MessagesAsync(
                 Channels,
                 cancellationToken,
-                channelErrors);
+                channelErrors, progress);
 
             // A failed channel must not discard the successfully retrieved channels.
             if (messagesByChannel.Keys.All(channelErrors.ContainsKey))
@@ -234,6 +236,10 @@ namespace CarShow.Controllers
             await _db.SaveChangesAsync(cancellationToken);
             return rows.Count;
         }
+
+        [HttpGet("scan/status")]
+        public IActionResult GetScanStatus([FromServices] TelegramScanStatus status)
+            => Ok(status.Read());
 
         // Troubleshooting only: GET /api/telegram-cars/diagnostics
         // This does not change the production GET response shape.
@@ -362,24 +368,24 @@ namespace CarShow.Controllers
         private async Task<Dictionary<string, List<string>>> GetLast100MessagesAsync(
             IEnumerable<string> channels,
             CancellationToken cancellationToken,
-            Dictionary<string, string> channelErrors = null)
+            Dictionary<string, string> channelErrors = null,
+            Action<int, int>? progress = null)
         {
-            var result = new Dictionary<string, List<string>>(
+            var result = new System.Collections.Concurrent.ConcurrentDictionary<string, List<string>>(
                 StringComparer.OrdinalIgnoreCase);
-
-            foreach (var channel in channels)
+            var errors = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
+            var usernames = channels.Select(NormalizeChannel)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var completed = 0;
+            using var semaphore = new SemaphoreSlim(3, 3);
+            await Task.WhenAll(usernames.Select(async username =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var username = NormalizeChannel(channel);
-
-                if (string.IsNullOrWhiteSpace(username) ||
-                    result.ContainsKey(username))
+                await semaphore.WaitAsync(cancellationToken);
+                try
                 {
-                    continue;
-                }
-
-                var messages = new Dictionary<long, string>();
+                    var messages = new Dictionary<long, string>();
                 long? beforeMessageId = null;
 
                 // Safety limit in case Telegram repeats a page.
@@ -411,7 +417,7 @@ namespace CarShow.Controllers
                             if (nodes == null || nodes.Count == 0)
                             {
                                 if (messages.Count == 0 && channelErrors != null)
-                                    channelErrors[username] = "Telegram HTML has no data-post elements; channel may be blocked, private, or preview markup changed.";
+                                    errors[username] = "Telegram HTML has no data-post elements; channel may be blocked, private, or preview markup changed.";
                                 break;
                             }
 
@@ -493,16 +499,16 @@ namespace CarShow.Controllers
                             username);
 
                         if (channelErrors != null)
-                            channelErrors[username] = exception.GetType().Name + ": " + exception.Message;
+                            errors[username] = exception.GetType().Name + ": " + exception.Message;
 
                         break;
                     }
                 }
 
                 if (messages.Count == 0 && channelErrors != null &&
-                    !channelErrors.ContainsKey(username))
+                    !errors.ContainsKey(username))
                 {
-                    channelErrors[username] = "No matching public posts were collected from Telegram preview.";
+                    errors[username] = "No matching public posts were collected from Telegram preview.";
                 }
 
                 result[username] = messages
@@ -515,9 +521,17 @@ namespace CarShow.Controllers
                     "Channel @{Channel}: {MessageCount} messages read.",
                     username,
                     result[username].Count);
-            }
-
-            return result;
+                }
+                finally
+                {
+                    progress?.Invoke(Interlocked.Increment(ref completed), usernames.Length);
+                    semaphore.Release();
+                }
+            }));
+            if (channelErrors != null)
+                foreach (var error in errors)
+                    channelErrors[error.Key] = error.Value;
+            return result.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
         }
 
         private static string ExtractMessageText(
