@@ -179,6 +179,18 @@ public sealed class TelegramScanBackgroundService : BackgroundService
         long jobId = 0;
         try
         {
+            // The exclusive lock proves no previous worker is still active.
+            // Mark runs orphaned by a process crash before starting a new one.
+            await using (var recover = lockConnection.CreateCommand())
+            {
+                recover.CommandText = """
+                    UPDATE dbo.TelegramScanJobs SET Status = N'Failed',
+                        FinishedAt = SYSDATETIMEOFFSET(),
+                        Error = N'Previous worker terminated before completing.'
+                    WHERE Status = N'Running';
+                    """;
+                await recover.ExecuteNonQueryAsync(ct);
+            }
             jobId = await _status.StartAsync(lockConnection, ct);
             using var scope = _scopes.CreateScope();
             var service = scope.ServiceProvider.GetRequiredService<TelegramScanService>();
