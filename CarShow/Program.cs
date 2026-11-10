@@ -1,3 +1,4 @@
+using CarShow.BackgroundServices;
 using CarShow.ApplicationService.Contract.IService;
 using CarShow.ApplicationService.Services;
 using CarShow.Domain.Crawling;
@@ -20,6 +21,8 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
+builder.Services.AddSingleton<TelegramScanStatus>();
+builder.Services.AddHostedService<TelegramScanBackgroundService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
