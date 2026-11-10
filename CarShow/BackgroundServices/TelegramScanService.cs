@@ -16,7 +16,16 @@ using static System.Net.WebRequestMethods;
 
 namespace CarShow.BackgroundServices
 {
-    public sealed record TelegramScanOutcome(int StatusCode, object? Value);
+    public sealed record TelegramScanOutcome(int StatusCode, object? Value)
+    {
+        public int TotalChannels { get; init; }
+        public int FailedChannels { get; init; }
+        public int MessagesProcessed { get; init; }
+        public int ParsedCars { get; init; }
+        public int ReferenceCount { get; init; }
+        public int SavedCars { get; init; }
+        public Dictionary<string, string> ChannelErrors { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    }
 
     public sealed class TelegramScanService
     {
@@ -142,8 +151,14 @@ namespace CarShow.BackgroundServices
                 channelErrors, progress);
 
             // A failed channel must not discard the successfully retrieved channels.
-            if (messagesByChannel.Keys.All(channelErrors.ContainsKey))
-                return new TelegramScanOutcome(502, new { Message = "Telegram retrieval failed; no cars were saved.", ChannelErrors = channelErrors });
+            if (messagesByChannel.Count == 0 || messagesByChannel.Keys.All(channelErrors.ContainsKey))
+                return new TelegramScanOutcome(502, new { Message = "Telegram retrieval failed; no cars were saved.", ChannelErrors = channelErrors })
+                {
+                    TotalChannels = Channels.Select(NormalizeChannel).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    FailedChannels = channelErrors.Count,
+                    MessagesProcessed = messagesByChannel.Values.Sum(x => x.Count),
+                    ChannelErrors = channelErrors
+                };
 
             // 2) Parse each message. A message may contain multiple cars.
             var parsedCars = messagesByChannel
@@ -187,7 +202,16 @@ namespace CarShow.BackgroundServices
                     GroupsWithTwoOrMoreAds = metrics.GroupsWithTwoOrMoreAds,
                     ChannelErrors = channelErrors,
                     ChannelCounts = messagesByChannel.ToDictionary(x => x.Key, x => x.Value.Count)
-                });
+                })
+                {
+                    TotalChannels = messagesByChannel.Count,
+                    FailedChannels = channelErrors.Count,
+                    MessagesProcessed = messagesByChannel.Values.Sum(x => x.Count),
+                    ParsedCars = parsedCars.Count,
+                    ReferenceCount = priceReferences.Count,
+                    SavedCars = savedCars,
+                    ChannelErrors = channelErrors
+                };
             }
 
             return new TelegramScanOutcome(channelErrors.Count > 0 ? 207 : 200, new
@@ -198,7 +222,16 @@ namespace CarShow.BackgroundServices
                 SavedCars = savedCars,
                 ChannelErrors = channelErrors,
                 References = priceReferences
-            });
+            })
+            {
+                TotalChannels = messagesByChannel.Count,
+                FailedChannels = channelErrors.Count,
+                MessagesProcessed = messagesByChannel.Values.Sum(x => x.Count),
+                ParsedCars = parsedCars.Count,
+                ReferenceCount = priceReferences.Count,
+                SavedCars = savedCars,
+                ChannelErrors = channelErrors
+            };
         }
 
         // Cars has no year column; keep final comparison details in Description JSON.
