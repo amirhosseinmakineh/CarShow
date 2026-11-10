@@ -1,0 +1,20 @@
+name: Telegram scan validation
+on:
+  pull_request:
+    paths:
+      - 'CarShow/**'
+      - 'CarShow.ApplicationService/**'
+      - '.github/workflows/telegram-scan-validation.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore CarShow/CarShow.csproj
+      - name: Build
+        run: dotnet build CarShow/CarShow.csproj --no-restore --configuration Release
