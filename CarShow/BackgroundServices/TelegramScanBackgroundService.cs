@@ -1,8 +1,5 @@
-using CarShow.Controllers;
 using CarShow.Infrastracture.Context;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
 
 namespace CarShow.BackgroundServices;
 
@@ -40,15 +37,14 @@ public sealed class TelegramScanBackgroundService : BackgroundService
             try
             {
                 using var scope = _scopes.CreateScope();
-                var controller = ActivatorUtilities.CreateInstance<TelegramImportController>(scope.ServiceProvider);
-                var response = await controller.Get(stoppingToken, (completed, total) =>
+                var scan = scope.ServiceProvider.GetRequiredService<TelegramScanService>();
+                var result = await scan.ScanAsync(stoppingToken, (completed, total) =>
                     _status.Set(new { status = "Running", startedAt, completedChannels = completed, totalChannels = total }));
 
-                var result = response.Result as ObjectResult;
-                var payload = result?.Value;
+                var payload = result.Value;
                 _status.Set(new
                 {
-                    status = result?.StatusCode is 200 ? "Completed" :
+                    status = result.StatusCode is 200 ? "Completed" :
                         result?.StatusCode is 207 ? "PartialSuccess" : "Failed",
                     startedAt,
                     finishedAt = DateTimeOffset.UtcNow,
