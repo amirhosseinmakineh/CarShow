@@ -19,7 +19,8 @@ public sealed class TelegramImportController : ControllerBase
     }
 
     [HttpGet("scan/status")]
-    public IActionResult GetScanStatus() => Ok(_status.Read());
+    public async Task<IActionResult> GetScanStatus(CancellationToken cancellationToken)
+        => Ok(await _status.ReadAsync(cancellationToken));
 
     [HttpGet("diagnostics")]
     public async Task<IActionResult> GetDiagnostics(CancellationToken cancellationToken)
