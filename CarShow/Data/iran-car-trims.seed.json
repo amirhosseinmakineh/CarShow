@@ -1,0 +1,45 @@
+{
+  "description": "Source-observed seed records; verify aliases and suitability before matching",
+  "records": [
+    {
+      "brand": "تارا",
+      "model": "تارا اتوماتیک V2",
+      "trim": "V2",
+      "source": "https://nerkhehrooz.com/cars/specs/tara",
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "brand": "تارا",
+      "model": "تارا اتوماتیک V4",
+      "trim": "V4",
+      "source": "https://nerkhehrooz.com/cars/specs/tara",
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "brand": "تارا",
+      "model": "تارا دنده ای V1",
+      "trim": "V1",
+      "source": "https://nerkhehrooz.com/cars/specs/tara",
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "brand": "تارا",
+      "model": "تارا دنده ای V1 پلاس",
+      "trim": "V1 پلاس",
+      "source": "https://nerkhehrooz.com/cars/specs/tara",
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "brand": "کی ام سی",
+      "model": "کی ام سی A5",
+      "trim": "1.5literturbo",
+      "source": "https://nerkhehrooz.com/cars/specs/kmc/a5",
+      "aliases": [],
+      "verified": false
+    }
+  ]
+}
