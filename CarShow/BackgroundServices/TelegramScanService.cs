@@ -247,6 +247,8 @@ namespace CarShow.BackgroundServices
                 {
                     Type = "TelegramPriceReference",
                     reference.Year,
+                    reference.Trim,
+                    Confidence = reference.AdvertisementCount == 1 ? "Low" : "Normal",
                     reference.AdvertisementCount,
                     reference.ComparedPricesBillion,
                     reference.MinPriceBillion,
@@ -620,6 +622,7 @@ namespace CarShow.BackgroundServices
         {
             public string Name { get; set; }
             public string Year { get; set; }
+            public string Trim { get; set; }
             public int AdvertisementCount { get; set; }
             public List<decimal> ComparedPricesBillion { get; set; }
             public decimal MinPriceBillion { get; set; }
@@ -915,6 +918,7 @@ namespace CarShow.BackgroundServices
                     {
                         var name = NormalizeCarName(car.Name);
                         var year = NormalizeYear(car.Year);
+                        var trim = TelegramCarTrimExtractor.Extract(name);
 
                         decimal priceBillion;
                         var hasPrice = TryConvertPrice(
@@ -925,6 +929,7 @@ namespace CarShow.BackgroundServices
                         {
                             Name = name,
                             ModelKey = GetModelKey(name),
+                            Trim = trim,
                             Year = year,
                             HasPrice = hasPrice,
                             PriceBillion = priceBillion
@@ -933,6 +938,7 @@ namespace CarShow.BackgroundServices
                     .Where(car =>
                         !string.IsNullOrWhiteSpace(car.ModelKey) &&
                         car.Year != null &&
+                        car.Trim != null &&
                         car.HasPrice)
                     .ToList();
 
@@ -943,9 +949,9 @@ namespace CarShow.BackgroundServices
                     .GroupBy(car => new
                     {
                         ModelKey = car.ModelKey,
-                        Year = car.Year
+                        Year = car.Year,
+                        Trim = car.Trim
                     })
-                    .Where(group => group.Count() >= 2)
                     .Select(group =>
                     {
                         // Convert every valid price to toman before averaging.
@@ -958,8 +964,9 @@ namespace CarShow.BackgroundServices
 
                         return new CarPriceReference
                         {
-                            Name = group.Key.ModelKey,
+                            Name = group.Key.ModelKey + " " + group.Key.Trim,
                             Year = group.Key.Year,
+                            Trim = group.Key.Trim,
                             AdvertisementCount = pricesToman.Count,
                             ComparedPricesBillion = pricesToman
                                 .Select(price => Round(price / 1_000_000_000m))
@@ -985,17 +992,19 @@ namespace CarShow.BackgroundServices
                     .Select(car => new
                     {
                         Model = GetModelKey(NormalizeCarName(car.Name)),
+                        Trim = TelegramCarTrimExtractor.Extract(NormalizeCarName(car.Name)),
                         Year = NormalizeYear(car.Year),
                         Price = car.Price
                     })
                     .Where(car =>
                         !string.IsNullOrWhiteSpace(car.Model) &&
                         car.Year != null &&
+                        car.Trim != null &&
                         HasValidPrice(car.Price))
                     .ToList();
 
                 var groups = eligible
-                    .GroupBy(car => new { car.Model, car.Year })
+                    .GroupBy(car => new { car.Model, car.Year, car.Trim })
                     .ToList();
 
                 return (
