@@ -37,6 +37,36 @@ public static class TelegramCarTrimExtractor
         ("تیپ 6", @"تیپ\s*6")
     };
 
+
+    // Explicit model/variant pairs cross-checked against car.ir/prices.
+    // Model identifiers (X55, S7, 207) are not trims by themselves.
+    private static readonly (string ModelPattern, string Trim, string TrimPattern)[] VerifiedModelTrims =
+    {
+        (@"(?:پژو\\s*)?206", "تیپ 2", @"تیپ\\s*2"),
+        (@"(?:پژو\\s*)?206", "تیپ 3", @"تیپ\\s*3"),
+        (@"(?:پژو\\s*)?207", "TU3", @"tu\\s*3"),
+        (@"(?:پژو\\s*)?207", "اتومات", @"اتوماتیک|اتومات|automatic"),
+        (@"(?:پژو\\s*)?207", "دستی", @"دستی|دنده\\s*ای"),
+        (@"(?:پژو\\s*)?207", "سقف شیشه ای", @"سقف\\s*شیشه\\s*ای|پانوراما"),
+        (@"تارا", "V1", @"v\\s*1|وی\\s*1"),
+        (@"تارا", "V4", @"v\\s*4|وی\\s*4"),
+        (@"دیگنیتی", "پرایم", @"پرایم|prime"),
+        (@"دیگنیتی", "پرستیژ", @"پرستیژ|prestige"),
+        (@"(?:اریزو|آریزو)\\s*5", "اسپرت", @"اسپرت|sport|fl"),
+        (@"(?:اریزو|آریزو)\\s*6", "پرو", @"پرو|pro"),
+        (@"تیگو\\s*7", "پرو", @"پرو|pro"),
+        (@"تیگو\\s*7", "پرو مکس", @"پرو\\s*مکس|pro\\s*max"),
+        (@"تیگو\\s*8", "پرو مکس", @"پرو\\s*مکس|pro\\s*max"),
+        (@"ام\\s*وی\\s*ام\\s*x22", "پرو", @"پرو|pro"),
+        (@"ام\\s*وی\\s*ام\\s*x33", "کراس", @"کراس|cross"),
+        (@"ام\\s*وی\\s*ام\\s*x55", "پرو", @"پرو|pro"),
+        (@"هایما\\s*s7", "پلاس", @"پلاس|plus"),
+        (@"فونیکس\\s*fx", "پرمیوم", @"پرمیوم|premium"),
+        (@"کوییک", "R", @"(?<![a-z0-9])r(?![a-z0-9])"),
+        (@"کوییک", "S", @"(?<![a-z0-9])s(?![a-z0-9])"),
+        (@"ساینا", "S", @"(?<![a-z0-9])s(?![a-z0-9])")
+    };
+
     // Model families whose numeric version is a meaningful identity component.
     private static readonly string[] NumericFamilies =
     {
@@ -64,7 +94,16 @@ public static class TelegramCarTrimExtractor
         // Reject contradictory explicit gearbox and version claims, including
         // disagreements between title and the corresponding vehicle's body.
         var all = headerTokens.Concat(bodyTokens).Distinct(StringComparer.Ordinal).ToList();
+        foreach (var rule in VerifiedModelTrims)
+        {
+            if (Has(header, rule.ModelPattern) && Has(header + " " + RemoveNoise(body), rule.TrimPattern))
+                all.Add(rule.Trim);
+        }
+        if (all.Contains("پرو مکس")) all.Remove("پرو");
+        all = all.Distinct(StringComparer.Ordinal).ToList();
         if (all.Contains("اتومات") && all.Contains("دستی")) return null;
+        if (all.Contains("پرایم") && all.Contains("پرستیژ")) return null;
+        if (all.Contains("R") && all.Contains("S")) return null;
         if (all.Count(x => Regex.IsMatch(x, @"^V[1-4]$")) > 1) return null;
         if (all.Count(x => x.StartsWith("نسخه ", StringComparison.Ordinal)) > 1) return null;
         if (all.Count(x => x is "TU3" or "TU5" or "TU5P") > 1) return null;
