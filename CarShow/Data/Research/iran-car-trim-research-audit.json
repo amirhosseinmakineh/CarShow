@@ -1,5 +1,5 @@
 {
-  "collectedAt": "2026-11-11T01:36:58.214812+00:00",
+  "collectedAt": "2026-11-11T01:40:00.648489+00:00",
   "sourceBrandCount": 122,
   "brandReports": [
     {
@@ -857,10 +857,10 @@
       "namedTrims": 0
     }
   ],
-  "totalNamedCandidates": 1323,
-  "recordCount": 2349,
-  "rawSourceRows": 1125,
+  "totalNamedCandidates": 2332,
+  "recordCount": 3358,
+  "rawSourceRows": 2267,
   "expectedSourceTrims": 1125,
-  "specModelPages": 0,
+  "specModelPages": 595,
   "failedUrls": []
 }
