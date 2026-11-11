@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Cross-check Iranian brand/model/trim names against public Bama technical pages.
-Does not collect individual seller advertisements, PII, or prices.
+Only follows trim-navigation links on public technical spec pages.\nDoes not collect individual seller advertisements, PII, or prices.
 """
 import argparse,json,re,time
 from pathlib import Path
