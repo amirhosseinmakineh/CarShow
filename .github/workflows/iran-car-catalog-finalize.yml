@@ -1,0 +1,47 @@
+name: Finalize complete Iranian trim research artifact
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/telegram-price-reference-model-year-trim
+    paths:
+      - .github/workflows/iran-car-catalog-finalize.yml
+permissions:
+  actions: read
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore successful cross-source research files
+        uses: actions/download-artifact@v4
+        with:
+          name: iran-car-trims-research
+          run-id: 42940583928
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: CarShow/Data/Research
+      - name: Inspect restored research audit
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('CarShow/Data/Research/iran-car-trim-research-audit.json').read_text())
+          assert d['specModelPages'] >= 595 and d['sourceBrandCount'] == 122
+          assert d['rawSourceRows'] >= 2200 and not d['failedUrls']
+          print('research rows:',d['recordCount'])
+          PY
+      - name: Commit source-linked catalog to research branch
+        run: |
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          git add CarShow/Data/Research/iran-car-trim-catalog-expanded.* CarShow/Data/Research/iran-car-trim-research-audit.json
+          if git diff --staged --quiet; then exit 0; fi
+          git commit -m 'Research: restore 595 technical model page catalog [skip ci]'
+          for retry in 1 2 3 4 5; do
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME"
+            if git push origin "HEAD:$GITHUB_REF_NAME"; then exit 0; fi
+            sleep 3
+          done
+          exit 1
