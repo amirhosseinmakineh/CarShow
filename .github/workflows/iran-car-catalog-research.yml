@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
       - name: Collect source catalog
-        run: python tools/research_iran_car_catalog.py --delay 0.5 --nemuda-only
+        run: python tools/research_iran_car_catalog.py --delay 0.55
       - name: Upload audit and catalog
         if: always()
         uses: actions/upload-artifact@v4
