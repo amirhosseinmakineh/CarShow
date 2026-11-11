@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Source-attributed Iranian car taxonomy research. Output is NOT a verified factory catalog."""
 import argparse
+import os
 import csv
 import json
 import re
@@ -131,7 +132,7 @@ def main():
                 fresh+=found
             except Exception as ex:errors.append({"url":url,"error":str(ex)})
             if idx%50==0:print("Specs",idx,len(tech_links),len(fresh),flush=True)
-    baseline="CarShow/Data/Research/iran-car-trim-catalog-researched.json"
+    baseline="CarShow/Data/Research/iran-car-trim-catalog-expanded.json" if os.path.exists("CarShow/Data/Research/iran-car-trim-catalog-expanded.json") else "CarShow/Data/Research/iran-car-trim-catalog-researched.json"
     before=json.loads(open(baseline,encoding="utf-8").read())["records"]
     merged={}
     for row in before+fresh:
