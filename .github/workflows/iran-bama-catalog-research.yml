@@ -1,0 +1,45 @@
+name: Cross-check Iranian car trims on Bama
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/telegram-price-reference-model-year-trim
+    paths:
+      - tools/research_bama_car_trims.py
+permissions:
+  contents: write
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+      - name: Scrape public technical pages (not seller ads)
+        run: python tools/research_bama_car_trims.py --delay 0.7
+      - name: Upload Bama research artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iran-bama-technical-trims
+          path: CarShow/Data/Research/iran-bama-technical-trims.json
+      - name: Commit source records (research only)
+        if: success()
+        run: |
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          git add CarShow/Data/Research/iran-bama-technical-trims.json
+          if ! git diff --staged --quiet; then
+            git commit -m 'Research: add source-attributed Bama trim navigation [skip ci]'
+            for retry in 1 2 3 4 5; do
+              git fetch origin "$GITHUB_REF_NAME"
+              git rebase "origin/$GITHUB_REF_NAME"
+              if git push origin "HEAD:$GITHUB_REF_NAME"; then exit 0; fi
+              sleep 3
+            done
+            exit 1
+          fi
