@@ -1071,8 +1071,8 @@ namespace CarShow.BackgroundServices
                     return string.Empty;
 
                 var value = CreateNameKey(name);
-                if (value.StartsWith("catalog:", StringComparison.Ordinal))
-                    return value;
+                if (Regex.IsMatch(value, @"^catalog\s+\d+$", RegexOptions.CultureInvariant))
+                    return "catalog:" + value.Substring(8).Trim();
 
                 // Match specific model names before their broader families.
                 if (Regex.IsMatch(value, @"(?<!\d)(?:پژو\s*)?207(?!\d)"))
