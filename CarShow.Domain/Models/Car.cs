@@ -13,7 +13,7 @@ namespace CarShow.Domain.Models
         public string ImageName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal FactoryPrice { get; set; } = 0m;
-        public decimal? MarketPrice { get; set; }
+        public decimal MarketPrice { get; set; } = 0m;
         public DateTime? LastUpdated { get; set; }
         public string Slug { get; set; } = string.Empty;
         public bool IsUsed { get; set; }
@@ -28,7 +28,7 @@ namespace CarShow.Domain.Models
         [NotMapped]
         public float Price
         {
-            get => (float)(MarketPrice ?? 0m);
+            get => (float)MarketPrice;
             set => MarketPrice = (decimal)value;
         }
 
