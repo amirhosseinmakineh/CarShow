@@ -94,7 +94,7 @@ namespace CarShow.ApplicationService.Services
             // Public listings contain only catalog cars with an actual Telegram reference.
             var query = carRepository.GetAll().Where(c =>
                 c.CompanyId != null && c.CarModelId != null && c.TipId != null &&
-                c.MarketPrice > 0 && c.Description.Contains("\\"Type\\":\\"TelegramPriceReference\\""));
+                c.MarketPrice > 0 && c.Description.Contains("TelegramPriceReference"));
 
             if (minPrice.HasValue)
                 query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
