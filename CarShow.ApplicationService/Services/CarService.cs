@@ -113,7 +113,7 @@ namespace CarShow.ApplicationService.Services
             }
 
             var rows = await query
-                .OrderBy(c => c.Id)
+                .OrderByDescending(c => c.Id)
                 .Skip(page * size)
                 .Take(size)
                 .Select(c => new

@@ -3,10 +3,12 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CarShow.ApplicationService.Services;
 using CarShow.Controllers;
 using CarShow.Domain.Models;
 using CarShow.Infrastracture.Context;
 using CarShow.Infrastracture.Migrations;
+using CarShow.Infrastracture.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -135,6 +137,19 @@ async Task RunScenario(ScanCase scenario, int expectedParsed, int expectedRefere
                       details.RootElement.GetProperty("AdvertisementCount").GetInt32() >= 2 &&
                       details.RootElement.GetProperty("ReferencePriceBillion").GetDecimal() * 1_000_000_000m == row.MarketPrice,
                       scenario + ": persisted year and final comparison details match MarketPrice");
+            }
+            if (scenario == ScanCase.Normal)
+            {
+                var service = new CarService(
+                    new BaseRepository<long, Car>(db),
+                    new BaseRepository<long, Tip>(db),
+                    new BaseRepository<long, CarModel>(db),
+                    new BaseRepository<long, Category>(db),
+                    new BaseRepository<long, Company>(db));
+                var listed = await service.GetAllCars(null, null, null, pageSize: 1, pageNumber: 0);
+                Check(listed.Count == 1 && listed[0].Id == finalCars[0].Id &&
+                      listed[0].MarketPrice == 1_600_000_000m && listed[0].CompanyName == string.Empty,
+                    "GET /api/Car service lists the newest saved reference with a null company");
             }
         }
     }
