@@ -23,10 +23,10 @@ internal static partial class CatalogHtmlParser
     [GeneratedRegex("<[^>]+>", RegexOptions.Singleline)]
     private static partial Regex TagPattern();
 
-    [GeneratedRegex(@"data-class=[""\u0027](?<value>[^""\u0027]+)[""\u0027]", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"data-class=[""'](?<value>[^""']+)[""']", RegexOptions.IgnoreCase)]
     private static partial Regex StatusPattern();
 
-    [GeneratedRegex(@"href=[""\u0027](?<value>[^""\u0027]+)[""\u0027]", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"href=[""'](?<value>[^""']+)[""']", RegexOptions.IgnoreCase)]
     private static partial Regex LinkPattern();
 
     public static IReadOnlyList<CatalogEntry> Parse(string html)
