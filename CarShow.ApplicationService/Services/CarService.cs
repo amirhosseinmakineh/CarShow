@@ -1,5 +1,5 @@
 using CarShow.ApplicationService.Import;
-﻿using CarShow.ApplicationService.Contract.Dtos.CarDto;
+using CarShow.ApplicationService.Contract.Dtos.CarDto;
 using CarShow.ApplicationService.Contract.Dtos.CategoryDto;
 using CarShow.ApplicationService.Contract.Dtos.CompanyDto;
 using CarShow.ApplicationService.Contract.Dtos.ModelDto;
@@ -269,7 +269,7 @@ namespace CarShow.ApplicationService.Services
             Stream catalogStream, CancellationToken cancellationToken = default)
         {
             using var reader = new StreamReader(catalogStream, System.Text.Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+                detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
             var entries = CatalogHtmlParser.Parse(await reader.ReadToEndAsync(cancellationToken));
 
             // Store all catalog entries; unverified source associations are not independently validated.
@@ -325,6 +325,14 @@ namespace CarShow.ApplicationService.Services
                     }
                 }
 
+                var category = await categoryRepository.GetAll()
+                    .FirstOrDefaultAsync(x => x.Name == "کاتالوگ", cancellationToken);
+                if (category is null)
+                {
+                    category = new Category { Name = "کاتالوگ" };
+                    await categoryRepository.Create(category);
+                }
+
                 await unitOfWork.SaveChangesAsync();
 
                 var known = (await carRepository.GetAll()
@@ -352,8 +360,9 @@ namespace CarShow.ApplicationService.Services
                         CompanyId = companyId,
                         CarModelId = modelId,
                         TipId = tipId,
-                        SourceUrl = entry.SourceUrl,
-                        LastUpdated = DateTime.UtcNow,
+                        CategoryId = category.Id,
+                        StartDate = string.Empty,
+                        Price = 0,
                         Description = string.Empty,
                         ImageName = string.Empty
                     });
