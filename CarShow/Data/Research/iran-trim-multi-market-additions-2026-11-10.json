@@ -1,0 +1,486 @@
+{
+  "count": 48,
+  "notes": "Current price/spec-list entries only. Not all distinct mechanically or factory-certified. Sources may list same configuration across years.",
+  "records": [
+    {
+      "brand": "ایران خودرو",
+      "model": "پژو 207",
+      "trim": "اتوماتیک TU5P",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "پژو 207",
+      "trim": "اتوماتیک پانوراما TU5P",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "پژو 207",
+      "trim": "دنده‌ای TU5P پانوراما رینگ فولادی",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "پژو 207",
+      "trim": "دنده‌ای برقی",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "پژو 207",
+      "trim": "دنده‌ای هیدرولیک",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "پژو 207",
+      "trim": "دنده‌ای پانوراما رینگ فولادی",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "تارا",
+      "trim": "اتوماتیک V4",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "تارا",
+      "trim": "دستی V1",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "تارا",
+      "trim": "اتوماتیک توربو",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "دنا پلاس",
+      "trim": "MT6 رینگ فولادی",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "دنا پلاس",
+      "trim": "MT6",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "دنا پلاس",
+      "trim": "توربو اتوماتیک آپشنال",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "سورن پلاس",
+      "trim": "TU5P",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "سورن پلاس",
+      "trim": "XU7P",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "سورن پلاس",
+      "trim": "دوگانه‌سوز کپسول بزرگ",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "سورن پلاس",
+      "trim": "دوگانه‌سوز کپسول کوچک",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "آئودی",
+      "model": "Q5",
+      "trim": "تیپ ۱",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "آئودی",
+      "model": "Q5",
+      "trim": "تیپ ۲",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "آئودی",
+      "model": "Q5",
+      "trim": "تیپ ۳",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "آئودی",
+      "model": "Q5",
+      "trim": "تیپ ۴",
+      "source": "https://nerkhehrooz.com/cars",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "nerkhehrooz"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "دنا پلاس",
+      "trim": "EF7P شش دنده رینگ فولادی",
+      "source": "https://carbank.info/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "carbank"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "دنا پلاس",
+      "trim": "EF7P شش دنده رینگ آلومینیومی",
+      "source": "https://carbank.info/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "carbank"
+    },
+    {
+      "brand": "ایران خودرو",
+      "model": "دنا پلاس",
+      "trim": "EF7 اتوماتیک توربو آپشنال",
+      "source": "https://carbank.info/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "carbank"
+    },
+    {
+      "brand": "سایپا",
+      "model": "شاهین",
+      "trim": "اتوماتیک CVT تیپ G",
+      "source": "https://carbank.info/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "carbank"
+    },
+    {
+      "brand": "سایپا",
+      "model": "شاهین",
+      "trim": "G دنده‌ای استاندارد ESC",
+      "source": "https://carbank.info/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "carbank"
+    },
+    {
+      "brand": "سایپا",
+      "model": "شاهین",
+      "trim": "GL دنده‌ای استاندارد ESC",
+      "source": "https://carbank.info/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "carbank"
+    },
+    {
+      "brand": "سایپا",
+      "model": "شاهین پلاس",
+      "trim": "اتوماتیک AT تیپ G",
+      "source": "https://carbank.info/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "carbank"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "تیگو 8 پرو",
+      "trim": "مکس",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "تیگو 8 پرو",
+      "trim": "E پلاس",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "تیگو 7 پرو",
+      "trim": "مکس تک دیفرانسیل",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "تیگو 7 پرو",
+      "trim": "مکس دو دیفرانسیل",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "تیگو 7 پرو",
+      "trim": "E پلاس",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "FX",
+      "trim": "پریمیوم تک دیفرانسیل",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "FX",
+      "trim": "پریمیوم دو دیفرانسیل",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "آریزو 6",
+      "trim": "GT",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "فونیکس",
+      "model": "آریزو 6",
+      "trim": "پرو",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "مدیران خودرو",
+      "model": "آریزو 5",
+      "trim": "اسپرت FL",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22 پرو",
+      "trim": "دنده‌ای",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33 کراس",
+      "trim": "دنده‌ای",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33 کراس",
+      "trim": "اتوماتیک",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "مکث موتور",
+      "model": "کلوت",
+      "trim": "اتوماتیک تیپ ۲",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "راوفور",
+      "trim": "هیبرید",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لوین",
+      "trim": "۱۲۰۰ توربو بنزینی",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لوین",
+      "trim": "۱۸۰۰ هیبرید",
+      "source": "https://car.ir/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "car.ir"
+    },
+    {
+      "brand": "بیجینگ",
+      "model": "U5 پلاس",
+      "trim": "۱٫۵ لیتر آپشن استاندارد",
+      "source": "https://mashinonline.com/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "mashinonline"
+    },
+    {
+      "brand": "بیجینگ",
+      "model": "U5 پلاس",
+      "trim": "موتور ۱۵۰۰",
+      "source": "https://mashinonline.com/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "mashinonline"
+    },
+    {
+      "brand": "بیجینگ",
+      "model": "X55",
+      "trim": "۱٫۵ لیتر توربو تک‌رنگ",
+      "source": "https://mashinonline.com/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "mashinonline"
+    },
+    {
+      "brand": "بیجینگ",
+      "model": "X55",
+      "trim": "۱٫۵ لیتر توربو دو‌رنگ",
+      "source": "https://mashinonline.com/prices",
+      "quality": "price-list-variant",
+      "verification": "Named separately by Iranian price/specification catalog; year/option naming may be marketing label",
+      "observedOn": "2026-11-10",
+      "sourceName": "mashinonline"
+    }
+  ]
+}

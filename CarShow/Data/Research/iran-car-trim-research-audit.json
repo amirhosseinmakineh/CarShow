@@ -1,0 +1,866 @@
+{
+  "collectedAt": "2026-11-11T01:40:00.648489+00:00",
+  "sourceBrandCount": 122,
+  "brandReports": [
+    {
+      "brand": "آئودی",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "آرتابان",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "آریسان",
+      "expected": 3,
+      "families": 1,
+      "links": 3,
+      "namedTrims": 3
+    },
+    {
+      "brand": "آریو",
+      "expected": 3,
+      "families": 0,
+      "links": 3,
+      "namedTrims": 0
+    },
+    {
+      "brand": "آلفارومئو",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "آمیکو",
+      "expected": 3,
+      "families": 1,
+      "links": 3,
+      "namedTrims": 3
+    },
+    {
+      "brand": "اپل",
+      "expected": 3,
+      "families": 0,
+      "links": 3,
+      "namedTrims": 0
+    },
+    {
+      "brand": "اس‌دبلیو‌ام",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "اشکودا",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "اکستریم",
+      "expected": 3,
+      "families": 0,
+      "links": 3,
+      "namedTrims": 0
+    },
+    {
+      "brand": "ام‌جی",
+      "expected": 14,
+      "families": 2,
+      "links": 14,
+      "namedTrims": 6
+    },
+    {
+      "brand": "ام‌وی‌ام",
+      "expected": 44,
+      "families": 11,
+      "links": 44,
+      "namedTrims": 38
+    },
+    {
+      "brand": "اوشان",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "ایران خودرو",
+      "expected": 3,
+      "families": 0,
+      "links": 3,
+      "namedTrims": 0
+    },
+    {
+      "brand": "اینرودز",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "اینفینیتی",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "بایک",
+      "expected": 9,
+      "families": 1,
+      "links": 9,
+      "namedTrims": 2
+    },
+    {
+      "brand": "برلیانس",
+      "expected": 17,
+      "families": 5,
+      "links": 17,
+      "namedTrims": 14
+    },
+    {
+      "brand": "بسترن",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "بستیون",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "بورگوارد",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "بی‌ام‌و",
+      "expected": 47,
+      "families": 9,
+      "links": 47,
+      "namedTrims": 35
+    },
+    {
+      "brand": "بی‌ای‌سی",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "بی‌وای‌دی",
+      "expected": 7,
+      "families": 0,
+      "links": 7,
+      "namedTrims": 0
+    },
+    {
+      "brand": "پارس خودرو",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "پاژن",
+      "expected": 3,
+      "families": 1,
+      "links": 3,
+      "namedTrims": 2
+    },
+    {
+      "brand": "پراید",
+      "expected": 42,
+      "families": 6,
+      "links": 42,
+      "namedTrims": 38
+    },
+    {
+      "brand": "پروتون",
+      "expected": 5,
+      "families": 2,
+      "links": 5,
+      "namedTrims": 4
+    },
+    {
+      "brand": "پژو",
+      "expected": 77,
+      "families": 9,
+      "links": 77,
+      "namedTrims": 71
+    },
+    {
+      "brand": "پورشه",
+      "expected": 8,
+      "families": 2,
+      "links": 8,
+      "namedTrims": 7
+    },
+    {
+      "brand": "پیکان",
+      "expected": 6,
+      "families": 1,
+      "links": 6,
+      "namedTrims": 3
+    },
+    {
+      "brand": "تارا",
+      "expected": 5,
+      "families": 1,
+      "links": 5,
+      "namedTrims": 1
+    },
+    {
+      "brand": "تویوتا",
+      "expected": 92,
+      "families": 14,
+      "links": 92,
+      "namedTrims": 61
+    },
+    {
+      "brand": "تیبا",
+      "expected": 11,
+      "families": 2,
+      "links": 11,
+      "namedTrims": 11
+    },
+    {
+      "brand": "تیگارد",
+      "expected": 3,
+      "families": 0,
+      "links": 3,
+      "namedTrims": 0
+    },
+    {
+      "brand": "جک",
+      "expected": 9,
+      "families": 2,
+      "links": 9,
+      "namedTrims": 5
+    },
+    {
+      "brand": "جی‌ای‌سی",
+      "expected": 6,
+      "families": 0,
+      "links": 6,
+      "namedTrims": 0
+    },
+    {
+      "brand": "جیپ",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "جیلی",
+      "expected": 9,
+      "families": 3,
+      "links": 9,
+      "namedTrims": 6
+    },
+    {
+      "brand": "چانگان",
+      "expected": 10,
+      "families": 0,
+      "links": 10,
+      "namedTrims": 0
+    },
+    {
+      "brand": "چانگهه کارو",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "چری",
+      "expected": 17,
+      "families": 3,
+      "links": 17,
+      "namedTrims": 12
+    },
+    {
+      "brand": "دانگ فنگ",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "دایون",
+      "expected": 3,
+      "families": 0,
+      "links": 3,
+      "namedTrims": 0
+    },
+    {
+      "brand": "دلیکا",
+      "expected": 2,
+      "families": 1,
+      "links": 2,
+      "namedTrims": 2
+    },
+    {
+      "brand": "دنا",
+      "expected": 13,
+      "families": 2,
+      "links": 13,
+      "namedTrims": 13
+    },
+    {
+      "brand": "دوو",
+      "expected": 8,
+      "families": 3,
+      "links": 8,
+      "namedTrims": 7
+    },
+    {
+      "brand": "دی‌اس",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "دیگنیتی",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "دییر",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "رانا",
+      "expected": 5,
+      "families": 0,
+      "links": 5,
+      "namedTrims": 0
+    },
+    {
+      "brand": "راین",
+      "expected": 3,
+      "families": 1,
+      "links": 3,
+      "namedTrims": 2
+    },
+    {
+      "brand": "رنو",
+      "expected": 46,
+      "families": 13,
+      "links": 46,
+      "namedTrims": 37
+    },
+    {
+      "brand": "رووی",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "ریچ",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "ری‌را",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "ریسپکت",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "ریگان",
+      "expected": 2,
+      "families": 1,
+      "links": 2,
+      "namedTrims": 2
+    },
+    {
+      "brand": "زامیاد",
+      "expected": 16,
+      "families": 3,
+      "links": 16,
+      "namedTrims": 10
+    },
+    {
+      "brand": "زد ایکس اتو",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "زوتی",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "سانگ‌یانگ",
+      "expected": 17,
+      "families": 4,
+      "links": 17,
+      "namedTrims": 11
+    },
+    {
+      "brand": "سایپا",
+      "expected": 12,
+      "families": 1,
+      "links": 12,
+      "namedTrims": 5
+    },
+    {
+      "brand": "ساینا",
+      "expected": 13,
+      "families": 2,
+      "links": 13,
+      "namedTrims": 8
+    },
+    {
+      "brand": "سمند",
+      "expected": 16,
+      "families": 5,
+      "links": 16,
+      "namedTrims": 14
+    },
+    {
+      "brand": "سوزوکی",
+      "expected": 12,
+      "families": 2,
+      "links": 12,
+      "namedTrims": 6
+    },
+    {
+      "brand": "سیتروئن",
+      "expected": 8,
+      "families": 2,
+      "links": 8,
+      "namedTrims": 5
+    },
+    {
+      "brand": "شاهین",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "شوال",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "شورولت",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "فاو",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "فردا",
+      "expected": 6,
+      "families": 0,
+      "links": 6,
+      "namedTrims": 0
+    },
+    {
+      "brand": "فوتون",
+      "expected": 6,
+      "families": 2,
+      "links": 6,
+      "namedTrims": 5
+    },
+    {
+      "brand": "فورد",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "فولکس‌واگن",
+      "expected": 19,
+      "families": 2,
+      "links": 19,
+      "namedTrims": 4
+    },
+    {
+      "brand": "فونیکس",
+      "expected": 17,
+      "families": 1,
+      "links": 17,
+      "namedTrims": 3
+    },
+    {
+      "brand": "فیات",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "فیدلیتی",
+      "expected": 6,
+      "families": 2,
+      "links": 6,
+      "namedTrims": 4
+    },
+    {
+      "brand": "کاپرا",
+      "expected": 6,
+      "families": 1,
+      "links": 6,
+      "namedTrims": 2
+    },
+    {
+      "brand": "کوییک",
+      "expected": 13,
+      "families": 2,
+      "links": 13,
+      "namedTrims": 9
+    },
+    {
+      "brand": "کیا",
+      "expected": 47,
+      "families": 10,
+      "links": 47,
+      "namedTrims": 33
+    },
+    {
+      "brand": "کی‌ام‌سی",
+      "expected": 11,
+      "families": 0,
+      "links": 11,
+      "namedTrims": 0
+    },
+    {
+      "brand": "گریت وال",
+      "expected": 8,
+      "families": 3,
+      "links": 8,
+      "namedTrims": 5
+    },
+    {
+      "brand": "لاماری",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "لاماکو",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "لکسوس",
+      "expected": 15,
+      "families": 4,
+      "links": 15,
+      "namedTrims": 10
+    },
+    {
+      "brand": "لندرور",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "لندمارک",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "لوکانو",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "لیفان",
+      "expected": 11,
+      "families": 3,
+      "links": 11,
+      "namedTrims": 6
+    },
+    {
+      "brand": "مازراتی",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "مرسدس بنز",
+      "expected": 40,
+      "families": 5,
+      "links": 40,
+      "namedTrims": 30
+    },
+    {
+      "brand": "مزدا",
+      "expected": 28,
+      "families": 4,
+      "links": 28,
+      "namedTrims": 21
+    },
+    {
+      "brand": "مکث موتور",
+      "expected": 3,
+      "families": 1,
+      "links": 3,
+      "namedTrims": 2
+    },
+    {
+      "brand": "مکسوس",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "میتسوبیشی",
+      "expected": 22,
+      "families": 5,
+      "links": 22,
+      "namedTrims": 17
+    },
+    {
+      "brand": "مینی",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "نارون",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "نیسان",
+      "expected": 41,
+      "families": 7,
+      "links": 41,
+      "namedTrims": 17
+    },
+    {
+      "brand": "ولوو",
+      "expected": 5,
+      "families": 2,
+      "links": 5,
+      "namedTrims": 4
+    },
+    {
+      "brand": "ون ایران خودرو",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "ونوسیا",
+      "expected": 4,
+      "families": 0,
+      "links": 4,
+      "namedTrims": 0
+    },
+    {
+      "brand": "وویا",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "هافی",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "هاوال",
+      "expected": 6,
+      "families": 0,
+      "links": 6,
+      "namedTrims": 0
+    },
+    {
+      "brand": "هایما",
+      "expected": 9,
+      "families": 2,
+      "links": 9,
+      "namedTrims": 7
+    },
+    {
+      "brand": "هن تنگ",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "هوندا",
+      "expected": 12,
+      "families": 1,
+      "links": 12,
+      "namedTrims": 5
+    },
+    {
+      "brand": "هونگچی",
+      "expected": 2,
+      "families": 0,
+      "links": 2,
+      "namedTrims": 0
+    },
+    {
+      "brand": "هیوندای",
+      "expected": 54,
+      "families": 12,
+      "links": 54,
+      "namedTrims": 37
+    },
+    {
+      "brand": "یوآز",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "BISU",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Datsun",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Dodge",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Domy",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Eres",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "GAC Gonow",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Hyosow",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Isuzu",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Iveco",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Luna",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    },
+    {
+      "brand": "Qingling",
+      "expected": 1,
+      "families": 0,
+      "links": 1,
+      "namedTrims": 0
+    }
+  ],
+  "totalNamedCandidates": 2332,
+  "recordCount": 3358,
+  "rawSourceRows": 2267,
+  "expectedSourceTrims": 1125,
+  "specModelPages": 595,
+  "failedUrls": []
+}

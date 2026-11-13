@@ -614,6 +614,7 @@ namespace CarShow.BackgroundServices
             public string Name { get; set; }
             public string Price { get; set; }
             public string Year { get; set; }
+            public string Trim { get; set; }
         }
 
         public sealed class CarPriceReference
@@ -704,7 +705,8 @@ namespace CarShow.BackgroundServices
                     {
                         Name = name,
                         Price = ExtractPrice(block),
-                        Year = ExtractYear(block)
+                        Year = ExtractYear(block),
+                        Trim = TelegramCarTrimExtractor.Extract(name, block)
                     });
                 }
 

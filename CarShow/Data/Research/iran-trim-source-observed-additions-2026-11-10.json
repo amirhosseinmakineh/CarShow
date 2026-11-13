@@ -1,0 +1,2247 @@
+{
+  "researchDate": "2026-11-10",
+  "notes": "Source-observed candidates from public Nemuda brand listings. Not manufacturer-certified; generic model identities have null trim. MVM source links point to brand page when variant URL is not verified.",
+  "count": 224,
+  "records": [
+    {
+      "brand": "پژو",
+      "model": "206",
+      "trim": "تیپ ۲",
+      "source": "https://nemuda.com/car/peugeot/206-2",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206",
+      "trim": "تیپ ۵",
+      "source": "https://nemuda.com/car/peugeot/206-5",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206",
+      "trim": "تیپ ۳",
+      "source": "https://nemuda.com/car/peugeot/206-3",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206",
+      "trim": "تیپ ۶",
+      "source": "https://nemuda.com/car/peugeot/206-6",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206",
+      "trim": "تیپ ۱",
+      "source": "https://nemuda.com/car/peugeot/206-1",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206",
+      "trim": "تیپ ۴",
+      "source": "https://nemuda.com/car/peugeot/206-4",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206 SD",
+      "trim": "V8",
+      "source": "https://nemuda.com/car/peugeot/206-sd-v8",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "پانوراما دنده‌ای",
+      "source": "https://nemuda.com/car/peugeot/207i-manual-p",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "دنده‌ای TU5",
+      "source": "https://nemuda.com/car/peugeot/207i-manual-tu5",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "پانوراما اتوماتیک TU5P",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-p-tu5p",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "دنده‌ای TU3",
+      "source": "https://nemuda.com/car/peugeot/207i-manual-tu3",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "اتوماتیک TU5P",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-tu5p",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "سال",
+      "source": "https://nemuda.com/car/peugeot/pars-latest",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "LX TU5",
+      "source": "https://nemuda.com/car/peugeot/pars-lx-tu5",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "XU7",
+      "source": "https://nemuda.com/car/peugeot/pars-xu7",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "ساده",
+      "source": "https://nemuda.com/car/peugeot/pars-basic",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "دوگانه‌سوز",
+      "source": "https://nemuda.com/car/peugeot/pars-bi-fuel",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "موتور جدید XU7P",
+      "source": "https://nemuda.com/car/peugeot/pars-xu7p-normal",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "موتور جدید XU7P سفارشی",
+      "source": "https://nemuda.com/car/peugeot/pars-xu7p-elx",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "ELX",
+      "source": "https://nemuda.com/car/peugeot/pars-elx-normal",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GLX بنزینی",
+      "source": "https://nemuda.com/car/peugeot/405-glx-petrol",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GLX دوگانه‌سوز CNG",
+      "source": "https://nemuda.com/car/peugeot/405-glx-bi-fuel-cng",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "SLX موتور TU5",
+      "source": "https://nemuda.com/car/peugeot/405-slx-normal",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GLX",
+      "source": "https://nemuda.com/car/peugeot/405-glx-normal",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "روآ",
+      "trim": "دوگانه‌سوز",
+      "source": "https://nemuda.com/car/peugeot/roa-bi-fuel",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/dena/plus-1700cc-automatic",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "EF7 اتوماتیک توربو آپشنال",
+      "source": "https://nemuda.com/car/dena/plus-ef7-automatic-turbo-optional",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "معمولی",
+      "trim": "تیپ ۲",
+      "source": "https://nemuda.com/car/dena/basic-2",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "۵ دنده ساده EF7",
+      "source": "https://nemuda.com/car/dena/plus-ef7-mt",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "تیپ ۲ دنده‌ای",
+      "source": "https://nemuda.com/car/dena/plus-1700cc-manual",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "۶ دنده توربو",
+      "source": "https://nemuda.com/car/dena/plus-manual-6-turbo",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "۶ دنده معمولی",
+      "source": "https://nemuda.com/car/dena/plus-6-speed-manual",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "۶ دنده دستی EF7P",
+      "source": "https://nemuda.com/car/dena/plus-ef7p-6-speed-manual",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "۵ دنده توربو",
+      "source": "https://nemuda.com/car/dena/plus-turbo",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "معمولی",
+      "trim": "تیپ ۱",
+      "source": "https://nemuda.com/car/dena/basic-1700cc",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "تیپ ۲ توربو",
+      "source": "https://nemuda.com/car/dena/plus-1700cc-turbo",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "تیپ ۱ دنده‌ای",
+      "source": "https://nemuda.com/car/dena/plus-manual-1",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "دنا",
+      "model": "پلاس",
+      "trim": "تیپ ۱ توربو",
+      "source": "https://nemuda.com/car/dena/plus-turbo-1",
+      "sourceBrand": "https://nemuda.com/car/dena",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "اطلس",
+      "trim": "G",
+      "source": "https://nemuda.com/car/saipa/atlas-g",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "اطلس",
+      "trim": "GL",
+      "source": "https://nemuda.com/car/saipa/atlas-gl",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "اطلس",
+      "trim": "G عادی",
+      "source": "https://nemuda.com/car/saipa/atlas-g-normal",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "اطلس",
+      "trim": "S",
+      "source": "https://nemuda.com/car/saipa/atlas-s",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "اطلس",
+      "trim": "E Plus اتوماتیک",
+      "source": "https://nemuda.com/car/saipa/atlas-e-plus",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "سهند",
+      "trim": "S بنزینی",
+      "source": "https://nemuda.com/car/saipa/sahand-s",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "سهند",
+      "trim": "S بنزینی ساده",
+      "source": "https://nemuda.com/car/saipa/sahand-s-normal",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "سهند",
+      "trim": "G بنزینی",
+      "source": "https://nemuda.com/car/saipa/sahand-g",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "سهند",
+      "trim": "G بنزینی ساده",
+      "source": "https://nemuda.com/car/saipa/sahand-g-normal",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "سهند",
+      "trim": "E اتومات بنزینی تیپ ۳",
+      "source": "https://nemuda.com/car/saipa/sahand-e",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "کاروان",
+      "trim": null,
+      "source": "https://nemuda.com/car/saipa/karvan-saipa",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "model-identity-only",
+      "verification": "Page lists a vehicle identity, not a separately named trim",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "سایپا",
+      "model": "421P",
+      "trim": null,
+      "source": "https://nemuda.com/car/saipa/421p",
+      "sourceBrand": "https://nemuda.com/car/saipa",
+      "quality": "model-identity-only",
+      "verification": "Page lists a vehicle identity, not a separately named trim",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "ریو مونتاژ",
+      "trim": "دنده‌ای",
+      "source": "https://nemuda.com/car/kia/rio-ir-manual",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سراتو",
+      "trim": "اتوماتیک 2000cc",
+      "source": "https://nemuda.com/car/kia/cerato-automatic-2000cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سراتو مونتاژ",
+      "trim": "اتوماتیک آپشنال 2000cc",
+      "source": "https://nemuda.com/car/kia/cerato-ir-optional-automatic-2000cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "اپتیما",
+      "trim": "2400cc",
+      "source": "https://nemuda.com/car/kia/optima-2400cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "اسپورتیج",
+      "trim": "2400cc",
+      "source": "https://nemuda.com/car/kia/sportage-2400cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "اپتیما",
+      "trim": "GT Line 2400cc",
+      "source": "https://nemuda.com/car/kia/optima-gt-line-2400cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "ریو",
+      "trim": "سدان",
+      "source": "https://nemuda.com/car/kia/rio-sedan",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سراتو مونتاژ",
+      "trim": "اتوماتیک 2000cc",
+      "source": "https://nemuda.com/car/kia/cerato-ir-automatic-2000cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "اپتیما",
+      "trim": "2700cc",
+      "source": "https://nemuda.com/car/kia/optima-2700cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سراتو",
+      "trim": "اتوماتیک 1600cc",
+      "source": "https://nemuda.com/car/kia/cerato-automatic-1600cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "اسپورتیج",
+      "trim": "2700cc",
+      "source": "https://nemuda.com/car/kia/sportage-2700cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "اسپورتیج",
+      "trim": "2000cc توربو",
+      "source": "https://nemuda.com/car/kia/sportage-2000cc-turbo",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سورنتو",
+      "trim": "GT Line نسل سوم",
+      "source": "https://nemuda.com/car/kia/sorento-gt-line-third-generation",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سراتو کوپه",
+      "trim": "2000cc",
+      "source": "https://nemuda.com/car/kia/cerato-coupe-2000cc",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سورنتو",
+      "trim": "نسل اول",
+      "source": "https://nemuda.com/car/kia/sorento-first-generation-2002-2009",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "کادنزا",
+      "trim": null,
+      "source": "https://nemuda.com/car/kia/cadenza",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "model-identity-only",
+      "verification": "Page lists a vehicle identity, not a separately named trim",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "K5",
+      "trim": "1.5L TURBO",
+      "source": "https://nemuda.com/car/kia/k5-turbo",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "کیا",
+      "model": "سورنتو",
+      "trim": "نسل سوم",
+      "source": "https://nemuda.com/car/kia/sorento-third-generation-2016-present",
+      "sourceBrand": "https://nemuda.com/car/kia",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "سانتافه ix45",
+      "trim": "2400cc",
+      "source": "https://nemuda.com/car/hyundai/santafe-ix45-2400cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "آزرا گرنجور",
+      "trim": "3300cc",
+      "source": "https://nemuda.com/car/hyundai/azera-grandeur-3300cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "سوناتا",
+      "trim": "YF",
+      "source": "https://nemuda.com/car/hyundai/sonata-yf",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "توسان ix35",
+      "trim": "2400cc",
+      "source": "https://nemuda.com/car/hyundai/tucson-ix35-2400cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "سوناتا NF",
+      "trim": "اتوماتیک 2400cc",
+      "source": "https://nemuda.com/car/hyundai/sonata-nf-automatic-2400cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "النترا",
+      "trim": "1800cc",
+      "source": "https://nemuda.com/car/hyundai/elantra-1800cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "سانتافه ix45",
+      "trim": "2700cc",
+      "source": "https://nemuda.com/car/hyundai/santafe-ix45-2700cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "وراکروز",
+      "trim": "ix55",
+      "source": "https://nemuda.com/car/hyundai/veracruz-ix55",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "جنسیس",
+      "trim": "سدان",
+      "source": "https://nemuda.com/car/hyundai/genesis-sedan",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "توسان ix35",
+      "trim": "2000cc دو دیفرانسیل",
+      "source": "https://nemuda.com/car/hyundai/tucson-ix35-2000cc-awd",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "ورنا",
+      "trim": "دنده‌ای",
+      "source": "https://nemuda.com/car/hyundai/verna-manual",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "ولستر",
+      "trim": null,
+      "source": "https://nemuda.com/car/hyundai/veloster",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "model-identity-only",
+      "verification": "Page lists a vehicle identity, not a separately named trim",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "آزرا گرنجور",
+      "trim": "3000cc",
+      "source": "https://nemuda.com/car/hyundai/azera-grandeur-3000cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "هیوندای",
+      "model": "النترا",
+      "trim": "1500cc",
+      "source": "https://nemuda.com/car/hyundai/elantra-1500cc",
+      "sourceBrand": "https://nemuda.com/car/hyundai",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "تندر ۹۰",
+      "trim": "E2",
+      "source": "https://nemuda.com/car/renault/tondar-90-e2-petrol",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "تندر ۹۰",
+      "trim": "E1",
+      "source": "https://nemuda.com/car/renault/tondar-90-e1-petrol",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "پی کی",
+      "trim": null,
+      "source": "https://nemuda.com/car/renault/pk",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "model-identity-only",
+      "verification": "Page lists a vehicle identity, not a separately named trim",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "پارس تندر",
+      "trim": "دنده‌ای",
+      "source": "https://nemuda.com/car/renault/pars-tondar-manual",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "مگان",
+      "trim": "2000cc",
+      "source": "https://nemuda.com/car/renault/megan-2000cc",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "ساندرو",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/renault/sandero-automatic",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "ساندرو استپ‌وی",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/renault/sandero-stepway-automatic",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "تندر ۹۰",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/renault/tondar-90-automatic",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "مگان مونتاژ",
+      "trim": "2000cc",
+      "source": "https://nemuda.com/car/renault/megan-ir-2000cc",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "تلیسمان",
+      "trim": "E3",
+      "source": "https://nemuda.com/car/renault/talisman-e3",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "مگان",
+      "trim": "1600cc",
+      "source": "https://nemuda.com/car/renault/megan-1600cc",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "تندر ۹۰ پلاس",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/renault/tondar-90-plus-automatic",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "تندر ۹۰",
+      "trim": "E0",
+      "source": "https://nemuda.com/car/renault/tondar-90-e0-petrol",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "رنو",
+      "model": "کپچر",
+      "trim": null,
+      "source": "https://nemuda.com/car/renault/captur",
+      "sourceBrand": "https://nemuda.com/car/renault",
+      "quality": "model-identity-only",
+      "verification": "Page lists a vehicle identity, not a separately named trim",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لندکروزر ۴ در",
+      "trim": "4000cc",
+      "source": "https://nemuda.com/car/toyota/landcruiser-4door-4000cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "GLX",
+      "source": "https://nemuda.com/car/toyota/camry-glx",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "راوفور",
+      "trim": "۲٫۵ لیتر دو دیفرانسیل",
+      "source": "https://nemuda.com/car/toyota/rav4-normal",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "هایلوکس دو کابین بلند",
+      "trim": "دنده‌ای",
+      "source": "https://nemuda.com/car/toyota/hilux-double-cabin-high-manual",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا",
+      "trim": "هیبرید ۱۸۰۰ الیت",
+      "source": "https://nemuda.com/car/toyota/corolla-1800-hybrid",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا کراس",
+      "trim": "هیبرید ۲ لیتری",
+      "source": "https://nemuda.com/car/toyota/corolla-corolla-cross-hybrid",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "پرادو ۲ در",
+      "trim": "۴ سیلندر",
+      "source": "https://nemuda.com/car/toyota/prado-2door-4-cylinder",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "هایلوکس",
+      "trim": "تک کابین",
+      "source": "https://nemuda.com/car/toyota/hilux-single-cabin",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "پرادو ۴ در",
+      "trim": "۴ سیلندر",
+      "source": "https://nemuda.com/car/toyota/prado-4door-4-cylinder",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لوین",
+      "trim": "هیبرید ۱۸۰۰ ساده",
+      "source": "https://nemuda.com/car/toyota/levin-hybrid-1800cc-normal",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "هایلوکس دو کابین",
+      "trim": "دنده‌ای",
+      "source": "https://nemuda.com/car/toyota/hilux-double-cabin-manual",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "GL",
+      "source": "https://nemuda.com/car/toyota/camry-gl",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "پرادو ۴ در",
+      "trim": "۶ سیلندر آفرود",
+      "source": "https://nemuda.com/car/toyota/prado-4door-6-cylinder-off-road",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا",
+      "trim": "اتوماتیک GLI 1800cc",
+      "source": "https://nemuda.com/car/toyota/corolla-gli-automatic-1800cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لوین",
+      "trim": "توربو 1200cc",
+      "source": "https://nemuda.com/car/toyota/levin-turbo-1200cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "فرانت‌لندر",
+      "trim": "هیبرید ۲ لیتر",
+      "source": "https://nemuda.com/car/toyota/frontlander-hybrid",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "آریون",
+      "trim": "گرند",
+      "source": "https://nemuda.com/car/toyota/aurion-grand",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "گرند ۴ سیلندر",
+      "source": "https://nemuda.com/car/toyota/camry-grand-4-cylinder",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "هایلوکس دو کابین بلند",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/toyota/hilux-double-cabin-high-automatic",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "پرادو ۴ در",
+      "trim": "۶ سیلندر",
+      "source": "https://nemuda.com/car/toyota/prado-4door-6-cylinder-normal",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لندکروزر ۲ در",
+      "trim": "2F",
+      "source": "https://nemuda.com/car/toyota/landcruiser-2door-2f",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لوین",
+      "trim": "هیبرید ۱۸۰۰ Sport Edition",
+      "source": "https://nemuda.com/car/toyota/levin-hybrid-1800cc-sport-edition",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "یاریس صندوق‌دار",
+      "trim": "1300cc",
+      "source": "https://nemuda.com/car/toyota/yaris-sedan-1300cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "پرادو ۴ در",
+      "trim": "۶ سیلندر آنرود",
+      "source": "https://nemuda.com/car/toyota/prado-4door-6-cylinder-on-road",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "C-HR",
+      "trim": "هیبرید",
+      "source": "https://nemuda.com/car/toyota/c-hr-hybrid",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "گرند ۶ سیلندر",
+      "source": "https://nemuda.com/car/toyota/camry-grand-6-cylinder",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "SE",
+      "source": "https://nemuda.com/car/toyota/camry-se",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "یاریس صندوق‌دار",
+      "trim": "1500cc",
+      "source": "https://nemuda.com/car/toyota/yaris-sedan-1500cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا",
+      "trim": "توربو 1200cc",
+      "source": "https://nemuda.com/car/toyota/corolla-1200",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا",
+      "trim": "SE 1600cc",
+      "source": "https://nemuda.com/car/toyota/corolla-se-1600cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "هایلوکس دو کابین",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/toyota/hilux-double-cabin-automatic",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا",
+      "trim": "GLI 2000cc",
+      "source": "https://nemuda.com/car/toyota/corolla-gli-2000cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "پریوس",
+      "trim": "C",
+      "source": "https://nemuda.com/car/toyota/prius-c",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لندکروزر ۴ در",
+      "trim": "۴ لیتر GXR",
+      "source": "https://nemuda.com/car/toyota/landcruiser-4door-4-0-gxr",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "راوفور",
+      "trim": "۲ لیتر تک دیفرانسیل",
+      "source": "https://nemuda.com/car/toyota/rav4-2-0l-fwd",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "Wildlander",
+      "trim": "Luxury Plus 2.0L 4WD",
+      "source": "https://nemuda.com/car/toyota/wildlander-luxury-plus",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "لندکروزر ۴ در",
+      "trim": "۶ سیلندر ۳٫۵ توربو GXR",
+      "source": "https://nemuda.com/car/toyota/landcruiser-4door-6-cylinder-3-5l-turbo-gxr",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا",
+      "trim": "اتوماتیک XLI 1800cc",
+      "source": "https://nemuda.com/car/toyota/corolla-xli-automatic-1800cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "Hybrid Premium Edition 2.5L",
+      "source": "https://nemuda.com/car/toyota/camry-hybrid-premium-edition-2-5l",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "راوفور",
+      "trim": "هیبرید دو دیفرانسیل",
+      "source": "https://nemuda.com/car/toyota/rav4-hybrid-awd",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "پرادو ۲ در",
+      "trim": "۶ سیلندر",
+      "source": "https://nemuda.com/car/toyota/prado-2door-6-cylinder",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "راوفور",
+      "trim": "۲ لیتر دو دیفرانسیل",
+      "source": "https://nemuda.com/car/toyota/rav4-2-0l-awd",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "هایلوکس دو کابین",
+      "trim": "GR Sport",
+      "source": "https://nemuda.com/car/toyota/hilux-double-cabin-gr-sport",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کرولا",
+      "trim": "XLI 2000cc",
+      "source": "https://nemuda.com/car/toyota/corolla-xli-2000cc",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "Hybrid 2.5L Lumiere",
+      "source": "https://nemuda.com/car/toyota/camry-hybrid-2-5l-lumiere",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "GT86",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/toyota/gt86-automatic",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "آریون",
+      "trim": "اسپرت",
+      "source": "https://nemuda.com/car/toyota/aurion-sport",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "Hybrid 2.5L EPlus",
+      "source": "https://nemuda.com/car/toyota/camry-hybrid-2-5l-eplus",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "Hybrid 2.5L Limited",
+      "source": "https://nemuda.com/car/toyota/camry-hybrid-2-5l-limited",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "XLE هیبرید ۲٫۵",
+      "source": "https://nemuda.com/car/toyota/camry-hybrid-xle",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "راوفور",
+      "trim": "Adventure Plus",
+      "source": "https://nemuda.com/car/toyota/rav4-adventure-plus",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "bZ4x",
+      "trim": "615 MAX",
+      "source": "https://nemuda.com/car/toyota/bz4x-normal",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "bZ4x",
+      "trim": "Pro",
+      "source": "https://nemuda.com/car/toyota/bz4x-turbo",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "تویوتا",
+      "model": "کمری",
+      "trim": "LE هیبرید ۲٫۵",
+      "source": "https://nemuda.com/car/toyota/camry-hybrid-le",
+      "sourceBrand": "https://nemuda.com/car/toyota",
+      "quality": "market-observed",
+      "verification": "Source-index name; manufacturer-level validation pending",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33",
+      "trim": "دنده‌ای",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33",
+      "trim": "Cross automatic",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33",
+      "trim": "Cross manual",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "315 هاچبک",
+      "trim": "ساده",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "315 هاچبک",
+      "trim": "اسپرت لاکچری",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "315 هاچبک",
+      "trim": "اسپرت اکسلنت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "110",
+      "trim": "۳ سیلندر",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "110",
+      "trim": "دنده‌ای ۴ سیلندر",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "110",
+      "trim": "اتوماتیک ۴ سیلندر",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22 Pro",
+      "trim": "MT",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22 Pro",
+      "trim": "IE",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22 Pro",
+      "trim": "اکسلنت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "دنده‌ای اسپرت اکسلنت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "اتوماتیک اسپرت اکسلنت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "دنده‌ای اسپرت لاکچری",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "اتوماتیک اسپرت لاکچری",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "اتوماتیک اسپرت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "دنده‌ای ساده",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title only; do not use unverified per-trim URLs",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "SLX موتور ۱۸۰۰",
+      "source": "https://nemuda.com/car/peugeot/405-slx-1800",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206 SD",
+      "trim": "V20",
+      "source": "https://nemuda.com/car/peugeot/206-sd-v20",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206 SD",
+      "trim": "V9",
+      "source": "https://nemuda.com/car/peugeot/206-sd-v9",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206 SD",
+      "trim": "V1",
+      "source": "https://nemuda.com/car/peugeot/206-sd-v1",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206 SD",
+      "trim": "V2",
+      "source": "https://nemuda.com/car/peugeot/206-sd-v2",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206 SD",
+      "trim": "V19",
+      "source": "https://nemuda.com/car/peugeot/206-sd-v19",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206 SD",
+      "trim": "V10",
+      "source": "https://nemuda.com/car/peugeot/206-sd-v10",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "206",
+      "trim": "تیپ ۳ پانوراما",
+      "source": "https://nemuda.com/car/peugeot/206-3p",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "اتوماتیک TU5",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-tu5",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "اتوماتیک MC",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-mc",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "پانوراما اتوماتیک TU5",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-p-tu5",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "پانوراما اتوماتیک TU5 نسخه دیگر",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-p-tu5-normal",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-normal",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i",
+      "trim": "پانوراما اتوماتیک",
+      "source": "https://nemuda.com/car/peugeot/207i-automatic-p-normal",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "207i SD",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/peugeot/207i-sd-automatic",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "بنزینی GLX - TU5",
+      "source": "https://nemuda.com/car/peugeot/405-glx-tu5-petrol",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "دوگانه‌سوز GLX - TU5",
+      "source": "https://nemuda.com/car/peugeot/405-glx-tu5-bi-fuel",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GL بنزینی",
+      "source": "https://nemuda.com/car/peugeot/405-gl-petrol",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GL دوگانه‌سوز CNG",
+      "source": "https://nemuda.com/car/peugeot/405-gl-bi-fuel-cng",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GLi بنزینی",
+      "source": "https://nemuda.com/car/peugeot/405-gli-petrol",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GLi دوگانه‌سوز CNG",
+      "source": "https://nemuda.com/car/peugeot/405-gli-bi-fuel-cng",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "GLX دوگانه‌سوز LPG",
+      "source": "https://nemuda.com/car/peugeot/405-glx-bi-fuel-lpg",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "405",
+      "trim": "SLX دوگانه‌سوز",
+      "source": "https://nemuda.com/car/peugeot/405-slx-bi-fuel",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "ELX XUM",
+      "source": "https://nemuda.com/car/peugeot/pars-elx-xum",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "ELX سفارشی TU5",
+      "source": "https://nemuda.com/car/peugeot/pars-elx-tu5",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "پارس",
+      "trim": "اتوماتیک TU5",
+      "source": "https://nemuda.com/car/peugeot/pars-automatic-tu5",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "روآ",
+      "trim": "بنزینی",
+      "source": "https://nemuda.com/car/peugeot/roa-petrol",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "روآ سال",
+      "trim": "بنزینی",
+      "source": "https://nemuda.com/car/peugeot/roa-sal-petrol",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "روآ سال",
+      "trim": "دوگانه‌سوز",
+      "source": "https://nemuda.com/car/peugeot/roa-sal-bi-fuel",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "آر دی",
+      "trim": "بنزینی",
+      "source": "https://nemuda.com/car/peugeot/rd-petrol",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "آر دی",
+      "trim": "دوگانه‌سوز CNG",
+      "source": "https://nemuda.com/car/peugeot/rd-bi-fuel-cng",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "پژو",
+      "model": "آر دی",
+      "trim": "دوگانه‌سوز LPG",
+      "source": "https://nemuda.com/car/peugeot/rd-bi-fuel-lpg",
+      "sourceBrand": "https://nemuda.com/car/peugeot",
+      "quality": "market-observed",
+      "verification": "Public index names exact entry",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "اتوماتیک لاکچری",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "اتوماتیک ساده",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X22",
+      "trim": "دنده‌ای لاکچری",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33 S",
+      "trim": "اسپرت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33 S",
+      "trim": "نیوفیس",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X33 S",
+      "trim": "ساده",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X55 Pro",
+      "trim": "IE",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X55 Pro",
+      "trim": "IE اسپرت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X55 Pro",
+      "trim": "اکسلنت اسپرت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X55 Pro",
+      "trim": "اکسلنت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X55 Pro",
+      "trim": "Li",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "550",
+      "trim": "اتوماتیک",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "550",
+      "trim": "دنده‌ای",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "110S",
+      "trim": "لاکچری",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "110S",
+      "trim": "کامفورت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "110S",
+      "trim": "اسپرت لاکچری",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "315 صندوق‌دار",
+      "trim": "اسپرت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "315 صندوق‌دار",
+      "trim": "ساده",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "315 هاچبک",
+      "trim": "پلاس",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X55",
+      "trim": "اکسلنت اسپرت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X55",
+      "trim": "اکسلنت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "X77",
+      "trim": "۱٫۵ لیتر توربو الیت",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    },
+    {
+      "brand": "ام وی ام",
+      "model": "M5 Pro",
+      "trim": "۱٫۵ لیتر توربو",
+      "source": "https://nemuda.com/car/mvm",
+      "sourceBrand": "https://nemuda.com/car/mvm",
+      "quality": "market-observed",
+      "verification": "Brand index title; per-variant link not individually verified",
+      "retrievedAt": "2026-11-10"
+    }
+  ]
+}
