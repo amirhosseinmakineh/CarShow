@@ -51,6 +51,7 @@ builder.Services.AddScoped(typeof(IBaseRepository<,>), typeof(BaseRepository<,>)
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
 builder.Services.AddScoped<ICarSErvicce, CarService>();
+builder.Services.AddScoped<CatalogImportService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITipService, TipService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
