@@ -112,10 +112,10 @@ namespace CarShow.ApplicationService.Services
             var query = carRepository.GetAll();
 
             if (minPrice.HasValue)
-                query = query.Where(c => c.Price >= minPrice.Value);
+                query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
 
             if (maxPrice.HasValue)
-                query = query.Where(c => c.Price <= maxPrice.Value);
+                query = query.Where(c => c.MarketPrice <= (decimal)maxPrice.Value);
 
             if (!string.IsNullOrEmpty(company))
                 query = query.Where(c => c.Company.Name == company);
@@ -132,10 +132,10 @@ namespace CarShow.ApplicationService.Services
                     Id = c.Id,
                     CategoryName = c.Category.Name,
                     Name = c.Name,
-                    StartDate = c.StartDate,
+                    StartDate = c.YearCalendar ?? string.Empty,
                     Description = c.Description,
                     ImageName = c.ImageName,
-                    Price = c.Price,
+                    Price = (float)(c.MarketPrice ?? 0m),
                     carModeName = c.CarModel.Name,
                     CompanyName = c.Company.Name,
                     tipName = c.Tip.Name
@@ -259,9 +259,9 @@ namespace CarShow.ApplicationService.Services
                     Description = x.Description,
                     ImageName = x.ImageName,
                     Name = x.Name,
-                    Price = x.Price,
+                    Price = (float)(x.MarketPrice ?? 0m),
                     tipName = x.Tip.Name,
-                    StartDate = x.StartDate,
+                    StartDate = x.YearCalendar ?? string.Empty,
                 }).FirstOrDefaultAsync();
             return Result<CarDto>.Success(result);
         }
@@ -361,8 +361,11 @@ namespace CarShow.ApplicationService.Services
                         CarModelId = modelId,
                         TipId = tipId,
                         CategoryId = category.Id,
-                        StartDate = string.Empty,
-                        Price = 0,
+                        YearCalendar = null,
+                        MarketPrice = null,
+                        FactoryPrice = null,
+                        LastUpdated = DateTime.UtcNow,
+                        SourceUrl = entry.SourceUrl,
                         Description = string.Empty,
                         ImageName = string.Empty
                     });
