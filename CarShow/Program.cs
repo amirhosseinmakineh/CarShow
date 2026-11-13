@@ -18,6 +18,9 @@ using System.Text;
 using Microsoft.OpenApi;
 using CarShow.Swagger;
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHostedService<CarShow.Services.ClinicLicenseRuntime>();
+builder.Services.AddHttpClient("ClinicLicensing", client => client.Timeout = TimeSpan.FromSeconds(20))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false });
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
@@ -82,6 +85,7 @@ builder.Services
 // ==============================
 
 var app = builder.Build();
+app.UseMiddleware<CarShow.Services.ClinicLicenseGateway>();
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
 app.UseCors("Frontend");
