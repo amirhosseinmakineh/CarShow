@@ -17,6 +17,7 @@ namespace CarShow.Infrastracture.Context
             modelBuilder.Entity<Car>(entity =>
             {
                 entity.Property(x => x.FactoryPrice).HasColumnType("decimal(18,2)").ValueGeneratedNever();
+                entity.Property(x => x.MarketPrice).HasColumnType("decimal(18,2)").ValueGeneratedNever();
                 entity.Property(x => x.PriceSampleCount).ValueGeneratedNever();
                 entity.Property(x => x.Slug).IsRequired();
                 entity.Property(x => x.YearCalendar).IsRequired();
