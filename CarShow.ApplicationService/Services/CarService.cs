@@ -366,6 +366,7 @@ namespace CarShow.ApplicationService.Services
                         FactoryPrice = null,
                         LastUpdated = DateTime.UtcNow,
                         SourceUrl = entry.SourceUrl,
+                        Slug = $"catalog-{companyId}-{modelId}-{tipId}",
                         Description = string.Empty,
                         ImageName = string.Empty
                     });
