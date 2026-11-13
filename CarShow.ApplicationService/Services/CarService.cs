@@ -240,13 +240,29 @@ namespace CarShow.ApplicationService.Services
             return Result<object>.Success(car, "ویرایش اتوموبیل مورد نظر با موفقیت انجام شد");
         }
 
+        private static string ReadReferenceYear(string description)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(description);
+                if (document.RootElement.TryGetProperty("Type", out var type) &&
+                    type.GetString() == "TelegramPriceReference" &&
+                    document.RootElement.TryGetProperty("Year", out var year))
+                    return year.GetString() ?? string.Empty;
+            }
+            catch (JsonException) { }
+            return string.Empty;
+        }
+
         public async Task<Result<CarDto>> GetCarDetail(long carId)
         {
             var car = await carRepository.GetAll()
                 .Include(x => x.Tip)
                 .Include(x => x.Company)
                 .Include(x => x.CarModel)
-                .FirstOrDefaultAsync(x => x.Id == carId);
+                .FirstOrDefaultAsync(x => x.Id == carId && x.CompanyId != null &&
+                    x.CarModelId != null && x.TipId != null && x.MarketPrice > 0 &&
+                    x.Description.Contains("TelegramPriceReference"));
 
             if (car is null)
                 return Result<CarDto>.Failure("اتومبیلی یافت نشد");
@@ -279,7 +295,8 @@ namespace CarShow.ApplicationService.Services
                 FactoryPrice = car.FactoryPrice,
                 SourceUrl = car.SourceUrl,
                 LastUpdated = car.LastUpdated,
-                tipName = car.Tip?.Name ?? string.Empty
+                tipName = car.Tip?.Name ?? string.Empty,
+                StartDate = ReadReferenceYear(car.Description)
             };
 
             return Result<CarDto>.Success(result);
