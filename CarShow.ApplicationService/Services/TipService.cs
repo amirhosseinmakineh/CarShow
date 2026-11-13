@@ -16,12 +16,12 @@ public TipService(IBaseRepository<long, Tip> tipRepository)
 
         public async Task<Result<object>> CreateTip(CreateTipDto dto)
         {
-            var tip = tipRepository.GetAll().FirstOrDefault(x=> x.TipName == dto.Name);
+            var tip = tipRepository.GetAll().FirstOrDefault(x=> x.Name == dto.Name);
             if (tip is  null)
             {
                 tip = new Tip()
                 {
-                    TipName = dto.Name
+                    Name = dto.Name
                 };
                 await tipRepository.Create(tip);
                 await tipRepository.SaveChanges();
@@ -49,7 +49,7 @@ public TipService(IBaseRepository<long, Tip> tipRepository)
             var result =  tipRepository.GetAll().Select(x => new TipDto()
             {
                 Id = x.Id,
-                Name = x.TipName
+                Name = x.Name
             }).ToList();
             return Result<List<TipDto>>.Success(result);
         }
@@ -60,7 +60,7 @@ public TipService(IBaseRepository<long, Tip> tipRepository)
             if (tip is not null)
             {
                 tip.Id = dto.Id;
-                tip.TipName = dto.Name;
+                tip.Name = dto.Name;
                 await tipRepository.Update(tip);
                 await tipRepository.SaveChanges();
                 return Result<object>.Success(tip, "ویرایش تیپ با موفقیت انجام شد");

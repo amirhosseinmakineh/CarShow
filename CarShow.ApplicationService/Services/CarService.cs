@@ -138,7 +138,7 @@ namespace CarShow.ApplicationService.Services
                     Price = c.Price,
                     carModeName = c.CarModel.Name,
                     CompanyName = c.Company.Name,
-                    tipName = c.Tip.TipName
+                    tipName = c.Tip.Name
                 })
                 .ToListAsync();
 
@@ -161,7 +161,7 @@ namespace CarShow.ApplicationService.Services
                 .ToListAsync();
 
             var tips = tipRepository.GetAll()
-                .Select(x => new TipDto { Name = x.TipName })
+                .Select(x => new TipDto { Name = x.Name })
                 .ToListAsync();
 
             await Task.WhenAll(categories, companies, models, tips);
@@ -195,7 +195,7 @@ namespace CarShow.ApplicationService.Services
                     .ToListAsync();
 
                 var tips = tipRepository.GetAll()
-                    .Select(x => new TipDto { Name = x.TipName })
+                    .Select(x => new TipDto { Name = x.Name })
                     .ToListAsync();
                 await Task.WhenAll(categories, companies, models, tips);
                 var info = new GetCarForUpdateDto()
@@ -260,7 +260,7 @@ namespace CarShow.ApplicationService.Services
                     ImageName = x.ImageName,
                     Name = x.Name,
                     Price = x.Price,
-                    tipName = x.Tip.TipName,
+                    tipName = x.Tip.Name,
                     StartDate = x.StartDate,
                 }).FirstOrDefaultAsync();
             return Result<CarDto>.Success(result);
@@ -288,7 +288,7 @@ namespace CarShow.ApplicationService.Services
             var models = (await carModelRepository.GetAll().ToListAsync(cancellationToken))
                 .GroupBy(x => Key(x.Name)).ToDictionary(x => x.Key, x => x.First());
             var tips = (await tipRepository.GetAll().ToListAsync(cancellationToken))
-                .GroupBy(x => Key(x.TipName)).ToDictionary(x => x.Key, x => x.First());
+                .GroupBy(x => Key(x.Name)).ToDictionary(x => x.Key, x => x.First());
 
             var newCompanies = 0;
             var newModels = 0;
@@ -318,7 +318,7 @@ namespace CarShow.ApplicationService.Services
                     }
                     if (!tips.ContainsKey(Key(entry.Tip)))
                     {
-                        var tip = new Tip { TipName = entry.Tip };
+                        var tip = new Tip { Name = entry.Tip };
                         tips.Add(Key(entry.Tip), tip);
                         await tipRepository.Create(tip);
                         newTips++;

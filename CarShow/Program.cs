@@ -92,7 +92,7 @@ app.MapControllers();
 // Set CatalogSeed__Enabled=true and place cars-catalog.html in Data/Seed.
 if (app.Configuration.GetValue<bool>("CatalogSeed:Enabled"))
 {
-    var catalogPath = Path.Combine(app.Environment.ContentRootPath, "Data", "Seed", "cars-catalog.html");
+    var catalogPath = Path.Combine(app.Environment.ContentRootPath, "Data", "Seed", "CarShow_Final_Trimmed_Cars_Catalog_1405(1).html");
     if (!File.Exists(catalogPath))
         throw new FileNotFoundException("Catalog seed file was not found.", catalogPath);
 
