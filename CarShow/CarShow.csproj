@@ -29,4 +29,7 @@
     <Folder Include="wwwroot\images\cars\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Data/Seed/*.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
