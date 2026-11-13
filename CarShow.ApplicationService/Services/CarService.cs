@@ -272,8 +272,8 @@ namespace CarShow.ApplicationService.Services
                 detectEncodingFromByteOrderMarks: true, leaveOpen: true);
             var entries = CatalogHtmlParser.Parse(await reader.ReadToEndAsync(cancellationToken));
 
-            // Candidate rows do not establish that the company actually offered the trim.
-            var accepted = entries.Where(x => x.Verified &&
+            // Store all catalog entries; unverified source associations are not independently validated.
+            var accepted = entries.Where(x =>
                 !string.IsNullOrWhiteSpace(x.Company) &&
                 !string.IsNullOrWhiteSpace(x.Model) &&
                 !string.IsNullOrWhiteSpace(x.Tip)).ToList();
