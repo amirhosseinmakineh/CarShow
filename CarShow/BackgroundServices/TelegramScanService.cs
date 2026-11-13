@@ -161,19 +161,18 @@ namespace CarShow.BackgroundServices
                     ChannelErrors = channelErrors
                 };
 
-            // 2) Parse each message. A message may contain multiple cars.
-            var parsedCars = messagesByChannel
-                .Where(channel => !channelErrors.ContainsKey(channel.Key))
-                .SelectMany(channel => channel.Value)
-                .SelectMany(TelegramCarParser.Parse)
-                .ToList();
-
-            // Resolve the model and trim against existing catalog rows before comparing prices.
-            // Unmatched or ambiguous advertisements cannot contribute to a reference.
+            // Read the catalog before parsing; the model vocabulary is database-driven.
             var catalog = await _db.Cars.AsNoTracking()
                 .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
                 .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
                 .ToListAsync(cancellationToken);
+            var modelNames = catalog.Select(x => x.Model).Distinct().ToArray();
+            var parsedCars = messagesByChannel
+                .Where(channel => !channelErrors.ContainsKey(channel.Key))
+                .SelectMany(channel => channel.Value)
+                .SelectMany(message => TelegramCarParser.ParseCatalog(message, modelNames))
+                .ToList();
+
             var matchedCars = parsedCars.Select(car =>
             {
                 var matches = catalog.Where(item =>
@@ -733,6 +732,42 @@ namespace CarShow.BackgroundServices
                 @"خاکستری|طوسی|نقره\s*ای|ذغالی|کرم|قرمز|آبی|سبز|تهران|" +
                 @"اصفهان|قم|پلاک|سند|آماده|گارانتی|خودرو)(?![\p{L}\p{N}])",
                 RegexOptions.Compiled);
+
+            public static List<ParsedCar> ParseCatalog(string message, IReadOnlyCollection<string> models)
+            {
+                var result = new List<ParsedCar>();
+                if (string.IsNullOrWhiteSpace(message) || models.Count == 0) return result;
+                var lines = message.Replace("\r", "").Split('\n');
+                var starts = Enumerable.Range(0, lines.Length)
+                    .Where(index => models.Any(model => CatalogContains(CleanLine(lines[index]), model)))
+                    .ToList();
+                for (var i = 0; i < starts.Count; i++)
+                {
+                    var start = starts[i];
+                    var end = i + 1 < starts.Count ? starts[i + 1] : lines.Length;
+                    var block = string.Join("\n", lines.Skip(start).Take(end - start));
+                    result.Add(new ParsedCar
+                    {
+                        Name = ExtractName(CleanLine(lines[start])),
+                        Price = ExtractPrice(block),
+                        Year = ExtractYearCatalog(block, lines[start])
+                    });
+                }
+                return result;
+            }
+
+            private static string ExtractYearCatalog(string block, string header)
+            {
+                // Existing year extraction uses the vehicle header for short years.
+                // The catalog parser also accepts model names outside the legacy prefix list.
+                var years = FullYearRegex.Matches(NormalizeText(block))
+                    .Cast<Match>().Select(x => x.Value).Distinct().ToList();
+                if (years.Count == 1) return years[0];
+                if (years.Count > 1) return null;
+                var shortYears = ShortYearRegex.Matches(NormalizeText(header))
+                    .Cast<Match>().Select(x => "14" + x.Groups["year"].Value.Substring(1)).Distinct().ToList();
+                return shortYears.Count == 1 ? shortYears[0] : null;
+            }
 
             public static List<ParsedCar> Parse(string message)
             {
