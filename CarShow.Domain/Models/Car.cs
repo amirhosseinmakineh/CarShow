@@ -1,21 +1,47 @@
-﻿namespace CarShow.Domain.Models
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace CarShow.Domain.Models
 {
-    public class Car : BaseEntity<long> 
+    public class Car : BaseEntity<long>
     {
         public long CategoryId { get; set; }
         public long TipId { get; set; }
         public long CarModelId { get; set; }
         public long CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string StartDate { get; set; } = string.Empty;
-        public float  Price { get; set; }
+        public string? SourceUrl { get; set; }
         public string ImageName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        #region Relations
-        public Category Category { get; set; }
-        public Tip Tip { get; set; }
-        public Model CarModel { get; set; }
-        public Company Company { get; set; }
-        #endregion
+        public decimal? FactoryPrice { get; set; }
+        public decimal? MarketPrice { get; set; }
+        public DateTime? LastUpdated { get; set; }
+        public string? Slug { get; set; }
+        public bool IsUsed { get; set; }
+        public DateTime? MarketPriceDay { get; set; }
+        public DateTime? PriceCalculatedAt { get; set; }
+        public int? PriceSampleCount { get; set; }
+        public int? Year { get; set; }
+        public string? YearCalendar { get; set; }
+        public string? TelegramIdentityKey { get; set; }
+
+        // Legacy DTO compatibility: these properties are not SQL columns.
+        [NotMapped]
+        public float Price
+        {
+            get => (float)(MarketPrice ?? 0m);
+            set => MarketPrice = (decimal)value;
+        }
+
+        [NotMapped]
+        public string StartDate
+        {
+            get => YearCalendar ?? string.Empty;
+            set => YearCalendar = value;
+        }
+
+        public Category Category { get; set; } = null!;
+        public Tip Tip { get; set; } = null!;
+        public Model CarModel { get; set; } = null!;
+        public Company Company { get; set; } = null!;
     }
 }
