@@ -366,7 +366,7 @@ namespace CarShow.ApplicationService.Services
                         CategoryId = category.Id,
                         YearCalendar = string.Empty,
                         PriceSampleCount = 0,
-                        MarketPrice = null,
+                        MarketPrice = 0m,
                         FactoryPrice = 0m,
                         LastUpdated = DateTime.UtcNow,
                         SourceUrl = entry.SourceUrl,
