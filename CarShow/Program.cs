@@ -87,4 +87,23 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+
+// One-time catalog seeding; disabled unless explicitly enabled.
+// Set CatalogSeed__Enabled=true and place cars-catalog.html in Data/Seed.
+if (app.Configuration.GetValue<bool>("CatalogSeed:Enabled"))
+{
+    var catalogPath = Path.Combine(app.Environment.ContentRootPath, "Data", "Seed", "cars-catalog.html");
+    if (!File.Exists(catalogPath))
+        throw new FileNotFoundException("Catalog seed file was not found.", catalogPath);
+
+    using var scope = app.Services.CreateScope();
+    var carService = scope.ServiceProvider.GetRequiredService<ICarSErvicce>();
+    await using var catalogStream = File.OpenRead(catalogPath);
+    var result = await carService.ImportCatalogAsync(catalogStream);
+    app.Logger.LogInformation(
+        "Catalog seed: total={Total}, inserted={Inserted}, existing={Existing}, rejected={Rejected}, models={Models}, companies={Companies}, tips={Tips}",
+        result.TotalRows, result.ImportedCars, result.ExistingCars, result.RejectedRows,
+        result.CreatedModels, result.CreatedCompanies, result.CreatedTips);
+}
+
 app.Run();
