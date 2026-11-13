@@ -288,7 +288,7 @@ namespace CarShow.ApplicationService.Services
             var models = (await carModelRepository.GetAll().ToListAsync(cancellationToken))
                 .GroupBy(x => Key(x.Name)).ToDictionary(x => x.Key, x => x.First());
             var tips = (await tipRepository.GetAll().ToListAsync(cancellationToken))
-                .GroupBy(x => Key(x.Name)).ToDictionary(x => x.Key, x => x.First());
+                .GroupBy(x => Key(x.TipName)).ToDictionary(x => x.Key, x => x.First());
 
             var newCompanies = 0;
             var newModels = 0;
@@ -311,14 +311,14 @@ namespace CarShow.ApplicationService.Services
                     }
                     if (!models.ContainsKey(Key(entry.Model)))
                     {
-                        var model = new CarModel { Name = entry.Model };
+                        var model = new Model { Name = entry.Model };
                         models.Add(Key(entry.Model), model);
                         await carModelRepository.Create(model);
                         newModels++;
                     }
                     if (!tips.ContainsKey(Key(entry.Tip)))
                     {
-                        var tip = new Tip { Name = entry.Tip };
+                        var tip = new Tip { TipName = entry.Tip };
                         tips.Add(Key(entry.Tip), tip);
                         await tipRepository.Create(tip);
                         newTips++;
@@ -336,10 +336,10 @@ namespace CarShow.ApplicationService.Services
                 await unitOfWork.SaveChangesAsync();
 
                 var known = (await carRepository.GetAll()
-                    .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
+                    .Where(x => x.CompanyId > 0 && x.CarModelId > 0 && x.TipId > 0)
                     .Select(x => new { x.CompanyId, x.CarModelId, x.TipId })
                     .ToListAsync(cancellationToken))
-                    .Select(x => (x.CompanyId!.Value, x.CarModelId!.Value, x.TipId!.Value))
+                    .Select(x => (x.CompanyId, x.CarModelId, x.TipId))
                     .ToHashSet();
 
                 foreach (var entry in accepted)
