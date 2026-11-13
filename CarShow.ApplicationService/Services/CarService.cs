@@ -1,3 +1,4 @@
+using CarShow.ApplicationService.Import;
 ﻿using CarShow.ApplicationService.Contract.Dtos.CarDto;
 using CarShow.ApplicationService.Contract.Dtos.CategoryDto;
 using CarShow.ApplicationService.Contract.Dtos.CompanyDto;
@@ -13,6 +14,7 @@ namespace CarShow.ApplicationService.Services
     public class CarService : ICarSErvicce
     {
         private readonly IBaseRepository<long, Car> carRepository;
+        private readonly IUnitOfWork unitOfWork;
         private readonly IBaseRepository<long, Tip> tipRepository;
         private readonly IBaseRepository<long, Model> carModelRepository;
         private readonly IBaseRepository<long, Category> categoryRepository;
@@ -23,13 +25,15 @@ namespace CarShow.ApplicationService.Services
             IBaseRepository<long, Tip> tipRepository,
             IBaseRepository<long, Model> carModelRepository, 
             IBaseRepository<long, Category> categoryRepository, 
-            IBaseRepository<long, Company> companyRepository)
+            IBaseRepository<long, Company> companyRepository,
+            IUnitOfWork unitOfWork)
         {
             this.carRepository = carRepository;
             this.tipRepository = tipRepository;
             this.carModelRepository = carModelRepository;
             this.categoryRepository = categoryRepository;
             this.companyRepository = companyRepository;
+            this.unitOfWork = unitOfWork;
         }
 
         public async Task<Result<object>> CreateCar(CreateCarDto dto)
@@ -261,5 +265,111 @@ namespace CarShow.ApplicationService.Services
                 }).FirstOrDefaultAsync();
             return Result<CarDto>.Success(result);
         }
+        public async Task<CatalogImportResultDto> ImportCatalogAsync(
+            Stream catalogStream, CancellationToken cancellationToken = default)
+        {
+            using var reader = new StreamReader(catalogStream, System.Text.Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            var entries = CatalogHtmlParser.Parse(await reader.ReadToEndAsync(cancellationToken));
+
+            // Candidate rows do not establish that the company actually offered the trim.
+            var accepted = entries.Where(x => x.Verified &&
+                !string.IsNullOrWhiteSpace(x.Company) &&
+                !string.IsNullOrWhiteSpace(x.Model) &&
+                !string.IsNullOrWhiteSpace(x.Tip)).ToList();
+
+            static string Key(string value) => string.Join(" ",
+                value.Replace('ي', 'ی').Replace('ك', 'ک')
+                    .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                .ToUpperInvariant();
+
+            var companies = (await companyRepository.GetAll().ToListAsync(cancellationToken))
+                .GroupBy(x => Key(x.Name)).ToDictionary(x => x.Key, x => x.First());
+            var models = (await carModelRepository.GetAll().ToListAsync(cancellationToken))
+                .GroupBy(x => Key(x.Name)).ToDictionary(x => x.Key, x => x.First());
+            var tips = (await tipRepository.GetAll().ToListAsync(cancellationToken))
+                .GroupBy(x => Key(x.Name)).ToDictionary(x => x.Key, x => x.First());
+
+            var newCompanies = 0;
+            var newModels = 0;
+            var newTips = 0;
+            var imported = 0;
+            var existing = 0;
+
+            await unitOfWork.BeginTransactionAsync();
+            try
+            {
+                foreach (var entry in accepted)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!companies.ContainsKey(Key(entry.Company)))
+                    {
+                        var company = new Company { Name = entry.Company };
+                        companies.Add(Key(entry.Company), company);
+                        await companyRepository.Create(company);
+                        newCompanies++;
+                    }
+                    if (!models.ContainsKey(Key(entry.Model)))
+                    {
+                        var model = new CarModel { Name = entry.Model };
+                        models.Add(Key(entry.Model), model);
+                        await carModelRepository.Create(model);
+                        newModels++;
+                    }
+                    if (!tips.ContainsKey(Key(entry.Tip)))
+                    {
+                        var tip = new Tip { Name = entry.Tip };
+                        tips.Add(Key(entry.Tip), tip);
+                        await tipRepository.Create(tip);
+                        newTips++;
+                    }
+                }
+
+                await unitOfWork.SaveChangesAsync();
+
+                var known = (await carRepository.GetAll()
+                    .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
+                    .Select(x => new { x.CompanyId, x.CarModelId, x.TipId })
+                    .ToListAsync(cancellationToken))
+                    .Select(x => (x.CompanyId!.Value, x.CarModelId!.Value, x.TipId!.Value))
+                    .ToHashSet();
+
+                foreach (var entry in accepted)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var companyId = companies[Key(entry.Company)].Id;
+                    var modelId = models[Key(entry.Model)].Id;
+                    var tipId = tips[Key(entry.Tip)].Id;
+                    if (!known.Add((companyId, modelId, tipId)))
+                    {
+                        existing++;
+                        continue;
+                    }
+
+                    await carRepository.Create(new Car
+                    {
+                        Name = $"{entry.Brand} {entry.Model} {entry.Tip}".Trim(),
+                        CompanyId = companyId,
+                        CarModelId = modelId,
+                        TipId = tipId,
+                        SourceUrl = entry.SourceUrl,
+                        LastUpdated = DateTime.UtcNow,
+                        Description = string.Empty,
+                        ImageName = string.Empty
+                    });
+                    imported++;
+                }
+
+                await unitOfWork.CommitAsync();
+                return new CatalogImportResultDto(entries.Count, imported, existing,
+                    entries.Count - accepted.Count, newModels, newCompanies, newTips);
+            }
+            catch
+            {
+                await unitOfWork.RollbackAsync();
+                throw;
+            }
+        }
+
     }
 }
