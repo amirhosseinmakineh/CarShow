@@ -252,7 +252,9 @@ namespace CarShow.BackgroundServices
 
         private static string CatalogNormalize(string? value)
         {
-            var text = NormalizeText(value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا');
+            var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا');
+            text = new string(text.Select(c => c >= '۰' && c <= '۹' ? (char)('0' + c - '۰') :
+                c >= '٠' && c <= '٩' ? (char)('0' + c - '٠') : c).ToArray());
             return Regex.Replace(Regex.Replace(text, @"[^\p{L}\p{N}]+", " "), @"\s+", " ").Trim().ToLowerInvariant();
         }
 
