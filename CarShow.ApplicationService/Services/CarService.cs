@@ -58,6 +58,9 @@ namespace CarShow.ApplicationService.Services
                 CategoryId = dto.CategoryId,
                 CompanyId = dto.CompanyId,
                 TipId = dto.TipId,
+                FactoryPrice = 0m,
+                PriceSampleCount = 0,
+                Slug = $"car-{Guid.NewGuid():N}",
             };
 
             await carRepository.Create(car);
