@@ -373,6 +373,15 @@ namespace CarShow.ApplicationService.Services
                 return new CatalogImportResultDto(entries.Count, imported, existing,
                     entries.Count - accepted.Count, newModels, newCompanies, newTips);
             }
+            catch (DbUpdateException ex)
+            {
+                await unitOfWork.RollbackAsync();
+                var entities = string.Join(", ", ex.Entries.Select(e => e.Metadata.ClrType.Name));
+                var root = ex.GetBaseException();
+                throw new InvalidOperationException(
+                    $"Catalog seed database failure. Entities: [{entities}]. " +
+                    $"SQL error: {root.Message}", ex);
+            }
             catch
             {
                 await unitOfWork.RollbackAsync();
