@@ -138,7 +138,7 @@ namespace CarShow.ApplicationService.Services
                     StartDate = c.YearCalendar ?? string.Empty,
                     Description = c.Description,
                     ImageName = c.ImageName,
-                    Price = (float)(c.MarketPrice ?? 0m),
+                    Price = (float)c.MarketPrice,
                     carModeName = c.CarModel.Name,
                     CompanyName = c.Company.Name,
                     tipName = c.Tip.Name
@@ -262,7 +262,7 @@ namespace CarShow.ApplicationService.Services
                     Description = x.Description,
                     ImageName = x.ImageName,
                     Name = x.Name,
-                    Price = (float)(x.MarketPrice ?? 0m),
+                    Price = (float)x.MarketPrice,
                     tipName = x.Tip.Name,
                     StartDate = x.YearCalendar ?? string.Empty,
                 }).FirstOrDefaultAsync();
