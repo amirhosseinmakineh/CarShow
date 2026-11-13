@@ -9,6 +9,20 @@ namespace CarShow.Infrastracture.Context
         {
 
         }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Explicitly send zero-valued prices instead of treating them as database-generated.
+            modelBuilder.Entity<Car>(entity =>
+            {
+                entity.Property(x => x.FactoryPrice).HasColumnType("decimal(18,2)").ValueGeneratedNever();
+                entity.Property(x => x.PriceSampleCount).ValueGeneratedNever();
+                entity.Property(x => x.Slug).IsRequired();
+                entity.Property(x => x.YearCalendar).IsRequired();
+            });
+        }
+
         public DbSet<User> Users { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<Role> Roles { get; set; }
