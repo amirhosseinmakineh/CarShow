@@ -364,7 +364,7 @@ namespace CarShow.ApplicationService.Services
                         YearCalendar = string.Empty,
                         PriceSampleCount = 0,
                         MarketPrice = null,
-                        FactoryPrice = null,
+                        FactoryPrice = 0m,
                         LastUpdated = DateTime.UtcNow,
                         SourceUrl = entry.SourceUrl,
                         Slug = $"catalog-{companyId}-{modelId}-{tipId}",
