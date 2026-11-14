@@ -175,11 +175,16 @@ namespace CarShow.BackgroundServices
 
             var matchedCars = parsedCars.Select(car =>
             {
-                var matches = catalog.Where(item =>
-                    CatalogContains(car.Name, item.Model) && CatalogContains(car.Name, item.Tip))
-                    .Select(item => item.Id).Distinct().Take(2).ToList();
-                return matches.Count == 1
-                    ? new ParsedCar { Name = "catalog:" + matches[0], Year = car.Year, Price = car.Price }
+                var candidates = catalog.Where(item =>
+                        CatalogContains(car.Name, item.Model) && CatalogContains(car.Name, item.Tip))
+                    .Select(item => new { item.Id, Specificity = CatalogNormalize(item.Model).Length
+                        + CatalogNormalize(item.Tip).Length })
+                    .OrderByDescending(item => item.Specificity).ToList();
+                // Prefer the most specific trim; reject ties rather than mix trims.
+                var best = candidates.FirstOrDefault();
+                var unique = best != null && candidates.Count(x => x.Specificity == best.Specificity) == 1;
+                return unique
+                    ? new ParsedCar { Name = "catalog:" + best!.Id, Year = car.Year, Price = car.Price }
                     : null;
             }).Where(car => car != null).Select(car => car!).ToList();
 
