@@ -96,4 +96,18 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnony
 app.MapGet("/health/ready", async (CarShowContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok("Healthy") : Results.StatusCode(503))
     .AllowAnonymous();
+// Import the versioned catalog from the published repository asset before the
+// Telegram background scanner starts. ImportAsync is idempotent for existing
+// company/model/trim combinations and never resets verified prices.
+var catalogSeedPath = Path.Combine(app.Environment.ContentRootPath, "Data", "Seed",
+    "CarShow_Final_Trimmed_Cars_Catalog_1405.html");
+if (!File.Exists(catalogSeedPath))
+    throw new FileNotFoundException("Required car catalog seed is missing.", catalogSeedPath);
+using (var catalogScope = app.Services.CreateScope())
+{
+    var catalogImporter = catalogScope.ServiceProvider.GetRequiredService<CatalogImportService>();
+    await using var catalogStream = File.OpenRead(catalogSeedPath);
+    var catalogResult = await catalogImporter.ImportAsync(catalogStream);
+    app.Logger.LogInformation("Catalog seed imported from {Path}: {Result}", catalogSeedPath, catalogResult);
+}
 app.Run();

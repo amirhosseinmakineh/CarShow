@@ -1,6 +1,7 @@
 using CarShow.Domain.Models;
 using CarShow.Infrastracture.Context;
 using HtmlAgilityPack;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -160,15 +161,35 @@ namespace CarShow.BackgroundServices
                     ChannelErrors = channelErrors
                 };
 
-            // 2) Parse each message. A message may contain multiple cars.
+            // Read the catalog before parsing; the model vocabulary is database-driven.
+            var catalog = await _db.Cars.AsNoTracking()
+                .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
+                .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
+                .ToListAsync(cancellationToken);
+            var modelNames = catalog.Select(x => x.Model).Distinct().ToArray();
             var parsedCars = messagesByChannel
                 .Where(channel => !channelErrors.ContainsKey(channel.Key))
                 .SelectMany(channel => channel.Value)
-                .SelectMany(TelegramCarParser.Parse)
+                .SelectMany(message => TelegramCarParser.ParseCatalog(message, modelNames))
                 .ToList();
 
-            // 3) Group same car name + same manufacturing year and calculate reference prices.
-            var priceReferences = CarPriceReferenceBuilder.Build(parsedCars);
+            var matchedCars = parsedCars.Select(car =>
+            {
+                var candidates = catalog.Where(item =>
+                        CatalogContains(car.Name, item.Model) && CatalogContains(car.Name, item.Tip))
+                    .Select(item => new { item.Id, Specificity = CatalogNormalize(item.Model).Length
+                        + CatalogNormalize(item.Tip).Length })
+                    .OrderByDescending(item => item.Specificity).ToList();
+                // Prefer the most specific trim; reject ties rather than mix trims.
+                var best = candidates.FirstOrDefault();
+                var unique = best != null && candidates.Count(x => x.Specificity == best.Specificity) == 1;
+                return unique
+                    ? new ParsedCar { Name = "catalog:" + best!.Id, Year = car.Year, Price = car.Price }
+                    : null;
+            }).Where(car => car != null).Select(car => car!).ToList();
+
+            // Keep the existing year/price validation, minimum sample size and mean.
+            var priceReferences = CarPriceReferenceBuilder.Build(matchedCars);
 
             // Only reference groups, never raw advertisements, become Cars rows.
             var savedCars = await SaveReferenceCarsAsync(priceReferences, cancellationToken);
@@ -234,35 +255,75 @@ namespace CarShow.BackgroundServices
             };
         }
 
-        // Cars has no year column; keep final comparison details in Description JSON.
+        private static string CatalogNormalize(string? value)
+        {
+            var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا');
+            text = new string(text.Select(c => c >= '۰' && c <= '۹' ? (char)('0' + c - '۰') :
+                c >= '٠' && c <= '٩' ? (char)('0' + c - '٠') : c).ToArray());
+            return Regex.Replace(Regex.Replace(text, @"[^\p{L}\p{N}]+", " "), @"\s+", " ").Trim().ToLowerInvariant();
+        }
+
+        private static bool CatalogContains(string advertisement, string term)
+        {
+            var value = CatalogNormalize(advertisement);
+            var token = CatalogNormalize(term);
+            return token.Length > 0 && (" " + value + " ").Contains(" " + token + " ", StringComparison.Ordinal);
+        }
+
+        // Only update existing catalog cars after a genuine reference was calculated.
+        // Keep all verified years in Description; do not insert a car per advertisement/year.
         private async Task<int> SaveReferenceCarsAsync(List<CarPriceReference> priceReferences, CancellationToken cancellationToken)
         {
-            if (priceReferences.Count == 0)
-                return 0;
+            var ids = priceReferences.Select(x => x.Name)
+                .Where(x => x.StartsWith("catalog:", StringComparison.Ordinal))
+                .Select(x => long.TryParse(x.Substring(8), out var id) ? id : 0)
+                .Where(x => x > 0).Distinct().ToList();
+            if (ids.Count == 0) return 0;
 
-            var rows = priceReferences.Select(reference => new Car
+            var existing = await _db.Cars.Where(x => ids.Contains(x.Id)
+                && x.CompanyId != null && x.CarModelId != null && x.TipId != null)
+                .ToDictionaryAsync(x => x.Id, cancellationToken);
+            var updated = 0;
+            foreach (var group in priceReferences.Where(x => x.Name.StartsWith("catalog:", StringComparison.Ordinal))
+                .GroupBy(x => long.TryParse(x.Name.Substring(8), out var id) ? id : 0))
             {
-                Name = reference.Name,
-                Description = JsonSerializer.Serialize(new
+                if (!existing.TryGetValue(group.Key, out var car)) continue;
+                var references = new Dictionary<string, CarPriceReference>(StringComparer.Ordinal);
+                if (!string.IsNullOrWhiteSpace(car.Description))
+                {
+                    try
+                    {
+                        using var document = JsonDocument.Parse(car.Description);
+                        if (document.RootElement.TryGetProperty("Type", out var type)
+                            && type.GetString() == "TelegramPriceReference"
+                            && document.RootElement.TryGetProperty("Years", out var years))
+                        {
+                            foreach (var item in years.EnumerateObject())
+                            {
+                                var old = item.Value.Deserialize<CarPriceReference>();
+                                if (old != null) references[item.Name] = old;
+                            }
+                        }
+                    }
+                    catch (JsonException) { /* Existing free-text descriptions are not references. */ }
+                }
+                foreach (var reference in group)
+                    references[reference.Year] = reference;
+                var latest = references.OrderByDescending(x => x.Key, StringComparer.Ordinal).First().Value;
+                car.MarketPrice = latest.ReferencePriceBillion * 1_000_000_000m;
+                car.LastUpdated = DateTime.UtcNow;
+                car.Description = JsonSerializer.Serialize(new
                 {
                     Type = "TelegramPriceReference",
-                    reference.Year,
-                    reference.AdvertisementCount,
-                    reference.ComparedPricesBillion,
-                    reference.MinPriceBillion,
-                    reference.MaxPriceBillion,
-                    reference.ReferencePriceBillion
-                }),
-                MarketPrice = reference.ReferencePriceBillion * 1_000_000_000m,
-                CompanyId = null,
-                CarModelId = null,
-                TipId = null,
-                LastUpdated = DateTime.UtcNow
-            }).ToList();
-
-            _db.Cars.AddRange(rows);
-            await _db.SaveChangesAsync(cancellationToken);
-            return rows.Count;
+                    Year = latest.Year,
+                    Years = references,
+                    latest.AdvertisementCount,
+                    latest.ReferencePriceBillion
+                });
+                updated++;
+            }
+            if (updated > 0) await _db.SaveChangesAsync(cancellationToken);
+            return updated;
         }
 
         // Troubleshooting only: GET /api/telegram-cars/diagnostics
@@ -679,6 +740,42 @@ namespace CarShow.BackgroundServices
                 @"اصفهان|قم|پلاک|سند|آماده|گارانتی|خودرو)(?![\p{L}\p{N}])",
                 RegexOptions.Compiled);
 
+            public static List<ParsedCar> ParseCatalog(string message, IReadOnlyCollection<string> models)
+            {
+                var result = new List<ParsedCar>();
+                if (string.IsNullOrWhiteSpace(message) || models.Count == 0) return result;
+                var lines = message.Replace("\r", "").Split('\n');
+                var starts = Enumerable.Range(0, lines.Length)
+                    .Where(index => models.Any(model => CatalogContains(CleanLine(lines[index]), model)))
+                    .ToList();
+                for (var i = 0; i < starts.Count; i++)
+                {
+                    var start = starts[i];
+                    var end = i + 1 < starts.Count ? starts[i + 1] : lines.Length;
+                    var block = string.Join("\n", lines.Skip(start).Take(end - start));
+                    result.Add(new ParsedCar
+                    {
+                        Name = ExtractName(CleanLine(lines[start])),
+                        Price = ExtractPrice(block),
+                        Year = ExtractYearCatalog(block, lines[start])
+                    });
+                }
+                return result;
+            }
+
+            private static string ExtractYearCatalog(string block, string header)
+            {
+                // Existing year extraction uses the vehicle header for short years.
+                // The catalog parser also accepts model names outside the legacy prefix list.
+                var years = FullYearRegex.Matches(NormalizeText(block))
+                    .Cast<Match>().Select(x => x.Value).Distinct().ToList();
+                if (years.Count == 1) return years[0];
+                if (years.Count > 1) return null;
+                var shortYears = ShortYearRegex.Matches(NormalizeText(header))
+                    .Cast<Match>().Select(x => "14" + x.Groups["year"].Value.Substring(1)).Distinct().ToList();
+                return shortYears.Count == 1 ? shortYears[0] : null;
+            }
+
             public static List<ParsedCar> Parse(string message)
             {
                 var result = new List<ParsedCar>();
@@ -1016,6 +1113,8 @@ namespace CarShow.BackgroundServices
                     return string.Empty;
 
                 var value = CreateNameKey(name);
+                if (Regex.IsMatch(value, @"^catalog\s+\d+$", RegexOptions.CultureInvariant))
+                    return "catalog:" + value.Substring(8).Trim();
 
                 // Match specific model names before their broader families.
                 if (Regex.IsMatch(value, @"(?<!\d)(?:پژو\s*)?207(?!\d)"))
