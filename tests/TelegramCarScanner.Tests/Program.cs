@@ -62,4 +62,25 @@ Check(Build(Ad("1405", "4290 میلیون"), Ad("1404", "4295 میلیون")).Co
 Check(Build(Ad("1405", "4290 میلیون")).Count == 0,
     "Single advertisement never produces a reference");
 
+var catalog = new (long Id, string Model, string Tip)[]
+{
+    (1, "پژو 207", "اتومات"),
+    (2, "پژو 207", "اتوماتیک"),
+    (3, "پژو 207", "دنده ای"),
+    (4, "پژو 207 sd", "اتوماتیک"),
+    (5, "دنا", "اتوماتیک")
+};
+Check(TelegramScanService.MatchCatalogCar("پژو 207 اتوماتیک", catalog) == 2,
+    "Trim selection respects token boundaries");
+Check(TelegramScanService.MatchCatalogCar("پژو 207 sd اتوماتیک", catalog) == 4,
+    "Specific model wins over contained shorter model");
+Check(TelegramScanService.MatchCatalogCar("پژو 207 دنده ای", catalog) == 3,
+    "Different trims stay distinct");
+Check(TelegramScanService.MatchCatalogCar("پژو 207", catalog) == null,
+    "Missing trim does not guess");
+Check(TelegramScanService.MatchCatalogCar("پژو 207 اتوماتیک دنده ای", catalog) == null,
+    "Conflicting trim evidence is rejected");
+Check(Parse("پژو 207 اتوماتیک مدل 1404\nقیمت 4 میلیارد\nمعاوضه با پژو 207 دنده ای", "پژو 207").Count == 1,
+    "Trade-in mention does not create another vehicle");
+
 Console.WriteLine($"PASS: {count} scanner regression checks");
