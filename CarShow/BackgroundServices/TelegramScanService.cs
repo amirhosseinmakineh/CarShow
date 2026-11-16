@@ -736,6 +736,11 @@ namespace CarShow.BackgroundServices
                 @"(?<!\d)\d+(?:[.,/]\d{1,3})?\s*(?:میلیارد|میلیون)",
                 RegexOptions.Compiled);
 
+            // Colloquial Iranian car-ad prices: "4 تومن" means four billion in this context.
+            private static readonly Regex ColloquialPriceRegex = new Regex(
+                @"(?<![\p{L}\d])(?<amount>\d+(?:[.,/]\d{1,3})?)\s*(?:تومن|تومان)(?![\p{L}])",
+                RegexOptions.Compiled);
+
             private static readonly Regex PhoneRegex = new Regex(
                 @"09[\s\-]*\d{9}",
                 RegexOptions.Compiled);
@@ -876,53 +881,47 @@ namespace CarShow.BackgroundServices
 
             private static string ExtractPrice(string block)
             {
-                var explicitPrices = new HashSet<string>(
-                    StringComparer.OrdinalIgnoreCase);
-
-                var numericPrices = new HashSet<string>(
-                    StringComparer.OrdinalIgnoreCase);
-
+                var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var line in block.Split('\n'))
                 {
-                    var normalized = NormalizeText(line);
-
-                    // Removing a phone number is safer than discarding a line
-                    // which may also contain an actual asking price.
-                    normalized = PhoneRegex.Replace(normalized, " ");
-
+                    var normalized = PhoneRegex.Replace(NormalizeText(line), " ");
                     if (MileageRegex.IsMatch(normalized))
                         continue;
 
+                    // A deposit, installment or down payment is not a vehicle asking price.
+                    if (Regex.IsMatch(normalized, @"پیش\s*پرداخت|بیعانه|اقساط|قسط|ودیعه"))
+                        continue;
+
                     foreach (Match match in ExplicitPriceRegex.Matches(normalized))
+                        candidates.Add(Regex.Replace(match.Value, @"\s+", " ").Trim());
+
+                    foreach (Match match in ColloquialPriceRegex.Matches(normalized))
                     {
-                        explicitPrices.Add(Regex.Replace(match.Value, @"\s+", " ").Trim());
+                        var amount = match.Groups["amount"].Value.Replace('/', '.').Replace(',', '.');
+                        if (decimal.TryParse(amount, NumberStyles.Number,
+                            CultureInfo.InvariantCulture, out var number) && number >= 1m && number < 100m)
+                            candidates.Add(amount + " میلیارد");
                     }
 
-                    var lineWithoutYears = FullYearRegex.Replace(normalized, " ");
-                    lineWithoutYears = ShortYearRegex.Replace(lineWithoutYears, " ");
+                    // Never double-count an explicitly unit-marked price as a bare number.
+                    if (ExplicitPriceRegex.IsMatch(normalized) || ColloquialPriceRegex.IsMatch(normalized))
+                        continue;
 
-                    foreach (Match match in PriceTokenRegex.Matches(lineWithoutYears))
+                    // Unitless figures are accepted only with an explicit price label.
+                    if (!Regex.IsMatch(normalized, @"قیمت|مبلغ|فروش"))
+                        continue;
+
+                    var withoutYears = ShortYearRegex.Replace(FullYearRegex.Replace(normalized, " "), " ");
+                    foreach (Match match in PriceTokenRegex.Matches(withoutYears))
                     {
-                        var digits = Regex.Replace(match.Value, @"\D", string.Empty);
-
-                        if (digits.Length < 4 || digits.Length > 8)
-                            continue;
-
-                        numericPrices.Add(match.Value);
+                        var digits = Regex.Replace(match.Value, @"\D", "");
+                        if (digits.Length >= 4 && digits.Length <= 8)
+                            candidates.Add(match.Value);
                     }
                 }
 
-                // Explicitly stated price units have priority.
-                if (explicitPrices.Count == 1)
-                    return explicitPrices.First();
-
-                if (explicitPrices.Count > 1)
-                    return null;
-
-                // Never guess when an ad contains multiple possible prices.
-                return numericPrices.Count == 1
-                    ? numericPrices.First()
-                    : null;
+                // Multiple distinct candidates are ambiguous: do not guess.
+                return candidates.Count == 1 ? candidates.First() : null;
             }
 
             private static string ExtractYear(string block)
@@ -1055,9 +1054,20 @@ namespace CarShow.BackgroundServices
                     .Where(group => group.Count() >= 2)
                     .Select(group =>
                     {
+                        // A median-based consensus prevents isolated bad parses from
+                        // poisoning the reference price. Two conflicting ads are rejected.
+                        var ordered = group.Select(x => x.PriceBillion).OrderBy(x => x).ToList();
+                        var mid = ordered.Count / 2;
+                        var median = ordered.Count % 2 == 1
+                            ? ordered[mid] : (ordered[mid - 1] + ordered[mid]) / 2m;
+                        var consistent = ordered.Where(x =>
+                            median > 0 && Math.Abs(x - median) <= median * 0.15m).ToList();
+                        if (consistent.Count < 2 || consistent.Count * 2 <= ordered.Count)
+                            return null;
+
                         // Convert every valid price to toman before averaging.
-                        var pricesToman = group
-                            .Select(car => car.PriceBillion * 1_000_000_000m)
+                        var pricesToman = consistent
+                            .Select(price => price * 1_000_000_000m)
                             .OrderBy(price => price)
                             .ToList();
 
@@ -1079,6 +1089,8 @@ namespace CarShow.BackgroundServices
                                 CultureInfo.InvariantCulture) + " میلیارد تومان"
                         };
                     })
+                    .Where(item => item != null)
+                    .Select(item => item!)
                     .OrderBy(item => item.Name)
                     .ThenBy(item => item.Year)
                     .ToList();
