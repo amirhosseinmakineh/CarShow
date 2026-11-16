@@ -11,11 +11,20 @@ public sealed class TelegramImportController : ControllerBase
 {
     private readonly TelegramScanService _scan;
     private readonly TelegramScanStatus _status;
+    private readonly TelegramScanBackgroundService _worker;
 
-    public TelegramImportController(TelegramScanService scan, TelegramScanStatus status)
+    public TelegramImportController(TelegramScanService scan, TelegramScanStatus status, TelegramScanBackgroundService worker)
     {
         _scan = scan;
         _status = status;
+        _worker = worker;
+    }
+
+    [HttpPost("scan")]
+    public async Task<IActionResult> RunScan(CancellationToken cancellationToken)
+    {
+        var outcome = await _worker.RunOnceAsync(cancellationToken);
+        return StatusCode(outcome.StatusCode, outcome.Value);
     }
 
     [HttpGet("scan/status")]
