@@ -429,7 +429,7 @@ namespace CarShow.BackgroundServices
 
         // =========================================================
         // TELEGRAM READER
-        // Reads up to 100 latest posts from every public channel.
+        // Reads only public posts published during the last 24 hours (UTC).
         // No Telegram login or phone number is used.
         // =========================================================
 
@@ -462,6 +462,7 @@ namespace CarShow.BackgroundServices
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             var completed = 0;
+            var cutoffUtc = DateTimeOffset.UtcNow.AddHours(-24);
             using var semaphore = new SemaphoreSlim(3, 3);
             await Task.WhenAll(usernames.Select(async username =>
             {
@@ -474,7 +475,7 @@ namespace CarShow.BackgroundServices
                 // Safety limit in case Telegram repeats a page.
                 const int maxPages = 20;
 
-                for (var page = 0; page < maxPages && messages.Count < 100; page++)
+                for (var page = 0; page < maxPages; page++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -506,6 +507,7 @@ namespace CarShow.BackgroundServices
 
                             long? oldestMessageId = null;
                             var addedCount = 0;
+                            var olderPosts = 0;
 
                             foreach (var node in nodes)
                             {
@@ -546,6 +548,21 @@ namespace CarShow.BackgroundServices
                                     oldestMessageId = messageId;
                                 }
 
+                                // Telegram public preview embeds the original post timestamp in <time datetime="...">.
+                                // Never include undated posts: otherwise older ads could contaminate the reference price.
+                                var timeNode = node.SelectSingleNode(".//time[@datetime]");
+                                var timestampText = timeNode?.GetAttributeValue("datetime", "");
+                                if (!DateTimeOffset.TryParse(timestampText, CultureInfo.InvariantCulture,
+                                        DateTimeStyles.AssumeUniversal, out var postedAt))
+                                    continue;
+                                if (postedAt.ToUniversalTime() < cutoffUtc)
+                                {
+                                    olderPosts++;
+                                    continue;
+                                }
+                                if (postedAt.ToUniversalTime() > DateTimeOffset.UtcNow.AddMinutes(5))
+                                    continue;
+
                                 if (messages.ContainsKey(messageId))
                                     continue;
 
@@ -560,13 +577,13 @@ namespace CarShow.BackgroundServices
                                 addedCount++;
                             }
 
-                            if (addedCount == 0 || !oldestMessageId.HasValue)
+                            // Pages are ordered newest first; once older posts appear, stop paging.
+                            if (olderPosts > 0 || addedCount == 0 || !oldestMessageId.HasValue)
                                 break;
 
                             beforeMessageId = oldestMessageId.Value;
 
-                            if (messages.Count < 100)
-                                await Task.Delay(300, cancellationToken);
+                            await Task.Delay(300, cancellationToken);
                         }
                     }
                     catch (OperationCanceledException)
@@ -588,15 +605,8 @@ namespace CarShow.BackgroundServices
                     }
                 }
 
-                if (messages.Count == 0 && channelErrors != null &&
-                    !errors.ContainsKey(username))
-                {
-                    errors[username] = "No matching public posts were collected from Telegram preview.";
-                }
-
                 result[username] = messages
                     .OrderByDescending(x => x.Key)
-                    .Take(100)
                     .Select(x => x.Value)
                     .ToList();
 
