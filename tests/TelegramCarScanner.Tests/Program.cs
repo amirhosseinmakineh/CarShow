@@ -56,11 +56,19 @@ Check(Build(Ad("1405", "7950 میلیون"), Ad("1405", "7960 میلیون"),
 Check(Build(Ad("1405", "912 میلیون"), Ad("1405", "11840 میلیون")).Count == 0,
     "Two conflicting ads produce no reference");
 
-Check(Build(Ad("1405", "4290 میلیون"), Ad("1404", "4295 میلیون")).Count == 0,
-    "Different model years never merge");
+Check(Build(Ad("1405", "4290 میلیون"), Ad("1404", "4295 میلیون"))
+    is [{ Year: "1404", AdvertisementCount: 1 }, { Year: "1405", AdvertisementCount: 1 }],
+    "Different model years produce separate single-ad references");
 
-Check(Build(Ad("1405", "4290 میلیون")).Count == 0,
-    "Single advertisement never produces a reference");
+Check(Build(Ad("1405", "4290 میلیون"))
+    is [{ ReferencePriceBillion: 4.290m, AdvertisementCount: 1 }],
+    "Single validated advertisement produces its own reference");
+
+Check(Build(Ad("1405", "نامشخص")).Count == 0,
+    "Single advertisement with invalid price produces no reference");
+
+Check(Build(Ad("نامشخص", "4290 میلیون")).Count == 0,
+    "Single advertisement with invalid year produces no reference");
 
 var catalog = new (long Id, string Model, string Tip)[]
 {
