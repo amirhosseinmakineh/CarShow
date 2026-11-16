@@ -16,10 +16,14 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Authorization;
 using CarShow.Swagger;
 var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// Temporary testing switch. Defaults to false, including published deployments.
+// Explicitly set Testing__DisableApiAuthentication=true only on an isolated test server.
+var disableApiAuthentication = builder.Configuration.GetValue<bool>("Testing:DisableApiAuthentication");
 builder.Services.AddControllers();
 builder.Services.AddSingleton<TelegramScanStatus>();
 builder.Services.AddScoped<TelegramScanService>();
@@ -83,6 +87,8 @@ builder.Services
 // ==============================
 
 var app = builder.Build();
+if (disableApiAuthentication)
+    app.Logger.LogWarning("SECURITY WARNING: API authentication is DISABLED for testing. All API endpoints, including admin/write operations, are publicly accessible.");
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
 app.UseCors("Frontend");
@@ -91,7 +97,10 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
+// Endpoint metadata is evaluated by AuthorizationMiddleware before MVC filters.
+var apiEndpoints = app.MapControllers();
+if (disableApiAuthentication)
+    apiEndpoints.Add(endpoint => endpoint.Metadata.Add(new AllowAnonymousAttribute()));
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnonymous();
 app.MapGet("/health/ready", async (CarShowContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok("Healthy") : Results.StatusCode(503))
