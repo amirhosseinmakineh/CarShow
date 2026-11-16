@@ -507,7 +507,6 @@ namespace CarShow.BackgroundServices
 
                             long? oldestMessageId = null;
                             var addedCount = 0;
-                            var datedPosts = 0;
                             var olderPosts = 0;
 
                             foreach (var node in nodes)
@@ -556,7 +555,6 @@ namespace CarShow.BackgroundServices
                                 if (!DateTimeOffset.TryParse(timestampText, CultureInfo.InvariantCulture,
                                         DateTimeStyles.AssumeUniversal, out var postedAt))
                                     continue;
-                                datedPosts++;
                                 if (postedAt.ToUniversalTime() < cutoffUtc)
                                 {
                                     olderPosts++;
@@ -605,12 +603,6 @@ namespace CarShow.BackgroundServices
 
                         break;
                     }
-                }
-
-                if (messages.Count == 0 && channelErrors != null &&
-                    !errors.ContainsKey(username))
-                {
-                    errors[username] = "No dated public posts from the last 24 hours were collected from Telegram preview.";
                 }
 
                 result[username] = messages
