@@ -1085,18 +1085,22 @@ namespace CarShow.BackgroundServices
                         ModelKey = car.ModelKey,
                         Year = car.Year
                     })
-                    .Where(group => group.Count() >= 2)
                     .Select(group =>
                     {
-                        // A median-based consensus prevents isolated bad parses from
-                        // poisoning the reference price. Two conflicting ads are rejected.
+                        // Multi-ad groups use median consensus to reject outliers.
+                        // Single-ad groups use their one validated asking price.
                         var ordered = group.Select(x => x.PriceBillion).OrderBy(x => x).ToList();
                         var mid = ordered.Count / 2;
                         var median = ordered.Count % 2 == 1
                             ? ordered[mid] : (ordered[mid - 1] + ordered[mid]) / 2m;
-                        var consistent = ordered.Where(x =>
-                            median > 0 && Math.Abs(x - median) <= median * 0.15m).ToList();
-                        if (consistent.Count < 2 || consistent.Count * 2 <= ordered.Count)
+                        // A single fully matched model/trim/year with a valid price
+                        // is allowed as its own reference. Multiple ads still need consensus.
+                        var consistent = ordered.Count == 1
+                            ? ordered
+                            : ordered.Where(x =>
+                                median > 0 && Math.Abs(x - median) <= median * 0.15m).ToList();
+                        if (ordered.Count > 1 &&
+                            (consistent.Count < 2 || consistent.Count * 2 <= ordered.Count))
                             return null;
 
                         // Convert every valid price to toman before averaging.
