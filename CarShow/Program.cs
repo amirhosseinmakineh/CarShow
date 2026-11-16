@@ -27,7 +27,8 @@ var disableApiAuthentication = builder.Configuration.GetValue<bool>("Testing:Dis
 builder.Services.AddControllers();
 builder.Services.AddSingleton<TelegramScanStatus>();
 builder.Services.AddScoped<TelegramScanService>();
-builder.Services.AddHostedService<TelegramScanBackgroundService>();
+builder.Services.AddSingleton<TelegramScanBackgroundService>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramScanBackgroundService>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
