@@ -111,7 +111,7 @@ public sealed class TelegramScanStatus
         if (!await reader.ReadAsync(ct))
             return new { status = "Pending", message = "No scan has been started." };
         var status = reader.GetString(0);
-        var results = reader.IsDBNull(1) ? null : JsonSerializer.Deserialize<JsonElement>(reader.GetString(1));
+        JsonElement? results = reader.IsDBNull(1) ? null : JsonSerializer.Deserialize<JsonElement>(reader.GetString(1));
         var error = reader.IsDBNull(2) ? null : reader.GetString(2);
         return new { status, results, error };
     }
