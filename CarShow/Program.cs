@@ -28,9 +28,8 @@ builder.Services.AddControllers();
 builder.Services.AddSingleton<TelegramScanStatus>();
 builder.Services.AddScoped<TelegramScanService>();
 builder.Services.AddSingleton<TelegramScanBackgroundService>();
-// Automatic Telegram scanning is opt-in. Manual POST /api/telegram-cars/scan remains available.
-if (builder.Configuration.GetValue<bool>("TelegramScan:EnableBackgroundScan"))
-    builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramScanBackgroundService>());
+// Host manual scan queue; automatic scans are opt-in via TelegramScan:EnableBackgroundScan.
+builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramScanBackgroundService>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

@@ -23,9 +23,14 @@ public sealed class TelegramImportController : ControllerBase
     [HttpPost("scan")]
     public async Task<IActionResult> RunScan(CancellationToken cancellationToken)
     {
-        var outcome = await _worker.RunOnceAsync(cancellationToken);
-        return StatusCode(outcome.StatusCode, outcome.Value);
+        if (!_worker.TryQueueManualScan())
+            return Conflict(new { message = "A Telegram scan is already queued or running." });
+        return Accepted(new { message = "Scan queued.", statusUrl = "/api/telegram-cars/scan/status", resultsUrl = "/api/telegram-cars/scan/results" });
     }
+
+    [HttpGet("scan/results")]
+    public async Task<IActionResult> GetScanResults(CancellationToken cancellationToken)
+        => Ok(await _status.ReadResultsAsync(cancellationToken));
 
     [HttpGet("scan/status")]
     public async Task<IActionResult> GetScanStatus(CancellationToken cancellationToken)

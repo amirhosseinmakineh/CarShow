@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Text.Json;
@@ -37,9 +38,12 @@ public sealed class TelegramScanStatus
                     ReferenceCount int NOT NULL DEFAULT 0,
                     SavedCars int NOT NULL DEFAULT 0,
                     ChannelErrors nvarchar(max) NOT NULL DEFAULT N'{}',
-                    Error nvarchar(max) NULL
+                    Error nvarchar(max) NULL,
+                    ResultsJson nvarchar(max) NULL
                 );
             END
+            IF COL_LENGTH(N'dbo.TelegramScanJobs', N'ResultsJson') IS NULL
+                ALTER TABLE dbo.TelegramScanJobs ADD ResultsJson nvarchar(max) NULL;
             """;
         await command.ExecuteNonQueryAsync(ct);
     }
@@ -87,6 +91,29 @@ public sealed class TelegramScanStatus
         command.Parameters.AddWithValue("@errors", JsonSerializer.Serialize(result?.ChannelErrors ?? new Dictionary<string, string>()));
         command.Parameters.Add("@error", SqlDbType.NVarChar, -1).Value = (object?)error ?? DBNull.Value;
         await command.ExecuteNonQueryAsync(ct);
+        if (result != null)
+        {
+            await using var save = connection.CreateCommand();
+            save.CommandText = "UPDATE dbo.TelegramScanJobs SET ResultsJson = @results WHERE Id = @id";
+            save.Parameters.AddWithValue("@id", id);
+            save.Parameters.Add("@results", SqlDbType.NVarChar, -1).Value = JsonSerializer.Serialize(result.Value);
+            await save.ExecuteNonQueryAsync(ct);
+        }
+    }
+
+    public async Task<object> ReadResultsAsync(CancellationToken ct)
+    {
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT TOP (1) Status, ResultsJson, Error FROM dbo.TelegramScanJobs ORDER BY Id DESC";
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct))
+            return new { status = "Pending", message = "No scan has been started." };
+        var status = reader.GetString(0);
+        var results = reader.IsDBNull(1) ? null : JsonSerializer.Deserialize<JsonElement>(reader.GetString(1));
+        var error = reader.IsDBNull(2) ? null : reader.GetString(2);
+        return new { status, results, error };
     }
 
     public async Task<object> ReadAsync(CancellationToken ct)
@@ -124,33 +151,59 @@ public sealed class TelegramScanStatus
 public sealed class TelegramScanBackgroundService : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(5);
+    private readonly Channel<bool> _requests = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { SingleReader = true, SingleWriter = false, FullMode = BoundedChannelFullMode.Wait });
+    private int _queuedOrRunning;
+    private readonly bool _enableScheduled;
     private readonly IServiceScopeFactory _scopes;
     private readonly TelegramScanStatus _status;
     private readonly ILogger<TelegramScanBackgroundService> _logger;
 
     public TelegramScanBackgroundService(IServiceScopeFactory scopes, TelegramScanStatus status,
-        ILogger<TelegramScanBackgroundService> logger)
+        ILogger<TelegramScanBackgroundService> logger, IConfiguration configuration)
     {
         _scopes = scopes;
         _status = status;
         _logger = logger;
+        _enableScheduled = configuration.GetValue<bool>("TelegramScan:EnableBackgroundScan");
+    }
+
+    public bool TryQueueManualScan()
+    {
+        if (Interlocked.CompareExchange(ref _queuedOrRunning, 1, 0) != 0)
+            return false;
+        if (_requests.Writer.TryWrite(true))
+            return true;
+        Interlocked.Exchange(ref _queuedOrRunning, 0);
+        return false;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        if (_enableScheduled)
+            _ = ScheduleAsync(stoppingToken);
+        try
         {
-            try
+            await foreach (var request in _requests.Reader.ReadAllAsync(stoppingToken))
             {
-                await _status.EnsureSchemaAsync(stoppingToken);
-                await RunOnceAsync(stoppingToken);
+                try { await RunOnceAsync(stoppingToken); }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
+                catch (Exception ex) { _logger.LogError(ex, "Telegram scan failed."); }
+                finally { Interlocked.Exchange(ref _queuedOrRunning, 0); }
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception ex) { _logger.LogError(ex, "Telegram scan worker failed."); }
-
-            try { await Task.Delay(Interval, stoppingToken); }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
         }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
+    }
+
+    private async Task ScheduleAsync(CancellationToken ct)
+    {
+        TryQueueManualScan();
+        using var timer = new PeriodicTimer(TimeSpan.FromHours(5));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(ct))
+                TryQueueManualScan();
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     }
 
     public async Task<TelegramScanOutcome> RunOnceAsync(CancellationToken ct)
