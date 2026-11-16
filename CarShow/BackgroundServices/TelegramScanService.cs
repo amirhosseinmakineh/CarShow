@@ -175,16 +175,10 @@ namespace CarShow.BackgroundServices
 
             var matchedCars = parsedCars.Select(car =>
             {
-                var candidates = catalog.Where(item =>
-                        CatalogContains(car.Name, item.Model) && CatalogContains(car.Name, item.Tip))
-                    .Select(item => new { item.Id, Specificity = CatalogNormalize(item.Model).Length
-                        + CatalogNormalize(item.Tip).Length })
-                    .OrderByDescending(item => item.Specificity).ToList();
-                // Prefer the most specific trim; reject ties rather than mix trims.
-                var best = candidates.FirstOrDefault();
-                var unique = best != null && candidates.Count(x => x.Specificity == best.Specificity) == 1;
-                return unique
-                    ? new ParsedCar { Name = "catalog:" + best!.Id, Year = car.Year, Price = car.Price }
+                var matchedId = MatchCatalogCar(car.Name,
+                    catalog.Select(item => (Id: (long)item.Id, Model: item.Model, Tip: item.Tip)).ToList());
+                return matchedId.HasValue
+                    ? new ParsedCar { Name = "catalog:" + matchedId.Value, Year = car.Year, Price = car.Price }
                     : null;
             }).Where(car => car != null).Select(car => car!).ToList();
 
@@ -268,6 +262,39 @@ namespace CarShow.BackgroundServices
             var value = CatalogNormalize(advertisement);
             var token = CatalogNormalize(term);
             return token.Length > 0 && (" " + value + " ").Contains(" " + token + " ", StringComparison.Ordinal);
+        }
+
+        // Match model first, then trim within that model. Ambiguity is never
+        // resolved using string length: a wrong CarId would corrupt reference prices.
+        public static long? MatchCatalogCar(string advertisement,
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            var text = CatalogNormalize(advertisement);
+            if (text.Length == 0) return null;
+
+            var models = catalog.Select(x => x.Model).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(model => CatalogContains(text, model))
+                .OrderByDescending(model => CatalogNormalize(model).Length).ToList();
+            if (models.Count == 0) return null;
+
+            // A longer model may include a shorter model name (e.g. "207" vs "207 sd").
+            // Only discard shorter names when they are fully contained in the longer one.
+            var specificModels = models.Where(model => !models.Any(other =>
+                !string.Equals(model, other, StringComparison.OrdinalIgnoreCase) &&
+                CatalogContains(other, model))).ToList();
+            if (specificModels.Count != 1) return null;
+
+            var modelName = specificModels[0];
+            var candidates = catalog.Where(item =>
+                string.Equals(item.Model, modelName, StringComparison.OrdinalIgnoreCase) &&
+                CatalogContains(text, item.Tip)).ToList();
+
+            // More specific trim wins only if all other matching trims are its
+            // component phrases. Independent trim matches mean ambiguous ad.
+            var specificTrims = candidates.Where(item => !candidates.Any(other =>
+                item.Id != other.Id && CatalogContains(other.Tip, item.Tip) &&
+                !CatalogContains(item.Tip, other.Tip))).ToList();
+            return specificTrims.Count == 1 ? specificTrims[0].Id : null;
         }
 
         // Only update existing catalog cars after a genuine reference was calculated.
@@ -761,7 +788,14 @@ namespace CarShow.BackgroundServices
                 if (string.IsNullOrWhiteSpace(message) || models.Count == 0) return result;
                 var lines = message.Replace("\r", "").Split('\n');
                 var starts = Enumerable.Range(0, lines.Length)
-                    .Where(index => models.Any(model => CatalogContains(CleanLine(lines[index]), model)))
+                    .Where(index =>
+                    {
+                        var line = CleanLine(lines[index]);
+                        // Ignore mentions in trade-in, comparison and descriptive lines.
+                        if (Regex.IsMatch(line, @"^(?:معاوضه|تعویض|مقایسه|مشابه|در\s+حد|با\s+خودروی)"))
+                            return false;
+                        return models.Any(model => CatalogContains(line, model));
+                    })
                     .ToList();
                 for (var i = 0; i < starts.Count; i++)
                 {
