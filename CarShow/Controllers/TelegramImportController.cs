@@ -6,7 +6,7 @@ namespace CarShow.Controllers;
 
 [ApiController]
 [Route("api/telegram-cars")]
-[Authorize(Roles = "Admin")]
+[AllowAnonymous]
 public sealed class TelegramImportController : ControllerBase
 {
     private readonly TelegramScanService _scan;
