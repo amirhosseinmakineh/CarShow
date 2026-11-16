@@ -16,11 +16,19 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using CarShow.Swagger;
 var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-builder.Services.AddControllers();
+// Explicit opt-in for short-lived testing deployments. Default is secure.
+var allowAnonymousApiTesting = builder.Configuration.GetValue<bool>("Testing:AllowAnonymousApi");
+builder.Services.AddControllers(options =>
+{
+    if (allowAnonymousApiTesting)
+        options.Conventions.Add(new TemporaryAnonymousApiConvention());
+});
 builder.Services.AddSingleton<TelegramScanStatus>();
 builder.Services.AddScoped<TelegramScanService>();
 builder.Services.AddHostedService<TelegramScanBackgroundService>();
@@ -83,6 +91,8 @@ builder.Services
 // ==============================
 
 var app = builder.Build();
+if (allowAnonymousApiTesting)
+    app.Logger.LogWarning("SECURITY WARNING: Testing:AllowAnonymousApi is enabled; ALL controller endpoints, including admin and write APIs, are publicly accessible without authentication.");
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
 app.UseCors("Frontend");
@@ -111,3 +121,14 @@ using (var catalogScope = app.Services.CreateScope())
     app.Logger.LogInformation("Catalog seed imported from {Path}: {Result}", catalogSeedPath, catalogResult);
 }
 app.Run();
+
+internal sealed class TemporaryAnonymousApiConvention : IApplicationModelConvention
+{
+    public void Apply(ApplicationModel application)
+    {
+        foreach (var controller in application.Controllers)
+        foreach (var action in controller.Actions)
+        foreach (var selector in action.Selectors)
+            selector.EndpointMetadata.Add(new AllowAnonymousAttribute());
+    }
+}
