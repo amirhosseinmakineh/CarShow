@@ -153,8 +153,9 @@ public sealed class TelegramScanBackgroundService : BackgroundService
         }
     }
 
-    private async Task RunOnceAsync(CancellationToken ct)
+    public async Task<TelegramScanOutcome> RunOnceAsync(CancellationToken ct)
     {
+        await _status.EnsureSchemaAsync(ct);
         // Keep this dedicated SQL session open throughout the scan. SQL Server releases
         // the exclusive application lock when the connection closes, including on crashes.
         await using var lockConnection = _status.CreateConnection();
@@ -173,7 +174,7 @@ public sealed class TelegramScanBackgroundService : BackgroundService
         if (code < 0)
         {
             _logger.LogInformation("Telegram scan skipped: another instance holds the lock ({Code}).", code);
-            return;
+            return new TelegramScanOutcome(409, new { Message = "Another Telegram scan is already running. Check GET /api/telegram-cars/scan/status." });
         }
 
         long jobId = 0;
@@ -206,6 +207,7 @@ public sealed class TelegramScanBackgroundService : BackgroundService
             await _status.UpdateAsync(jobId, finalStatus, completed, result, null, ct);
             _logger.LogInformation("Telegram scan {JobId}: {Status}, {SavedCars} reference cars saved.",
                 jobId, finalStatus, result.SavedCars);
+            return result;
         }
         catch (Exception ex)
         {
