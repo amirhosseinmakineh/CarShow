@@ -903,6 +903,10 @@ namespace CarShow.BackgroundServices
                             candidates.Add(amount + " میلیارد");
                     }
 
+                    // Never double-count an explicitly unit-marked price as a bare number.
+                    if (ExplicitPriceRegex.IsMatch(normalized) || ColloquialPriceRegex.IsMatch(normalized))
+                        continue;
+
                     // Unitless figures are accepted only with an explicit price label.
                     if (!Regex.IsMatch(normalized, @"قیمت|مبلغ|فروش"))
                         continue;
