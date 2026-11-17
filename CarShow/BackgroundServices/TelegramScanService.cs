@@ -307,50 +307,37 @@ namespace CarShow.BackgroundServices
                     examples.Add(new { car.Name, car.Year, car.Price, Reason = reason, Detail = detail, MatchedModel = matchedModel, CandidateCount = candidateCount });
             }
 
+            var parsedAdvertisements = new List<ParsedCar>();
             foreach (var message in messages)
             {
                 var cars = TelegramCarParser.ParseCatalog(message, models);
                 if (cars.Count == 0) noVehicleMessages++;
-                foreach (var car in cars)
+                parsedAdvertisements.AddRange(cars);
+            }
+            parsedCount = parsedAdvertisements.Count;
+            var owners = MatchAdvertisementOwners(parsedAdvertisements, catalogTuples);
+            for (var i = 0; i < parsedAdvertisements.Count; i++)
+            {
+                var car = parsedAdvertisements[i];
+                if (!owners.TryGetValue(i, out var id))
                 {
-                    parsedCount++;
-                    // Report matching according to the same car-first flow as production.
-                    var matchedIds = catalogTuples
-                        .Where(item => CatalogContains(car.Name, item.Model) &&
-                            TrimContains(car.Name, item.Tip) &&
-                            catalogTuples.Count(other =>
-                                CatalogNormalize(other.Model) == CatalogNormalize(item.Model) &&
-                                NormalizeTrimTerms(other.Tip) == NormalizeTrimTerms(item.Tip)) == 1 &&
-                            !catalogTuples.Any(other => other.Id != item.Id &&
-                                CatalogContains(car.Name, other.Model) &&
-                                TrimContains(car.Name, other.Tip) &&
-                                (IsStrictlyMoreSpecificTrim(other.Tip, item.Tip) ||
-                                 (CatalogNormalize(other.Model) != CatalogNormalize(item.Model) &&
-                                  CatalogContains(other.Model, item.Model)))))
-                        .Select(item => item.Id).ToList();
-                    if (matchedIds.Count == 0)
-                    {
-                        var diagnosis = ExplainCatalogRejection(car.Name, catalogTuples);
-                        Reject(diagnosis.Reason == "UnclassifiedMatchFailure" ? "DuplicateCatalogCar" : diagnosis.Reason,
-                            car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
-                        continue;
-                    }
-                    if (string.IsNullOrWhiteSpace(car.Year) ||
-                        NormalizeManufacturingYear(car.Year) == null)
-                    {
-                        Reject("MissingOrInvalidYear", car,
-                            string.IsNullOrWhiteSpace(car.Year) ? "Manufacturing year was not extracted." : "Manufacturing year has an unsupported format.");
-                        continue;
-                    }
-                    if (!CarPriceReferenceBuilder.TryConvertPrice(car.Price, out _))
-                    {
-                        Reject("MissingOrInvalidPrice", car,
-                            string.IsNullOrWhiteSpace(car.Price) ? "Sale price was not extracted." : "Extracted price failed numeric or range validation.");
-                        continue;
-                    }
-                    foreach (var id in matchedIds)
-                        accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = NormalizeManufacturingYear(car.Year), Price = car.Price });
+                    var diagnosis = ExplainCatalogRejection(car.Name, catalogTuples);
+                    Reject(diagnosis.Reason == "UnclassifiedMatchFailure" ? "AmbiguousCatalogMatch" : diagnosis.Reason,
+                        car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
+                    continue;
                 }
+                var year = NormalizeManufacturingYear(car.Year);
+                if (year == null)
+                {
+                    Reject("MissingOrInvalidYear", car, "Manufacturing year was not extracted or unsupported.");
+                    continue;
+                }
+                if (!CarPriceReferenceBuilder.TryConvertPrice(car.Price, out _))
+                {
+                    Reject("MissingOrInvalidPrice", car, "Sale price missing or invalid.");
+                    continue;
+                }
+                accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = year, Price = car.Price });
             }
 
             var groups = accepted.GroupBy(x => new { x.Name, x.Year }).ToList();
@@ -486,56 +473,54 @@ namespace CarShow.BackgroundServices
 
         // The database car is the unit of work. Never choose a CarId by searching
         // the entire catalog for each advertisement.
+        // Match by database car, but retain only advertisements with one unambiguous owner.
+        // The same matcher is used by the production scan and read-only diagnostics.
+        private static Dictionary<int, long> MatchAdvertisementOwners(
+            IReadOnlyList<ParsedCar> advertisements,
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            var owners = new Dictionary<int, long>();
+            var ambiguous = new HashSet<int>();
+            var uniqueCars = catalog.GroupBy(x =>
+                (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
+                .Where(g => g.Count() == 1).Select(g => g.Single()).ToList();
+
+            foreach (var car in uniqueCars)
+            {
+                for (var i = 0; i < advertisements.Count; i++)
+                {
+                    var ad = advertisements[i];
+                    if (!CatalogContains(ad.Name, car.Model) || !TrimContains(ad.Name, car.Tip))
+                        continue;
+                    if (catalog.Any(other => other.Id != car.Id &&
+                        CatalogContains(ad.Name, other.Model) &&
+                        TrimContains(ad.Name, other.Tip) &&
+                        (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
+                         (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
+                          CatalogContains(other.Model, car.Model)))))
+                        continue;
+                    if (owners.TryGetValue(i, out var previous) && previous != car.Id)
+                        ambiguous.Add(i);
+                    else
+                        owners[i] = car.Id;
+                }
+            }
+            foreach (var i in ambiguous) owners.Remove(i);
+            return owners;
+        }
+
         private static List<ParsedCar> MatchAdvertisementsForCatalogCars(
             IReadOnlyCollection<ParsedCar> advertisements,
             IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
         {
-            var matches = new List<ParsedCar>();
-            // Identical model/trim definitions cannot be assigned safely to one
-            // of multiple CarIds. Leave these records untouched.
-            var uniqueCars = catalog.GroupBy(x =>
-                (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
-                .Where(group => group.Count() == 1)
-                .Select(group => group.Single());
-
-            var claimedAdvertisements = new Dictionary<int, List<long>>();
             var ads = advertisements.ToList();
-            foreach (var car in uniqueCars)
-            {
-                // Match this car's model and trim only; then move to the next car.
-                // Prevent a shorter model/trim from stealing an advertisement
-                // that explicitly names a more specific catalog variant.
-                for (var adIndex = 0; adIndex < ads.Count; adIndex++)
+            return MatchAdvertisementOwners(ads, catalog)
+                .Select(pair => new ParsedCar
                 {
-                    var advertisement = ads[adIndex];
-                    if (!CatalogContains(advertisement.Name, car.Model) ||
-                        !TrimContains(advertisement.Name, car.Tip))
-                        continue;
-
-                    var competing = catalog.Any(other => other.Id != car.Id &&
-                        CatalogContains(advertisement.Name, other.Model) &&
-                        TrimContains(advertisement.Name, other.Tip) &&
-                        (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
-                         (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
-                          CatalogContains(other.Model, car.Model))));
-                    if (competing) continue;
-
-                    if (!claimedAdvertisements.TryGetValue(adIndex, out var owners))
-                        claimedAdvertisements[adIndex] = owners = new List<long>();
-                    owners.Add(car.Id);
-                    matches.Add(new ParsedCar
-                    {
-                        Name = "catalog:" + car.Id,
-                        Year = NormalizeManufacturingYear(advertisement.Year),
-                        Price = advertisement.Price
-                    });
-                }
-            }
-            var ambiguousOwners = claimedAdvertisements.Where(x => x.Value.Distinct().Count() > 1)
-                .SelectMany(x => x.Value).ToHashSet();
-            // Never write a price reference for a car sharing any ad with another CarId.
-            return matches.Where(x => !long.TryParse(x.Name.Substring(8), out var id) ||
-                !ambiguousOwners.Contains(id)).ToList();
+                    Name = "catalog:" + pair.Value,
+                    Year = NormalizeManufacturingYear(ads[pair.Key].Year),
+                    Price = ads[pair.Key].Price
+                }).ToList();
         }
 
         // Only update existing catalog cars after a genuine reference was calculated.
@@ -1070,7 +1055,8 @@ namespace CarShow.BackgroundServices
             {
                 // Existing year extraction uses the vehicle header for short years.
                 // The catalog parser also accepts model names outside the legacy prefix list.
-                var years = FullYearRegex.Matches(NormalizeText(block))
+                var normalizedBlock = NormalizeText(block);
+                var years = FullYearRegex.Matches(normalizedBlock)
                     .Cast<Match>().Select(x => x.Value).Distinct().ToList();
                 if (years.Count == 1) return NormalizeManufacturingYear(years[0]);
                 if (years.Count > 1) return null;
@@ -1200,7 +1186,7 @@ namespace CarShow.BackgroundServices
                         continue;
 
                     // Unitless figures are accepted only with an explicit price label.
-                    if (!Regex.IsMatch(normalized, @"قیمت|مبلغ|فروش"))
+                    if (!Regex.IsMatch(normalized, @"قیمت|مبلغ|فروش|نرخ"))
                         continue;
 
                     var withoutYears = ShortYearRegex.Replace(FullYearRegex.Replace(normalized, " "), " ");
