@@ -249,6 +249,41 @@ namespace CarShow.BackgroundServices
             };
         }
 
+        // Diagnostic-only classification; matching and reference-price rules remain unchanged.
+        private static (string Reason, string Detail, string? Model, int CandidateCount)
+            ExplainCatalogRejection(string advertisement,
+                IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            var text = CatalogNormalize(advertisement);
+            if (text.Length == 0)
+                return ("EmptyVehicleName", "Vehicle name is empty after normalization.", null, 0);
+
+            var models = catalog.Select(x => x.Model).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(model => CatalogContains(text, model)).ToList();
+            if (models.Count == 0)
+                return ("ModelNotFound", "No exact normalized catalog model phrase was found.", null, 0);
+
+            var specificModels = models.Where(model => !models.Any(other =>
+                !string.Equals(model, other, StringComparison.OrdinalIgnoreCase) &&
+                CatalogContains(other, model))).ToList();
+            if (specificModels.Count != 1)
+                return ("AmbiguousModel", "Multiple unrelated catalog models match the advertisement.", null, specificModels.Count);
+
+            var model = specificModels[0];
+            var candidates = catalog.Where(item =>
+                string.Equals(item.Model, model, StringComparison.OrdinalIgnoreCase) &&
+                CatalogContains(text, item.Tip)).ToList();
+            if (candidates.Count == 0)
+                return ("TrimNotFound", "Model matched but no catalog trim phrase matched.", model, 0);
+
+            var specificTrims = candidates.Where(item => !candidates.Any(other =>
+                item.Id != other.Id && CatalogContains(other.Tip, item.Tip) &&
+                !CatalogContains(item.Tip, other.Tip))).ToList();
+            return specificTrims.Count == 1
+                ? ("UnclassifiedMatchFailure", "Diagnostic classification differs from matcher.", model, specificTrims.Count)
+                : ("AmbiguousTrim", "Multiple catalog trims or duplicate catalog entries match.", model, specificTrims.Count);
+        }
+
         // Read-only diagnostic scan: fetches the same Telegram source and catalog as ScanAsync,
         // but never calls SaveReferenceCarsAsync and never modifies database records.
         public async Task<TelegramScanOutcome> DiagnoseRejectionsAsync(CancellationToken cancellationToken)
@@ -270,13 +305,13 @@ namespace CarShow.BackgroundServices
                 .SelectMany(x => x.Value).ToList();
             var noVehicleMessages = 0;
 
-            void Reject(string reason, ParsedCar car)
+            void Reject(string reason, ParsedCar car, string detail = "", string? matchedModel = null, int candidateCount = 0)
             {
                 reasons[reason] = reasons.TryGetValue(reason, out var count) ? count + 1 : 1;
                 if (!samples.TryGetValue(reason, out var examples))
                     samples[reason] = examples = new List<object>();
                 if (examples.Count < 5)
-                    examples.Add(new { car.Name, car.Year, car.Price });
+                    examples.Add(new { car.Name, car.Year, car.Price, Reason = reason, Detail = detail, MatchedModel = matchedModel, CandidateCount = candidateCount });
             }
 
             foreach (var message in messages)
@@ -289,18 +324,21 @@ namespace CarShow.BackgroundServices
                     var id = MatchCatalogCar(car.Name, catalogTuples);
                     if (!id.HasValue)
                     {
-                        Reject("ModelOrTrimNotUniquelyMatched", car);
+                        var diagnosis = ExplainCatalogRejection(car.Name, catalogTuples);
+                        Reject(diagnosis.Reason, car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(car.Year) ||
                         !Regex.IsMatch(car.Year, @"^14\d{2}$"))
                     {
-                        Reject("MissingOrInvalidYear", car);
+                        Reject("MissingOrInvalidYear", car,
+                            string.IsNullOrWhiteSpace(car.Year) ? "Manufacturing year was not extracted." : "Manufacturing year has an unsupported format.");
                         continue;
                     }
                     if (!CarPriceReferenceBuilder.TryConvertPrice(car.Price, out _))
                     {
-                        Reject("MissingOrInvalidPrice", car);
+                        Reject("MissingOrInvalidPrice", car,
+                            string.IsNullOrWhiteSpace(car.Price) ? "Sale price was not extracted." : "Extracted price failed numeric or range validation.");
                         continue;
                     }
                     accepted.Add(new ParsedCar
