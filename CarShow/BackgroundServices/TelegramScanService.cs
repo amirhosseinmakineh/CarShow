@@ -336,7 +336,7 @@ namespace CarShow.BackgroundServices
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(car.Year) ||
-                        !Regex.IsMatch(car.Year, @"^14\d{2}$"))
+                        NormalizeManufacturingYear(car.Year) == null)
                     {
                         Reject("MissingOrInvalidYear", car,
                             string.IsNullOrWhiteSpace(car.Year) ? "Manufacturing year was not extracted." : "Manufacturing year has an unsupported format.");
@@ -349,7 +349,7 @@ namespace CarShow.BackgroundServices
                         continue;
                     }
                     foreach (var id in matchedIds)
-                        accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = car.Year, Price = car.Price });
+                        accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = NormalizeManufacturingYear(car.Year), Price = car.Price });
                 }
             }
 
@@ -468,6 +468,22 @@ namespace CarShow.BackgroundServices
             return specificTrims.Count == 1 ? specificTrims[0].Id : null;
         }
 
+        // Canonical comparison key: 1405 / 405 / 05 => 2026.
+        // This is a model-year convention, not a calendar-date conversion.
+        private static string NormalizeManufacturingYear(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            var value = NormalizeText(raw).Trim();
+            if (!Regex.IsMatch(value, @"^\\d{2,4}$")) return null;
+            if (!int.TryParse(value, out var year)) return null;
+            if (year >= 2000 && year <= 2099) return year.ToString(CultureInfo.InvariantCulture);
+            if (year >= 1300 && year <= 1399) return (year + 621).ToString(CultureInfo.InvariantCulture);
+            if (year >= 1400 && year <= 1499) return (year + 621).ToString(CultureInfo.InvariantCulture);
+            if (year >= 400 && year <= 499) return (year + 1621).ToString(CultureInfo.InvariantCulture);
+            if (value.Length == 2 && year <= 30) return (2021 + year).ToString(CultureInfo.InvariantCulture);
+            return null;
+        }
+
         // The database car is the unit of work. Never choose a CarId by searching
         // the entire catalog for each advertisement.
         private static List<ParsedCar> MatchAdvertisementsForCatalogCars(
@@ -482,13 +498,16 @@ namespace CarShow.BackgroundServices
                 .Where(group => group.Count() == 1)
                 .Select(group => group.Single());
 
+            var claimedAdvertisements = new Dictionary<int, List<long>>();
+            var ads = advertisements.ToList();
             foreach (var car in uniqueCars)
             {
                 // Match this car's model and trim only; then move to the next car.
                 // Prevent a shorter model/trim from stealing an advertisement
                 // that explicitly names a more specific catalog variant.
-                foreach (var advertisement in advertisements)
+                for (var adIndex = 0; adIndex < ads.Count; adIndex++)
                 {
+                    var advertisement = ads[adIndex];
                     if (!CatalogContains(advertisement.Name, car.Model) ||
                         !TrimContains(advertisement.Name, car.Tip))
                         continue;
@@ -501,15 +520,22 @@ namespace CarShow.BackgroundServices
                           CatalogContains(other.Model, car.Model))));
                     if (competing) continue;
 
+                    if (!claimedAdvertisements.TryGetValue(adIndex, out var owners))
+                        claimedAdvertisements[adIndex] = owners = new List<long>();
+                    owners.Add(car.Id);
                     matches.Add(new ParsedCar
                     {
                         Name = "catalog:" + car.Id,
-                        Year = advertisement.Year,
+                        Year = NormalizeManufacturingYear(advertisement.Year),
                         Price = advertisement.Price
                     });
                 }
             }
-            return matches;
+            var ambiguousOwners = claimedAdvertisements.Where(x => x.Value.Distinct().Count() > 1)
+                .SelectMany(x => x.Value).ToHashSet();
+            // Never write a price reference for a car sharing any ad with another CarId.
+            return matches.Where(x => !long.TryParse(x.Name.Substring(8), out var id) ||
+                !ambiguousOwners.Contains(id)).ToList();
         }
 
         // Only update existing catalog cars after a genuine reference was calculated.
@@ -1046,10 +1072,10 @@ namespace CarShow.BackgroundServices
                 // The catalog parser also accepts model names outside the legacy prefix list.
                 var years = FullYearRegex.Matches(NormalizeText(block))
                     .Cast<Match>().Select(x => x.Value).Distinct().ToList();
-                if (years.Count == 1) return years[0];
+                if (years.Count == 1) return NormalizeManufacturingYear(years[0]);
                 if (years.Count > 1) return null;
-                var shortYears = ShortYearRegex.Matches(NormalizeText(header))
-                    .Cast<Match>().Select(x => "14" + x.Groups["year"].Value.Substring(1)).Distinct().ToList();
+                var shortYears = Regex.Matches(NormalizeText(header), @"(?:مدل\\s*)(?<year>40[0-9]|0[0-9])(?=\\D|$)")
+                    .Cast<Match>().Select(x => NormalizeManufacturingYear(x.Groups["year"].Value)).Where(x => x != null).Distinct().ToList();
                 return shortYears.Count == 1 ? shortYears[0] : null;
             }
 
@@ -1209,7 +1235,7 @@ namespace CarShow.BackgroundServices
                     if (Regex.IsMatch(beforeYear, @"پژو\s*$"))
                         continue;
 
-                    var fullYear = "14" + match.Groups["year"].Value.Substring(1);
+                    var fullYear = NormalizeManufacturingYear(match.Groups["year"].Value);
 
                     if (!years.Contains(fullYear))
                         years.Add(fullYear);
@@ -1222,7 +1248,7 @@ namespace CarShow.BackgroundServices
                     return null;
                 }
 
-                return years.Count == 1 ? years[0] : null;
+                return years.Count == 1 ? NormalizeManufacturingYear(years[0]) : null;
             }
 
             private static string CleanLine(string value)
@@ -1482,7 +1508,7 @@ namespace CarShow.BackgroundServices
                     return null;
 
                 var value = NormalizeText(year).Trim();
-                return ValidYearRegex.IsMatch(value) ? value : null;
+                return NormalizeManufacturingYear(value);
             }
 
             public static bool TryConvertPrice(
