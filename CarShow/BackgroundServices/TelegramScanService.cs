@@ -272,13 +272,13 @@ namespace CarShow.BackgroundServices
             var model = specificModels[0];
             var candidates = catalog.Where(item =>
                 string.Equals(item.Model, model, StringComparison.OrdinalIgnoreCase) &&
-                CatalogContains(text, item.Tip)).ToList();
+                TrimContains(text, item.Tip)).ToList();
             if (candidates.Count == 0)
                 return ("TrimNotFound", "Model matched but no catalog trim phrase matched.", model, 0);
 
             var specificTrims = candidates.Where(item => !candidates.Any(other =>
-                item.Id != other.Id && CatalogContains(other.Tip, item.Tip) &&
-                !CatalogContains(item.Tip, other.Tip))).ToList();
+                item.Id != other.Id && TrimContains(other.Tip, item.Tip) &&
+                !TrimContains(item.Tip, other.Tip))).ToList();
             return specificTrims.Count == 1
                 ? ("UnclassifiedMatchFailure", "Diagnostic classification differs from matcher.", model, specificTrims.Count)
                 : ("AmbiguousTrim", "Multiple catalog trims or duplicate catalog entries match.", model, specificTrims.Count);
@@ -391,6 +391,27 @@ namespace CarShow.BackgroundServices
             text = new string(text.Select(c => c >= '۰' && c <= '۹' ? (char)('0' + c - '۰') :
                 c >= '٠' && c <= '٩' ? (char)('0' + c - '٠') : c).ToArray());
             return Regex.Replace(Regex.Replace(text, @"[^\p{L}\p{N}]+", " "), @"\s+", " ").Trim().ToLowerInvariant();
+        }
+
+        // Normalize only well-established spelling variants of the SAME trim feature.
+        // This is deliberately not fuzzy matching: unknown or conflicting trims remain rejected.
+        private static string NormalizeTrimTerms(string value)
+        {
+            var text = CatalogNormalize(value);
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:پانوراما|پانورامیک|پانا)(?![\p{L}\p{N}])", "پانوراما");
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:اتوماتیک|اتومات)(?![\p{L}\p{N}])", "اتومات");
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:دنده\s*ای|دنده)(?![\p{L}\p{N}])", "دنده");
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:ارتقاء|ارتقا\s*یافته|ارتقا)(?![\p{L}\p{N}])", "ارتقا");
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:تیو\s*تری|تیوتری|tu\s*3)(?![\p{L}\p{N}])", "tu3");
+            return Regex.Replace(text, @"\s+", " ").Trim();
+        }
+
+        private static bool TrimContains(string advertisement, string trim)
+        {
+            var value = NormalizeTrimTerms(advertisement);
+            var token = NormalizeTrimTerms(trim);
+            return token.Length > 0 &&
+                (" " + value + " ").Contains(" " + token + " ", StringComparison.Ordinal);
         }
 
         private static bool CatalogContains(string advertisement, string term)
