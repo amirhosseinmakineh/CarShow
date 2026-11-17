@@ -293,7 +293,7 @@ namespace CarShow.BackgroundServices
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(car.Year) ||
-                        !Regex.IsMatch(car.Year, @"^14\\d{2}$"))
+                        !Regex.IsMatch(car.Year, @"^14\d{2}$"))
                     {
                         Reject("MissingOrInvalidYear", car);
                         continue;
