@@ -167,18 +167,40 @@ namespace CarShow.BackgroundServices
                 .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
                 .ToListAsync(cancellationToken);
             var modelNames = catalog.Select(x => x.Model).Distinct().ToArray();
-            var parsedCars = messagesByChannel
+            // Database-first: one catalog car is the unit of work. Telegram is fetched
+            // once for efficiency, then searched independently for each database car.
+            var messages = messagesByChannel
                 .Where(channel => !channelErrors.ContainsKey(channel.Key))
                 .SelectMany(channel => channel.Value)
-                .Distinct(StringComparer.Ordinal) // identical syndicated posts count once
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var parsedCars = messages
                 .SelectMany(message => TelegramCarParser.ParseCatalog(message, modelNames))
                 .ToList();
-
             var catalogTuples = catalog.Select(item => (Id: (long)item.Id, Model: item.Model, Tip: item.Tip)).ToList();
-            var matchedCars = MatchAdvertisementsForCatalogCars(parsedCars, catalogTuples);
-
-            // Keep the existing year/price validation, minimum sample size and mean.
-            var priceReferences = CarPriceReferenceBuilder.Build(matchedCars);
+            // Resolve ownership once to prevent a Telegram advertisement from being
+            // assigned to two overlapping model/trim catalog records.
+            var owners = MatchAdvertisementOwners(parsedCars, catalogTuples);
+            var priceReferences = new List<CarPriceReference>();
+            foreach (var databaseCar in catalog.OrderBy(x => x.Id))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var matched = owners
+                    .Where(pair => pair.Value == databaseCar.Id)
+                    .Select(pair => parsedCars[pair.Key])
+                    .Where(ad => NormalizeManufacturingYear(ad.Year) != null &&
+                        CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out _))
+                    .Select(ad => new ParsedCar
+                    {
+                        Name = "catalog:" + databaseCar.Id,
+                        Year = NormalizeManufacturingYear(ad.Year),
+                        Price = ad.Price
+                    }).ToList();
+                if (matched.Count == 0) continue;
+                // Each manufacturing year is compared only with the same year.
+                // One valid advertisement is itself the reference.
+                priceReferences.AddRange(CarPriceReferenceBuilder.Build(matched));
+            }
 
             // Only reference groups, never raw advertisements, become Cars rows.
             var savedCars = await SaveReferenceCarsAsync(priceReferences, cancellationToken);
@@ -599,7 +621,7 @@ namespace CarShow.BackgroundServices
                     Years = references,
                     latest.AdvertisementCount,
                     latest.ReferencePriceBillion,
-                    ComparisonApproved = latest.AdvertisementCount >= 2 && latest.ReferencePriceBillion > 0,
+                    ComparisonApproved = latest.AdvertisementCount >= 1 && latest.ReferencePriceBillion > 0,
                     ComparedAtUtc = DateTime.UtcNow
                 });
                 updated++;
@@ -1397,11 +1419,11 @@ namespace CarShow.BackgroundServices
                         var median = ordered.Count % 2 == 1
                             ? ordered[mid] : (ordered[mid - 1] + ordered[mid]) / 2m;
                         // A single advertisement must never be a confirmed reference.
-                        var consistent = ordered.Where(x =>
+                        var consistent = ordered.Count == 1 ? ordered : ordered.Where(x =>
                             median > 0 && Math.Abs(x - median) <= median * 0.15m).ToList();
                         // Never publish a reference from a single advertisement.
-                        if (ordered.Count < 2 || consistent.Count < 2 ||
-                            consistent.Count * 2 <= ordered.Count)
+                        if (ordered.Count > 1 &&
+                            (consistent.Count == 0 || consistent.Count * 2 <= ordered.Count))
                             return null;
 
                         // Convert every valid price to toman before averaging.
