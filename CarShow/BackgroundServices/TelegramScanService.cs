@@ -924,14 +924,7 @@ namespace CarShow.BackgroundServices
                 if (string.IsNullOrWhiteSpace(message) || models.Count == 0) return result;
                 var lines = message.Replace("\r", "").Split('\n');
                 var starts = Enumerable.Range(0, lines.Length)
-                    .Where(index =>
-                    {
-                        var line = CleanLine(lines[index]);
-                        // Ignore mentions in trade-in, comparison and descriptive lines.
-                        if (Regex.IsMatch(line, @"^(?:معاوضه|تعویض|مقایسه|مشابه|در\s+حد|با\s+خودروی)"))
-                            return false;
-                        return models.Any(model => CatalogContains(line, model));
-                    })
+                    .Where(index => IsCatalogVehicleHeader(CleanLine(lines[index]), models))
                     .ToList();
                 for (var i = 0; i < starts.Count; i++)
                 {
@@ -946,6 +939,26 @@ namespace CarShow.BackgroundServices
                     });
                 }
                 return result;
+            }
+
+            // A catalog model mentioned in a delivery date, comparison or description
+            // is not a new vehicle. Require the model to begin the cleaned header.
+            private static bool IsCatalogVehicleHeader(string line, IReadOnlyCollection<string> models)
+            {
+                if (string.IsNullOrWhiteSpace(line) ||
+                    Regex.IsMatch(line, @"^(?:معاوضه|تعویض|مقایسه|مشابه|در\s+حد|با\s+خودروی|برج|روز|مدل|قیمت|مبلغ|فروش|تحویل|رینگ|قالپاق)(?:\s|$)"))
+                    return false;
+
+                return models.Any(model =>
+                {
+                    var token = CatalogNormalize(model);
+                    if (token.Length == 0) return false;
+                    // Avoid interpreting numeric catalog names as delivery months.
+                    if (Regex.IsMatch(token, @"^\d{1,2}$")) return false;
+                    var normalized = CatalogNormalize(line);
+                    return normalized.Equals(token, StringComparison.Ordinal) ||
+                        normalized.StartsWith(token + " ", StringComparison.Ordinal);
+                });
             }
 
             private static string ExtractYearCatalog(string block, string header)
@@ -1044,7 +1057,11 @@ namespace CarShow.BackgroundServices
                 name = ExplicitPriceRegex.Replace(name, " ");
                 name = PriceTokenRegex.Replace(name, " ");
                 name = NoiseRegex.Replace(name, " ");
-
+                // Remove delivery and presentation details, never the preceding trim.
+                // A standalone "405" in "مدل 405 روز" is not the model of a 207.
+                name = Regex.Replace(name,
+                    @"\b(?:برج\s*\d{1,2}|روز{2,}\S*|قالپاق|با\s+رینگ\s+شرکتی|رینگ\s+شرکتی)\b",
+                    " ");
                 name = Regex.Replace(name, @"\s+", " ").Trim();
                 return name.Trim(' ', '-', '/', ',', '،', ':', '؛');
             }
