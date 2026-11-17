@@ -444,13 +444,13 @@ namespace CarShow.BackgroundServices
             var modelName = specificModels[0];
             var candidates = catalog.Where(item =>
                 string.Equals(item.Model, modelName, StringComparison.OrdinalIgnoreCase) &&
-                CatalogContains(text, item.Tip)).ToList();
+                TrimContains(text, item.Tip)).ToList();
 
             // More specific trim wins only if all other matching trims are its
             // component phrases. Independent trim matches mean ambiguous ad.
             var specificTrims = candidates.Where(item => !candidates.Any(other =>
-                item.Id != other.Id && CatalogContains(other.Tip, item.Tip) &&
-                !CatalogContains(item.Tip, other.Tip))).ToList();
+                item.Id != other.Id && TrimContains(other.Tip, item.Tip) &&
+                !TrimContains(item.Tip, other.Tip))).ToList();
             return specificTrims.Count == 1 ? specificTrims[0].Id : null;
         }
 
