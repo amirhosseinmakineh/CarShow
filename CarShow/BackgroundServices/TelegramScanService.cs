@@ -473,8 +473,8 @@ namespace CarShow.BackgroundServices
         private static string NormalizeManufacturingYear(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return null;
-            var value = NormalizeText(raw).Trim();
-            if (!Regex.IsMatch(value, @"^\\d{2,4}$")) return null;
+            var value = CatalogNormalize(raw).Trim();
+            if (!Regex.IsMatch(value, @"^\d{2,4}$")) return null;
             if (!int.TryParse(value, out var year)) return null;
             if (year >= 2000 && year <= 2099) return year.ToString(CultureInfo.InvariantCulture);
             if (year >= 1300 && year <= 1399) return (year + 621).ToString(CultureInfo.InvariantCulture);
