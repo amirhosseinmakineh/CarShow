@@ -1079,16 +1079,33 @@ namespace CarShow.BackgroundServices
 
             private static string ExtractYearCatalog(string block, string header)
             {
-                // Existing year extraction uses the vehicle header for short years.
-                // The catalog parser also accepts model names outside the legacy prefix list.
-                var normalizedBlock = NormalizeText(block);
-                var years = FullYearRegex.Matches(normalizedBlock)
-                    .Cast<Match>().Select(x => x.Value).Distinct().ToList();
-                if (years.Count == 1) return NormalizeManufacturingYear(years[0]);
-                if (years.Count > 1) return null;
-                var shortYears = Regex.Matches(NormalizeText(header), @"مدل\s*(?<year>40[0-9]|0[0-9])(?=\D|$)")
-                    .Cast<Match>().Select(x => NormalizeManufacturingYear(x.Groups["year"].Value)).Where(x => x != null).Distinct().ToList();
-                return shortYears.Count == 1 ? shortYears[0] : null;
+                // The vehicle header is authoritative. Delivery years in later lines
+                // must never override the actual manufacturing year.
+                var normalizedHeader = NormalizeText(header);
+                var candidates = new HashSet<string>(StringComparer.Ordinal);
+                var explicitYears = Regex.Matches(normalizedHeader,
+                    @"(?<!\d)(?:13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?=\s*(?:[/.-]\s*(?:0?[1-9]|1[0-2]))?(?:\s|$|روز|برج|پلاک|،|🔷|🔶))");
+                foreach (Match match in explicitYears)
+                {
+                    if (match.Value == "405" &&
+                        Regex.IsMatch(normalizedHeader[..match.Index], @"پژو\s*$"))
+                        continue;
+                    var year = NormalizeManufacturingYear(match.Value);
+                    if (year != null) candidates.Add(year);
+                }
+                // If the header is silent, accept only an explicitly labelled model year
+                // in the remaining block; never infer from delivery dates.
+                if (candidates.Count == 0)
+                {
+                    var labelled = Regex.Matches(NormalizeText(block),
+                        @"مدل\s*(?<year>13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?=\D|$)");
+                    foreach (Match match in labelled)
+                    {
+                        var year = NormalizeManufacturingYear(match.Groups["year"].Value);
+                        if (year != null) candidates.Add(year);
+                    }
+                }
+                return candidates.Count == 1 ? candidates.Single() : null;
             }
 
             public static List<ParsedCar> Parse(string message)
@@ -1186,53 +1203,60 @@ namespace CarShow.BackgroundServices
 
             private static string ExtractPrice(string block)
             {
-                var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var line in block.Split('\n'))
+                var candidates = new HashSet<decimal>();
+                foreach (var rawLine in block.Split('\n'))
                 {
-                    var normalized = PhoneRegex.Replace(NormalizeText(line), " ");
-                    if (MileageRegex.IsMatch(normalized))
+                    var normalized = PhoneRegex.Replace(NormalizeText(rawLine), " ");
+                    if (Regex.IsMatch(normalized, @"پیش\s*پرداخت|بیعانه|اقساط|قسط|ودیعه|کاور|لوازم|بیمه|مالیات"))
                         continue;
-
-                    // A deposit, installment or down payment is not a vehicle asking price.
-                    if (Regex.IsMatch(normalized, @"پیش\s*پرداخت|بیعانه|اقساط|قسط|ودیعه"))
-                        continue;
-
+                    // Mileage and asking price can coexist on one line. Only accept a
+                    // numeric token on such lines when an explicit price label exists.
+                    var labelled = Regex.IsMatch(normalized, @"قیمت|مبلغ|نرخ|فروش");
+                    if (MileageRegex.IsMatch(normalized) && !labelled) continue;
                     foreach (Match match in ExplicitPriceRegex.Matches(normalized))
-                        candidates.Add(Regex.Replace(match.Value, @"\s+", " ").Trim());
-
+                        if (CarPriceReferenceBuilder.TryConvertPrice(match.Value, out var price))
+                            candidates.Add(price);
                     foreach (Match match in ColloquialPriceRegex.Matches(normalized))
                     {
                         var amount = match.Groups["amount"].Value.Replace('/', '.').Replace(',', '.');
-                        if (decimal.TryParse(amount, NumberStyles.Number,
-                            CultureInfo.InvariantCulture, out var number) && number >= 1m && number < 100m)
-                            candidates.Add(amount + " میلیارد");
+                        if (decimal.TryParse(amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
+                            && number >= 1m && number < 100m)
+                            candidates.Add(number);
                     }
-
-                    // Never double-count an explicitly unit-marked price as a bare number.
-                    if (ExplicitPriceRegex.IsMatch(normalized) || ColloquialPriceRegex.IsMatch(normalized))
-                        continue;
-
-                    // Unitless figures are accepted only with an explicit price label.
-                    if (!Regex.IsMatch(normalized, @"قیمت|مبلغ|فروش|نرخ"))
-                        continue;
-
-                    var withoutYears = ShortYearRegex.Replace(FullYearRegex.Replace(normalized, " "), " ");
-                    foreach (Match match in PriceTokenRegex.Matches(withoutYears))
+                    // A bare figure must be on its own line, have a price label,
+                    // or follow a price marker. Never treat a date as a price.
+                    var priceLine = Regex.Replace(normalized, @"[🔥🔷🔶✅⚡️\s]", "");
+                    var bareLine = Regex.IsMatch(priceLine, @"^\d{4,5}$|^\d{1,2}[/.,]\d{3}$|^\d{1,3}(?:,\d{3}){2,3}$");
+                    if (!labelled && !bareLine) continue;
+                    foreach (Match match in Regex.Matches(normalized,
+                        @"(?<![\p{L}\d])(?:\d{1,3}(?:,\d{3}){2,3}|\d{1,2}[/.,]\d{3}|\d{4,5})(?![\d])"))
                     {
-                        var digits = Regex.Replace(match.Value, @"\D", "");
-                        if (digits.Length >= 4 && digits.Length <= 8)
-                            candidates.Add(match.Value);
+                        var token = match.Value;
+                        if (Regex.IsMatch(token, @"^(?:13\d{2}|14\d{2}|20\d{2}|40[0-9])$")) continue;
+                        if (Regex.IsMatch(token, @"^\d{1,2}[/.,]\d{3}$"))
+                        {
+                            var decimalText = token.Replace('/', '.').Replace(',', '.');
+                            if (decimal.TryParse(decimalText, NumberStyles.Number,
+                                CultureInfo.InvariantCulture, out var billion) &&
+                                billion >= 1m && billion < 100m)
+                                candidates.Add(billion);
+                            continue;
+                        }
+                        if (Regex.IsMatch(token, @"^\d{1,3}(?:,\d{3}){2,3}$"))
+                        {
+                            var digits = token.Replace(",", "");
+                            if (decimal.TryParse(digits, out var toman) && toman >= 1_000_000_000m)
+                                candidates.Add(toman / 1_000_000_000m);
+                            continue;
+                        }
+                        if (CarPriceReferenceBuilder.TryConvertPrice(token, out var price))
+                            candidates.Add(price);
                     }
                 }
-
-                // Different spellings of the same numeric price must not create
-                // a false ambiguity; validate each candidate with the existing converter.
-                var validPrices = candidates
-                    .Select(value => new { Value = value, Valid = CarPriceReferenceBuilder.TryConvertPrice(value, out var amount), Amount = amount })
-                    .Where(x => x.Valid)
-                    .GroupBy(x => x.Amount)
-                    .ToList();
-                return validPrices.Count == 1 ? validPrices[0].First().Value : null;
+                // Conflicting prices are ambiguous, not a license to guess.
+                return candidates.Count == 1
+                    ? (candidates.Single() * 1000m).ToString("0", CultureInfo.InvariantCulture)
+                    : null;
             }
 
             private static string ExtractYear(string block)
@@ -1364,20 +1388,17 @@ namespace CarShow.BackgroundServices
                     })
                     .Select(group =>
                     {
-                        // Multi-ad groups use median consensus to reject outliers.
-                        // Single-ad groups use their one validated asking price.
+                        // Median-based outlier rejection, followed by the mean of at least two accepted ads.
                         var ordered = group.Select(x => x.PriceBillion).OrderBy(x => x).ToList();
                         var mid = ordered.Count / 2;
                         var median = ordered.Count % 2 == 1
                             ? ordered[mid] : (ordered[mid - 1] + ordered[mid]) / 2m;
-                        // A single fully matched model/trim/year with a valid price
-                        // is allowed as its own reference. Multiple ads still need consensus.
-                        var consistent = ordered.Count == 1
-                            ? ordered
-                            : ordered.Where(x =>
-                                median > 0 && Math.Abs(x - median) <= median * 0.15m).ToList();
-                        if (ordered.Count > 1 &&
-                            (consistent.Count < 2 || consistent.Count * 2 <= ordered.Count))
+                        // A single advertisement must never be a confirmed reference.
+                        var consistent = ordered.Where(x =>
+                            median > 0 && Math.Abs(x - median) <= median * 0.15m).ToList();
+                        // Never publish a reference from a single advertisement.
+                        if (ordered.Count < 2 || consistent.Count < 2 ||
+                            consistent.Count * 2 <= ordered.Count)
                             return null;
 
                         // Convert every valid price to toman before averaging.
