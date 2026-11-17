@@ -170,6 +170,7 @@ namespace CarShow.BackgroundServices
             var parsedCars = messagesByChannel
                 .Where(channel => !channelErrors.ContainsKey(channel.Key))
                 .SelectMany(channel => channel.Value)
+                .Distinct(StringComparer.Ordinal) // identical syndicated posts count once
                 .SelectMany(message => TelegramCarParser.ParseCatalog(message, modelNames))
                 .ToList();
 
@@ -295,7 +296,7 @@ namespace CarShow.BackgroundServices
             var accepted = new List<ParsedCar>();
             var parsedCount = 0;
             var messages = messagesByChannel.Where(x => !channelErrors.ContainsKey(x.Key))
-                .SelectMany(x => x.Value).ToList();
+                .SelectMany(x => x.Value).Distinct(StringComparer.Ordinal).ToList();
             var noVehicleMessages = 0;
 
             void Reject(string reason, ParsedCar car, string detail = "", string? matchedModel = null, int candidateCount = 0)
@@ -597,7 +598,9 @@ namespace CarShow.BackgroundServices
                     Year = latest.Year,
                     Years = references,
                     latest.AdvertisementCount,
-                    latest.ReferencePriceBillion
+                    latest.ReferencePriceBillion,
+                    ComparisonApproved = latest.AdvertisementCount >= 2 && latest.ReferencePriceBillion > 0,
+                    ComparedAtUtc = DateTime.UtcNow
                 });
                 updated++;
             }
