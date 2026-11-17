@@ -173,14 +173,8 @@ namespace CarShow.BackgroundServices
                 .SelectMany(message => TelegramCarParser.ParseCatalog(message, modelNames))
                 .ToList();
 
-            var matchedCars = parsedCars.Select(car =>
-            {
-                var matchedId = MatchCatalogCar(car.Name,
-                    catalog.Select(item => (Id: (long)item.Id, Model: item.Model, Tip: item.Tip)).ToList());
-                return matchedId.HasValue
-                    ? new ParsedCar { Name = "catalog:" + matchedId.Value, Year = car.Year, Price = car.Price }
-                    : null;
-            }).Where(car => car != null).Select(car => car!).ToList();
+            var catalogTuples = catalog.Select(item => (Id: (long)item.Id, Model: item.Model, Tip: item.Tip)).ToList();
+            var matchedCars = MatchAdvertisementsForCatalogCars(parsedCars, catalogTuples);
 
             // Keep the existing year/price validation, minimum sample size and mean.
             var priceReferences = CarPriceReferenceBuilder.Build(matchedCars);
@@ -320,11 +314,25 @@ namespace CarShow.BackgroundServices
                 foreach (var car in cars)
                 {
                     parsedCount++;
-                    var id = MatchCatalogCar(car.Name, catalogTuples);
-                    if (!id.HasValue)
+                    // Report matching according to the same car-first flow as production.
+                    var matchedIds = catalogTuples
+                        .Where(item => CatalogContains(car.Name, item.Model) &&
+                            TrimContains(car.Name, item.Tip) &&
+                            catalogTuples.Count(other =>
+                                CatalogNormalize(other.Model) == CatalogNormalize(item.Model) &&
+                                NormalizeTrimTerms(other.Tip) == NormalizeTrimTerms(item.Tip)) == 1 &&
+                            !catalogTuples.Any(other => other.Id != item.Id &&
+                                CatalogContains(car.Name, other.Model) &&
+                                TrimContains(car.Name, other.Tip) &&
+                                (IsStrictlyMoreSpecificTrim(other.Tip, item.Tip) ||
+                                 (CatalogNormalize(other.Model) != CatalogNormalize(item.Model) &&
+                                  CatalogContains(other.Model, item.Model)))))
+                        .Select(item => item.Id).ToList();
+                    if (matchedIds.Count == 0)
                     {
                         var diagnosis = ExplainCatalogRejection(car.Name, catalogTuples);
-                        Reject(diagnosis.Reason, car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
+                        Reject(diagnosis.Reason == "UnclassifiedMatchFailure" ? "DuplicateCatalogCar" : diagnosis.Reason,
+                            car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(car.Year) ||
@@ -340,12 +348,8 @@ namespace CarShow.BackgroundServices
                             string.IsNullOrWhiteSpace(car.Price) ? "Sale price was not extracted." : "Extracted price failed numeric or range validation.");
                         continue;
                     }
-                    accepted.Add(new ParsedCar
-                    {
-                        Name = "catalog:" + id.Value,
-                        Year = car.Year,
-                        Price = car.Price
-                    });
+                    foreach (var id in matchedIds)
+                        accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = car.Year, Price = car.Price });
                 }
             }
 
@@ -462,6 +466,50 @@ namespace CarShow.BackgroundServices
             var specificTrims = candidates.Where(item => !candidates.Any(other =>
                 item.Id != other.Id && IsStrictlyMoreSpecificTrim(other.Tip, item.Tip))).ToList();
             return specificTrims.Count == 1 ? specificTrims[0].Id : null;
+        }
+
+        // The database car is the unit of work. Never choose a CarId by searching
+        // the entire catalog for each advertisement.
+        private static List<ParsedCar> MatchAdvertisementsForCatalogCars(
+            IReadOnlyCollection<ParsedCar> advertisements,
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            var matches = new List<ParsedCar>();
+            // Identical model/trim definitions cannot be assigned safely to one
+            // of multiple CarIds. Leave these records untouched.
+            var uniqueCars = catalog.GroupBy(x =>
+                (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
+                .Where(group => group.Count() == 1)
+                .Select(group => group.Single());
+
+            foreach (var car in uniqueCars)
+            {
+                // Match this car's model and trim only; then move to the next car.
+                // Prevent a shorter model/trim from stealing an advertisement
+                // that explicitly names a more specific catalog variant.
+                foreach (var advertisement in advertisements)
+                {
+                    if (!CatalogContains(advertisement.Name, car.Model) ||
+                        !TrimContains(advertisement.Name, car.Tip))
+                        continue;
+
+                    var competing = catalog.Any(other => other.Id != car.Id &&
+                        CatalogContains(advertisement.Name, other.Model) &&
+                        TrimContains(advertisement.Name, other.Tip) &&
+                        (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
+                         (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
+                          CatalogContains(other.Model, car.Model))));
+                    if (competing) continue;
+
+                    matches.Add(new ParsedCar
+                    {
+                        Name = "catalog:" + car.Id,
+                        Year = advertisement.Year,
+                        Price = advertisement.Price
+                    });
+                }
+            }
+            return matches;
         }
 
         // Only update existing catalog cars after a genuine reference was calculated.
