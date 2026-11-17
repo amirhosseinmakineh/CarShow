@@ -336,7 +336,7 @@ namespace CarShow.BackgroundServices
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(car.Year) ||
-                        !Regex.IsMatch(car.Year, @"^14\d{2}$"))
+                        NormalizeManufacturingYear(car.Year) == null)
                     {
                         Reject("MissingOrInvalidYear", car,
                             string.IsNullOrWhiteSpace(car.Year) ? "Manufacturing year was not extracted." : "Manufacturing year has an unsupported format.");
@@ -349,7 +349,7 @@ namespace CarShow.BackgroundServices
                         continue;
                     }
                     foreach (var id in matchedIds)
-                        accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = car.Year, Price = car.Price });
+                        accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = NormalizeManufacturingYear(car.Year), Price = car.Price });
                 }
             }
 
@@ -468,6 +468,22 @@ namespace CarShow.BackgroundServices
             return specificTrims.Count == 1 ? specificTrims[0].Id : null;
         }
 
+        // Canonical comparison key: 1405 / 405 / 05 => 2026.
+        // This is a model-year convention, not a calendar-date conversion.
+        private static string NormalizeManufacturingYear(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            var value = NormalizeText(raw).Trim();
+            if (!Regex.IsMatch(value, @"^\\d{2,4}$")) return null;
+            if (!int.TryParse(value, out var year)) return null;
+            if (year >= 2000 && year <= 2099) return year.ToString(CultureInfo.InvariantCulture);
+            if (year >= 1300 && year <= 1399) return (year + 621).ToString(CultureInfo.InvariantCulture);
+            if (year >= 1400 && year <= 1499) return (year + 621).ToString(CultureInfo.InvariantCulture);
+            if (year >= 400 && year <= 499) return (year + 1621).ToString(CultureInfo.InvariantCulture);
+            if (value.Length == 2 && year <= 30) return (2021 + year).ToString(CultureInfo.InvariantCulture);
+            return null;
+        }
+
         // The database car is the unit of work. Never choose a CarId by searching
         // the entire catalog for each advertisement.
         private static List<ParsedCar> MatchAdvertisementsForCatalogCars(
@@ -504,7 +520,7 @@ namespace CarShow.BackgroundServices
                     matches.Add(new ParsedCar
                     {
                         Name = "catalog:" + car.Id,
-                        Year = advertisement.Year,
+                        Year = NormalizeManufacturingYear(advertisement.Year),
                         Price = advertisement.Price
                     });
                 }
@@ -1482,7 +1498,7 @@ namespace CarShow.BackgroundServices
                     return null;
 
                 var value = NormalizeText(year).Trim();
-                return ValidYearRegex.IsMatch(value) ? value : null;
+                return NormalizeManufacturingYear(value);
             }
 
             public static bool TryConvertPrice(
