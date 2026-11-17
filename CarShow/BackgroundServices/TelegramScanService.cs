@@ -277,8 +277,7 @@ namespace CarShow.BackgroundServices
                 return ("TrimNotFound", "Model matched but no catalog trim phrase matched.", model, 0);
 
             var specificTrims = candidates.Where(item => !candidates.Any(other =>
-                item.Id != other.Id && TrimContains(other.Tip, item.Tip) &&
-                !TrimContains(item.Tip, other.Tip))).ToList();
+                item.Id != other.Id && IsStrictlyMoreSpecificTrim(other.Tip, item.Tip))).ToList();
             return specificTrims.Count == 1
                 ? ("UnclassifiedMatchFailure", "Diagnostic classification differs from matcher.", model, specificTrims.Count)
                 : ("AmbiguousTrim", "Multiple catalog trims or duplicate catalog entries match.", model, specificTrims.Count);
@@ -414,6 +413,18 @@ namespace CarShow.BackgroundServices
                 (" " + value + " ").Contains(" " + token + " ", StringComparison.Ordinal);
         }
 
+        // Compare normalized trim feature tokens independent of word order.
+        // Only a strict superset can eliminate a less-specific trim; equal token
+        // sets (including duplicate catalog rows) remain ambiguous.
+        private static bool IsStrictlyMoreSpecificTrim(string candidate, string other)
+        {
+            var candidateTokens = NormalizeTrimTerms(candidate).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet(StringComparer.Ordinal);
+            var otherTokens = NormalizeTrimTerms(other).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet(StringComparer.Ordinal);
+            return candidateTokens.IsProperSupersetOf(otherTokens);
+        }
+
         private static bool CatalogContains(string advertisement, string term)
         {
             var value = CatalogNormalize(advertisement);
@@ -449,8 +460,7 @@ namespace CarShow.BackgroundServices
             // More specific trim wins only if all other matching trims are its
             // component phrases. Independent trim matches mean ambiguous ad.
             var specificTrims = candidates.Where(item => !candidates.Any(other =>
-                item.Id != other.Id && TrimContains(other.Tip, item.Tip) &&
-                !TrimContains(item.Tip, other.Tip))).ToList();
+                item.Id != other.Id && IsStrictlyMoreSpecificTrim(other.Tip, item.Tip))).ToList();
             return specificTrims.Count == 1 ? specificTrims[0].Id : null;
         }
 
