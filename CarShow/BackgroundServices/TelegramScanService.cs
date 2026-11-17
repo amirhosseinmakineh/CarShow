@@ -349,6 +349,23 @@ namespace CarShow.BackgroundServices
             return new TelegramScanOutcome(200, new
             {
                 Note = "Read-only live fetch; counts can differ from a previous scan. No database writes.",
+                // Investigation mode: return every fetched Telegram message verbatim.
+                // No model, trim, year or price filters are applied to this dataset.
+                // RawMessage is intentionally not passed through NormalizeText.
+                RawTelegramMessages = messagesByChannel
+                    .SelectMany(channel => channel.Value.Select((message, index) => new
+                    {
+                        Channel = channel.Key,
+                        Index = index,
+                        RawMessage = message
+                    })).ToList(),
+                // Parsed values are observational only; no catalog-match requirement.
+                ParsedAdvertisements = parsedAdvertisements.Select(car => new
+                {
+                    car.Name,
+                    car.Year,
+                    car.Price
+                }).ToList(),
                 TotalChannels = messagesByChannel.Count,
                 FailedChannels = channelErrors.Count,
                 MessagesProcessed = messages.Count,
