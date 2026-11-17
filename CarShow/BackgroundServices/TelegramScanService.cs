@@ -498,13 +498,16 @@ namespace CarShow.BackgroundServices
                 .Where(group => group.Count() == 1)
                 .Select(group => group.Single());
 
+            var claimedAdvertisements = new Dictionary<int, List<long>>();
+            var ads = advertisements.ToList();
             foreach (var car in uniqueCars)
             {
                 // Match this car's model and trim only; then move to the next car.
                 // Prevent a shorter model/trim from stealing an advertisement
                 // that explicitly names a more specific catalog variant.
-                foreach (var advertisement in advertisements)
+                for (var adIndex = 0; adIndex < ads.Count; adIndex++)
                 {
+                    var advertisement = ads[adIndex];
                     if (!CatalogContains(advertisement.Name, car.Model) ||
                         !TrimContains(advertisement.Name, car.Tip))
                         continue;
@@ -517,6 +520,9 @@ namespace CarShow.BackgroundServices
                           CatalogContains(other.Model, car.Model))));
                     if (competing) continue;
 
+                    if (!claimedAdvertisements.TryGetValue(adIndex, out var owners))
+                        claimedAdvertisements[adIndex] = owners = new List<long>();
+                    owners.Add(car.Id);
                     matches.Add(new ParsedCar
                     {
                         Name = "catalog:" + car.Id,
@@ -525,7 +531,11 @@ namespace CarShow.BackgroundServices
                     });
                 }
             }
-            return matches;
+            var ambiguousOwners = claimedAdvertisements.Where(x => x.Value.Distinct().Count() > 1)
+                .SelectMany(x => x.Value).ToHashSet();
+            // Never write a price reference for a car sharing any ad with another CarId.
+            return matches.Where(x => !long.TryParse(x.Name.Substring(8), out var id) ||
+                !ambiguousOwners.Contains(id)).ToList();
         }
 
         // Only update existing catalog cars after a genuine reference was calculated.
@@ -1062,10 +1072,10 @@ namespace CarShow.BackgroundServices
                 // The catalog parser also accepts model names outside the legacy prefix list.
                 var years = FullYearRegex.Matches(NormalizeText(block))
                     .Cast<Match>().Select(x => x.Value).Distinct().ToList();
-                if (years.Count == 1) return years[0];
+                if (years.Count == 1) return NormalizeManufacturingYear(years[0]);
                 if (years.Count > 1) return null;
-                var shortYears = ShortYearRegex.Matches(NormalizeText(header))
-                    .Cast<Match>().Select(x => "14" + x.Groups["year"].Value.Substring(1)).Distinct().ToList();
+                var shortYears = Regex.Matches(NormalizeText(header), @"(?:مدل\\s*)(?<year>40[0-9]|0[0-9])(?=\\D|$)")
+                    .Cast<Match>().Select(x => NormalizeManufacturingYear(x.Groups["year"].Value)).Where(x => x != null).Distinct().ToList();
                 return shortYears.Count == 1 ? shortYears[0] : null;
             }
 
@@ -1225,7 +1235,7 @@ namespace CarShow.BackgroundServices
                     if (Regex.IsMatch(beforeYear, @"پژو\s*$"))
                         continue;
 
-                    var fullYear = "14" + match.Groups["year"].Value.Substring(1);
+                    var fullYear = NormalizeManufacturingYear(match.Groups["year"].Value);
 
                     if (!years.Contains(fullYear))
                         years.Add(fullYear);
@@ -1238,7 +1248,7 @@ namespace CarShow.BackgroundServices
                     return null;
                 }
 
-                return years.Count == 1 ? years[0] : null;
+                return years.Count == 1 ? NormalizeManufacturingYear(years[0]) : null;
             }
 
             private static string CleanLine(string value)
