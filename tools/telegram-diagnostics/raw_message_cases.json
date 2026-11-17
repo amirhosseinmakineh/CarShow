@@ -1,0 +1,300 @@
+{
+  "description": "Phase 1 raw-message fixture samples; phone numbers removed. Expected values are preliminary labels requiring human review, not authoritative parsing assertions.",
+  "sourceFile": "response_1794894156562.json",
+  "cases": [
+    {
+      "id": "tg-001",
+      "source": {
+        "channel": "parsiankhodroqolizade",
+        "index": 2
+      },
+      "rawMessage": "۲۰۷ اتومات پانا ارتقا مشکی\n۴۰۵ پلاک روز\nخوش قیمتتتتت ۴۷۲۰ این قیمت نمیدن",
+      "scenario": "unitless_with_price_word",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "۴۷۲۰"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-002",
+      "source": {
+        "channel": "parsiankhodroqolizade",
+        "index": 25
+      },
+      "rawMessage": "سورن موتور پارس مشکی\n۴۰۴ برج ۱۲\nکارکرد ۱۰ هزار مشابه صفر",
+      "scenario": "no_price",
+      "expected": {
+        "manufacturingYear": "2025",
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-003",
+      "source": {
+        "channel": "parsiankhodroqolizade",
+        "index": 26
+      },
+      "rawMessage": "دیگنیتی پرایم سفید تو مشکی\n۴۰۳\nکارکرد ۱۹ هزار\nکاور بدنه ۳۰۰ میلیونی",
+      "scenario": "accessory_not_vehicle_price",
+      "expected": {
+        "manufacturingYear": "2024",
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-004",
+      "source": {
+        "channel": "alavicarexhibition",
+        "index": 0
+      },
+      "rawMessage": "شاهین پلاس اتومات برج ۲ با مدارک\nکارکرد ۵۷۰۰\n4,008,000,000",
+      "scenario": "full_rial_like_amount_year_missing",
+      "expected": {
+        "manufacturingYear": null,
+        "priceToken": "4,008,000,000"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-005",
+      "source": {
+        "channel": "alavicarexhibition",
+        "index": 1
+      },
+      "rawMessage": "تیگو ۷ پرمیوم سفید ۴۰۳ برج ۴\n۲۵٫۰۰۰ کارکرد\n7,368,000,000",
+      "scenario": "mileage_and_full_price",
+      "expected": {
+        "manufacturingYear": "2024",
+        "priceToken": "7,368,000,000"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-006",
+      "source": {
+        "channel": "alavicarexhibition",
+        "index": 3
+      },
+      "rawMessage": "چانگان Cs55 وارداتی 2024 خاکستری\n9,028,000,000",
+      "scenario": "latin_year",
+      "expected": {
+        "manufacturingYear": "2024",
+        "priceToken": "9,028,000,000"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-007",
+      "source": {
+        "channel": "omidabbasicarsale",
+        "index": 0
+      },
+      "rawMessage": "کرولا کراس ۲۰۲۶ کاردکس اسپرلوس\n10.250",
+      "scenario": "decimal_dot",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "10.250"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-008",
+      "source": {
+        "channel": "omidabbasicarsale",
+        "index": 2
+      },
+      "rawMessage": "کرولا کراس سفید ۲۰۲۶ نامی با پلاک\nسند آماده 10/550",
+      "scenario": "slash_price",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "10/550"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-009",
+      "source": {
+        "channel": "omidabbasicarsale",
+        "index": 3
+      },
+      "rawMessage": "فیدلیتی پرستیژ مشکی نسکافه ۴۰۵/۷\nتهران سند اماده کارشناسی 10/850",
+      "scenario": "year_month_and_price",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "10/850"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-010",
+      "source": {
+        "channel": "omidabbasicarsale",
+        "index": 4
+      },
+      "rawMessage": "۲۰۷ پانا دنده مشکی ۴۰۵/۶ رینگ\n(۴ تا کار)ب رویت صفر",
+      "scenario": "mileage_no_price",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-011",
+      "source": {
+        "channel": "AutoEsmieh",
+        "index": 5
+      },
+      "rawMessage": "تارا دنده V1 خاکستری مدل ۱۴۰۵ روز🔷۳/۳۰۰\nتحویل فردا",
+      "scenario": "inline_price",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "۳/۳۰۰"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-012",
+      "source": {
+        "channel": "AutoEsmieh",
+        "index": 12
+      },
+      "rawMessage": "آریزو 6 GT سفید مدل ۱۴۰۵/۰۷🔷موجود",
+      "scenario": "year_month_without_price",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-013",
+      "source": {
+        "channel": "AutoEsmieh",
+        "index": 15
+      },
+      "rawMessage": "شاهین دنده G سفید فول با سانروف مدل ۱۴۰۴/۱۲🔶۳/۰۴۰",
+      "scenario": "inline_year_month_price",
+      "expected": {
+        "manufacturingYear": "2025",
+        "priceToken": "۳/۰۴۰"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-014",
+      "source": {
+        "channel": "AutoEsmieh",
+        "index": 24
+      },
+      "rawMessage": "207 دنده پانا مشکی بدون رینگ مدل 404🔹موجود\n4000 km",
+      "scenario": "used_vehicle_no_price",
+      "expected": {
+        "manufacturingYear": "2025",
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-015",
+      "source": {
+        "channel": "autoluxy",
+        "index": 0
+      },
+      "rawMessage": "پراید وانت 151 gx سفید مدل ۴۰۴\nتحویل برج ۳ سال ۴۰۵",
+      "scenario": "manufacturing_vs_delivery_year",
+      "expected": {
+        "manufacturingYear": "2025",
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-016",
+      "source": {
+        "channel": "autoluxy",
+        "index": 12
+      },
+      "rawMessage": "لیست قیمت خودروهای روز\nدیگنیتی=۷۲۵۰\nتیگو۷ = ۹۴۶۰\nسوناتا=۱۴۹۸۰",
+      "scenario": "multi_vehicle_price_list_without_year",
+      "expected": {
+        "manufacturingYear": null,
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-017",
+      "source": {
+        "channel": "autoluxy",
+        "index": 13
+      },
+      "rawMessage": "لیست قیمت خودروهای روز\n۲۰۷ اتومات پانا=۶۴۲۰\nتارا اتومات =۴۳۲۰",
+      "scenario": "multi_vehicle_price_list_without_year",
+      "expected": {
+        "manufacturingYear": null,
+        "priceToken": null
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-018",
+      "source": {
+        "channel": "bakshabadi",
+        "index": 0
+      },
+      "rawMessage": "207 دنده پانا سفید ارتقا ۱۴۰۵ برج ۱۲ موجود قابل تحویل\n3/415",
+      "scenario": "separate_price_line",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "3/415"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-019",
+      "source": {
+        "channel": "khodro_nasri",
+        "index": 0
+      },
+      "rawMessage": "۲۰۷ پانا اتومات تیتانیوم ۴۰۵ برج ۶\n4/830/000",
+      "scenario": "slash_grouped_price",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "4/830/000"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-020",
+      "source": {
+        "channel": "khodro_nasri",
+        "index": 7
+      },
+      "rawMessage": "۲۰۷ دنده فرمان برقی سفید ۴۰۵ روز\n3/128",
+      "scenario": "slash_short_price",
+      "expected": {
+        "manufacturingYear": "2026",
+        "priceToken": "3/128"
+      },
+      "reviewStatus": "needs-human-review"
+    },
+    {
+      "id": "tg-021",
+      "source": {
+        "channel": "khodro_nasri",
+        "index": 17
+      },
+      "rawMessage": "تارا دنده v1 سفید ۴۰۴ برج ۸\n3/160/000",
+      "scenario": "slash_grouped_price",
+      "expected": {
+        "manufacturingYear": "2025",
+        "priceToken": "3/160/000"
+      },
+      "reviewStatus": "needs-human-review"
+    }
+  ]
+}
