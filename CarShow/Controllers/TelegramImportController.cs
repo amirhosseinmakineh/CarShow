@@ -12,12 +12,14 @@ public sealed class TelegramImportController : ControllerBase
     private readonly TelegramScanService _scan;
     private readonly TelegramScanStatus _status;
     private readonly TelegramScanBackgroundService _worker;
+    private readonly TelegramRejectionDiagnosticsWorker _diagnosticsWorker;
 
-    public TelegramImportController(TelegramScanService scan, TelegramScanStatus status, TelegramScanBackgroundService worker)
+    public TelegramImportController(TelegramScanService scan, TelegramScanStatus status, TelegramScanBackgroundService worker, TelegramRejectionDiagnosticsWorker diagnosticsWorker)
     {
         _scan = scan;
         _status = status;
         _worker = worker;
+        _diagnosticsWorker = diagnosticsWorker;
     }
 
     [HttpPost("scan")]
@@ -44,11 +46,32 @@ public sealed class TelegramImportController : ControllerBase
     }
 
     [HttpGet("diagnostics/rejections")]
-    public async Task<IActionResult> GetRejectionDiagnostics(CancellationToken cancellationToken)
+    public IActionResult GetRejectionDiagnostics()
+        => Ok(new
+        {
+            message = "Diagnostics now runs in the background. Start with POST /api/telegram-cars/diagnostics/rejections, then poll status and results.",
+            statusUrl = "/api/telegram-cars/diagnostics/rejections/status",
+            resultsUrl = "/api/telegram-cars/diagnostics/rejections/results"
+        });
+
+    [HttpPost("diagnostics/rejections")]
+    public IActionResult QueueRejectionDiagnostics()
     {
-        var outcome = await _scan.DiagnoseRejectionsAsync(cancellationToken);
-        return StatusCode(outcome.StatusCode, outcome.Value);
+        if (!_diagnosticsWorker.TryQueue())
+            return Conflict(new { message = "Diagnostics is already queued or running.",
+                statusUrl = "/api/telegram-cars/diagnostics/rejections/status" });
+        return Accepted(new { message = "Diagnostics queued.",
+            statusUrl = "/api/telegram-cars/diagnostics/rejections/status",
+            resultsUrl = "/api/telegram-cars/diagnostics/rejections/results" });
     }
+
+    [HttpGet("diagnostics/rejections/status")]
+    public IActionResult GetRejectionDiagnosticsStatus()
+        => Ok(_diagnosticsWorker.ReadStatus());
+
+    [HttpGet("diagnostics/rejections/results")]
+    public IActionResult GetRejectionDiagnosticsResults()
+        => Ok(_diagnosticsWorker.ReadResults());
 
     [HttpPost("diagnostics/parsed-cars")]
     public IActionResult DiagnoseParsedCars([FromBody] List<TelegramScanService.ParsedCar> cars)
