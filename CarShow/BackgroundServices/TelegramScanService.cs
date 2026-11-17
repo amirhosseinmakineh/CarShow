@@ -290,12 +290,6 @@ namespace CarShow.BackgroundServices
                 .ToListAsync(cancellationToken);
             var models = catalog.Select(x => x.Model).Distinct().ToArray();
             var catalogTuples = catalog.Select(x => (Id: (long)x.Id, Model: x.Model, Tip: x.Tip)).ToList();
-            var matchedCars = MatchAdvertisementsForCatalogCars(
-                messagesByChannel.Where(x => !channelErrors.ContainsKey(x.Key))
-                    .SelectMany(x => x.Value)
-                    .SelectMany(message => TelegramCarParser.ParseCatalog(message, models)).ToList(),
-                catalogTuples);
-            var matchedNames = matchedCars.Select(x => (x.Name, x.Year, x.Price)).ToHashSet();
             var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
             var samples = new Dictionary<string, List<object>>(StringComparer.Ordinal);
             var accepted = new List<ParsedCar>();
@@ -320,11 +314,25 @@ namespace CarShow.BackgroundServices
                 foreach (var car in cars)
                 {
                     parsedCount++;
-                    var id = MatchCatalogCar(car.Name, catalogTuples);
-                    if (!id.HasValue)
+                    // Report matching according to the same car-first flow as production.
+                    var matchedIds = catalogTuples
+                        .Where(item => CatalogContains(car.Name, item.Model) &&
+                            TrimContains(car.Name, item.Tip) &&
+                            catalogTuples.Count(other =>
+                                CatalogNormalize(other.Model) == CatalogNormalize(item.Model) &&
+                                NormalizeTrimTerms(other.Tip) == NormalizeTrimTerms(item.Tip)) == 1 &&
+                            !catalogTuples.Any(other => other.Id != item.Id &&
+                                CatalogContains(car.Name, other.Model) &&
+                                TrimContains(car.Name, other.Tip) &&
+                                (IsStrictlyMoreSpecificTrim(other.Tip, item.Tip) ||
+                                 (CatalogNormalize(other.Model) != CatalogNormalize(item.Model) &&
+                                  CatalogContains(other.Model, item.Model)))))
+                        .Select(item => item.Id).ToList();
+                    if (matchedIds.Count == 0)
                     {
                         var diagnosis = ExplainCatalogRejection(car.Name, catalogTuples);
-                        Reject(diagnosis.Reason, car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
+                        Reject(diagnosis.Reason == "UnclassifiedMatchFailure" ? "DuplicateCatalogCar" : diagnosis.Reason,
+                            car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(car.Year) ||
@@ -340,12 +348,8 @@ namespace CarShow.BackgroundServices
                             string.IsNullOrWhiteSpace(car.Price) ? "Sale price was not extracted." : "Extracted price failed numeric or range validation.");
                         continue;
                     }
-                    accepted.Add(new ParsedCar
-                    {
-                        Name = "catalog:" + id.Value,
-                        Year = car.Year,
-                        Price = car.Price
-                    });
+                    foreach (var id in matchedIds)
+                        accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = car.Year, Price = car.Price });
                 }
             }
 
