@@ -94,7 +94,8 @@ namespace CarShow.ApplicationService.Services
             // Public listings contain only catalog cars with an actual Telegram reference.
             var query = carRepository.GetAll().Where(c =>
                 c.CompanyId != null && c.CarModelId != null && c.TipId != null &&
-                c.MarketPrice > 0 && c.Description.Contains("TelegramPriceReference"));
+                c.MarketPrice > 0 && c.Description.Contains("TelegramPriceReference") &&
+                c.Description.Contains("\"ComparisonApproved\":true"));
 
             if (minPrice.HasValue)
                 query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
@@ -262,7 +263,8 @@ namespace CarShow.ApplicationService.Services
                 .Include(x => x.CarModel)
                 .FirstOrDefaultAsync(x => x.Id == carId && x.CompanyId != null &&
                     x.CarModelId != null && x.TipId != null && x.MarketPrice > 0 &&
-                    x.Description.Contains("TelegramPriceReference"));
+                    x.Description.Contains("TelegramPriceReference") &&
+                    x.Description.Contains("\"ComparisonApproved\":true"));
 
             if (car is null)
                 return Result<CarDto>.Failure("اتومبیلی یافت نشد");
