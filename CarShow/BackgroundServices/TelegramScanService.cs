@@ -249,6 +249,104 @@ namespace CarShow.BackgroundServices
             };
         }
 
+        // Read-only diagnostic scan: fetches the same Telegram source and catalog as ScanAsync,
+        // but never calls SaveReferenceCarsAsync and never modifies database records.
+        public async Task<TelegramScanOutcome> DiagnoseRejectionsAsync(CancellationToken cancellationToken)
+        {
+            var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var messagesByChannel = await GetLast100MessagesAsync(
+                Channels, cancellationToken, channelErrors, null);
+            var catalog = await _db.Cars.AsNoTracking()
+                .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
+                .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
+                .ToListAsync(cancellationToken);
+            var models = catalog.Select(x => x.Model).Distinct().ToArray();
+            var catalogTuples = catalog.Select(x => (Id: (long)x.Id, Model: x.Model, Tip: x.Tip)).ToList();
+            var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
+            var samples = new Dictionary<string, List<object>>(StringComparer.Ordinal);
+            var accepted = new List<ParsedCar>();
+            var parsedCount = 0;
+            var messages = messagesByChannel.Where(x => !channelErrors.ContainsKey(x.Key))
+                .SelectMany(x => x.Value).ToList();
+            var noVehicleMessages = 0;
+
+            void Reject(string reason, ParsedCar car)
+            {
+                reasons[reason] = reasons.TryGetValue(reason, out var count) ? count + 1 : 1;
+                if (!samples.TryGetValue(reason, out var examples))
+                    samples[reason] = examples = new List<object>();
+                if (examples.Count < 5)
+                    examples.Add(new { car.Name, car.Year, car.Price });
+            }
+
+            foreach (var message in messages)
+            {
+                var cars = TelegramCarParser.ParseCatalog(message, models);
+                if (cars.Count == 0) noVehicleMessages++;
+                foreach (var car in cars)
+                {
+                    parsedCount++;
+                    var id = MatchCatalogCar(car.Name, catalogTuples);
+                    if (!id.HasValue)
+                    {
+                        Reject("ModelOrTrimNotUniquelyMatched", car);
+                        continue;
+                    }
+                    if (string.IsNullOrWhiteSpace(car.Year) ||
+                        !Regex.IsMatch(car.Year, @"^14\d{2}$"))
+                    {
+                        Reject("MissingOrInvalidYear", car);
+                        continue;
+                    }
+                    if (!CarPriceReferenceBuilder.TryConvertPrice(car.Price, out _))
+                    {
+                        Reject("MissingOrInvalidPrice", car);
+                        continue;
+                    }
+                    accepted.Add(new ParsedCar
+                    {
+                        Name = "catalog:" + id.Value,
+                        Year = car.Year,
+                        Price = car.Price
+                    });
+                }
+            }
+
+            var groups = accepted.GroupBy(x => new { x.Name, x.Year }).ToList();
+            var references = CarPriceReferenceBuilder.Build(accepted);
+            var referenceKeys = references.Select(x => (x.Name, x.Year)).ToHashSet();
+            var rejectedGroups = groups.Where(x => !referenceKeys.Contains((x.Key.Name, x.Key.Year)))
+                .Select(x => new { x.Key.Name, x.Key.Year, Advertisements = x.Count() })
+                .ToList();
+            return new TelegramScanOutcome(200, new
+            {
+                Note = "Read-only live fetch; counts can differ from a previous scan. No database writes.",
+                TotalChannels = messagesByChannel.Count,
+                FailedChannels = channelErrors.Count,
+                MessagesProcessed = messages.Count,
+                MessagesWithoutRecognizedCar = noVehicleMessages,
+                ParsedCars = parsedCount,
+                CatalogCars = catalog.Count,
+                RejectedByReason = reasons,
+                RejectedExamples = samples,
+                MatchedWithValidYearAndPrice = accepted.Count,
+                EligibleGroups = groups.Count,
+                ReferenceCount = references.Count,
+                SingleAdvertisementReferences = references.Count(x => x.AdvertisementCount == 1),
+                RejectedPriceConsensusGroups = rejectedGroups.Count,
+                RejectedPriceConsensusExamples = rejectedGroups.Take(10).ToList(),
+                ChannelErrors = channelErrors
+            })
+            {
+                TotalChannels = messagesByChannel.Count,
+                FailedChannels = channelErrors.Count,
+                MessagesProcessed = messages.Count,
+                ParsedCars = parsedCount,
+                ReferenceCount = references.Count,
+                ChannelErrors = channelErrors
+            };
+        }
+
         private static string CatalogNormalize(string? value)
         {
             var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا');

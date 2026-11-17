@@ -43,6 +43,13 @@ public sealed class TelegramImportController : ControllerBase
         return StatusCode(outcome.StatusCode, outcome.Value);
     }
 
+    [HttpGet("diagnostics/rejections")]
+    public async Task<IActionResult> GetRejectionDiagnostics(CancellationToken cancellationToken)
+    {
+        var outcome = await _scan.DiagnoseRejectionsAsync(cancellationToken);
+        return StatusCode(outcome.StatusCode, outcome.Value);
+    }
+
     [HttpPost("diagnostics/parsed-cars")]
     public IActionResult DiagnoseParsedCars([FromBody] List<TelegramScanService.ParsedCar> cars)
     {
