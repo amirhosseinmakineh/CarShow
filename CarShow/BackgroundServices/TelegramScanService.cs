@@ -304,7 +304,7 @@ namespace CarShow.BackgroundServices
                 if (!samples.TryGetValue(reason, out var examples))
                     samples[reason] = examples = new List<object>();
                 if (examples.Count < 5)
-                    examples.Add(new { car.Name, car.Year, car.Price, Reason = reason, Detail = detail, MatchedModel = matchedModel, CandidateCount = candidateCount });
+                    examples.Add(new { car.Name, Year = NormalizeManufacturingYear(car.Year), car.Price, Reason = reason, Detail = detail, MatchedModel = matchedModel, CandidateCount = candidateCount });
             }
 
             var parsedAdvertisements = new List<ParsedCar>();
@@ -1060,7 +1060,7 @@ namespace CarShow.BackgroundServices
                     .Cast<Match>().Select(x => x.Value).Distinct().ToList();
                 if (years.Count == 1) return NormalizeManufacturingYear(years[0]);
                 if (years.Count > 1) return null;
-                var shortYears = Regex.Matches(NormalizeText(header), @"(?:مدل\\s*)(?<year>40[0-9]|0[0-9])(?=\\D|$)")
+                var shortYears = Regex.Matches(NormalizeText(header), @"مدل\s*(?<year>40[0-9]|0[0-9])(?=\D|$)")
                     .Cast<Match>().Select(x => NormalizeManufacturingYear(x.Groups["year"].Value)).Where(x => x != null).Distinct().ToList();
                 return shortYears.Count == 1 ? shortYears[0] : null;
             }
@@ -1145,6 +1145,7 @@ namespace CarShow.BackgroundServices
 
                 name = FullYearRegex.Replace(name, " ");
                 name = ShortYearRegex.Replace(name, " ");
+                name = Regex.Replace(name, @"مدل\s*(?:40[0-9]|0[0-9])(?=\D|$)", " ");
                 name = ExplicitPriceRegex.Replace(name, " ");
                 name = PriceTokenRegex.Replace(name, " ");
                 name = NoiseRegex.Replace(name, " ");
@@ -1198,8 +1199,14 @@ namespace CarShow.BackgroundServices
                     }
                 }
 
-                // Multiple distinct candidates are ambiguous: do not guess.
-                return candidates.Count == 1 ? candidates.First() : null;
+                // Different spellings of the same numeric price must not create
+                // a false ambiguity; validate each candidate with the existing converter.
+                var validPrices = candidates
+                    .Select(value => new { Value = value, Valid = CarPriceReferenceBuilder.TryConvertPrice(value, out var amount), Amount = amount })
+                    .Where(x => x.Valid)
+                    .GroupBy(x => x.Amount)
+                    .ToList();
+                return validPrices.Count == 1 ? validPrices[0].First().Value : null;
             }
 
             private static string ExtractYear(string block)
