@@ -359,6 +359,15 @@ namespace CarShow.BackgroundServices
                         Index = index,
                         RawMessage = message
                     })).ToList(),
+                // Shadow token observations: no catalog matching, no price acceptance,
+                // and no changes to production reference-price calculations.
+                ShadowTokenObservations = messagesByChannel
+                    .SelectMany(channel => channel.Value.Select((message, index) => new
+                    {
+                        Channel = channel.Key,
+                        Index = index,
+                        Tokens = TelegramShadowExtractor.Inspect(message)
+                    })).ToList(),
                 // Parsed values are observational only; no catalog-match requirement.
                 ParsedAdvertisements = parsedAdvertisements.Select(car => new
                 {
