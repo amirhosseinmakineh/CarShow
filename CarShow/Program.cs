@@ -28,6 +28,8 @@ builder.Services.AddControllers();
 builder.Services.AddSingleton<TelegramScanStatus>();
 builder.Services.AddScoped<TelegramScanService>();
 builder.Services.AddSingleton<TelegramScanBackgroundService>();
+builder.Services.AddSingleton<TelegramRejectionDiagnosticsWorker>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramRejectionDiagnosticsWorker>());
 // Host manual scan queue; automatic scans are opt-in via TelegramScan:EnableBackgroundScan.
 builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramScanBackgroundService>());
 builder.Services.AddEndpointsApiExplorer();
