@@ -1060,7 +1060,7 @@ namespace CarShow.BackgroundServices
                 // Remove delivery and presentation details, never the preceding trim.
                 // A standalone "405" in "مدل 405 روز" is not the model of a 207.
                 name = Regex.Replace(name,
-                    @"\b(?:برج\s*\d{1,2}|(?:مدل\s*)?405\s*روز(?:\S*)?|روز{2,}\S*|قالپاق|با\s+رینگ\s+شرکتی|رینگ\s+شرکتی)\b",
+                    @"\b(?:برج\s*\d{1,2}|روز{2,}\S*|قالپاق|با\s+رینگ\s+شرکتی|رینگ\s+شرکتی)\b",
                     " ");
                 name = Regex.Replace(name, @"\s+", " ").Trim();
                 return name.Trim(' ', '-', '/', ',', '،', ':', '؛');
