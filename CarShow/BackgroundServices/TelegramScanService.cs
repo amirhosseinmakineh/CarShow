@@ -611,7 +611,11 @@ namespace CarShow.BackgroundServices
                 }
                 foreach (var reference in group)
                     references[reference.Year] = reference;
-                var latest = references.OrderByDescending(x => x.Key, StringComparer.Ordinal).First().Value;
+                // Prefer a reference computed in this scan. Old years remain history,
+                // but must not silently override a newly validated reference.
+                var latest = group
+                    .OrderByDescending(x => int.TryParse(x.Year, out var year) ? year : 0)
+                    .First();
                 car.MarketPrice = latest.ReferencePriceBillion * 1_000_000_000m;
                 car.LastUpdated = DateTime.UtcNow;
                 car.Description = JsonSerializer.Serialize(new
@@ -1413,15 +1417,19 @@ namespace CarShow.BackgroundServices
                     })
                     .Select(group =>
                     {
-                        // Median-based outlier rejection, followed by the mean of at least two accepted ads.
+                        // Keep a single valid ad, but do not manufacture a price from
+                        // two mutually inconsistent ads.
                         var ordered = group.Select(x => x.PriceBillion).OrderBy(x => x).ToList();
                         var mid = ordered.Count / 2;
                         var median = ordered.Count % 2 == 1
                             ? ordered[mid] : (ordered[mid - 1] + ordered[mid]) / 2m;
-                        // A single advertisement must never be a confirmed reference.
+                        if (ordered.Count == 2 &&
+                            (ordered[1] - ordered[0]) / median > 0.15m)
+                            return null;
+
                         var consistent = ordered.Count == 1 ? ordered : ordered.Where(x =>
                             median > 0 && Math.Abs(x - median) <= median * 0.15m).ToList();
-                        // Never publish a reference from a single advertisement.
+                        // With three or more ads, require a strict majority after filtering.
                         if (ordered.Count > 1 &&
                             (consistent.Count == 0 || consistent.Count * 2 <= ordered.Count))
                             return null;
@@ -1613,6 +1621,11 @@ namespace CarShow.BackgroundServices
                 }
 
                 var digits = new string(value.Where(char.IsDigit).ToArray());
+
+                // Reject malformed or ambiguous numeric representations instead of
+                // silently concatenating punctuation and changing the magnitude.
+                if (!Regex.IsMatch(value, @"^\d{4,8}$"))
+                    return false;
 
                 if (digits.Length < 4 || digits.Length > 8)
                     return false;
