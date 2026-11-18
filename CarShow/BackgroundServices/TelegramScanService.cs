@@ -189,7 +189,6 @@ namespace CarShow.BackgroundServices
                 var matched = owners
                     .Where(pair => pair.Value == databaseCar.Id)
                     .Select(pair => parsedCars[pair.Key])
-                    .Where(ad => ad.IsZeroKilometer)
                     .Where(ad => NormalizeManufacturingYear(ad.Year) != null &&
                         CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out _))
                     .Select(ad => new ParsedCar
@@ -1040,7 +1039,6 @@ namespace CarShow.BackgroundServices
             public string Name { get; set; }
             public string Price { get; set; }
             public string Year { get; set; }
-            public bool IsZeroKilometer { get; set; }
         }
 
         public sealed class CarPriceReference
@@ -1128,21 +1126,10 @@ namespace CarShow.BackgroundServices
                     {
                         Name = ExtractName(CleanLine(lines[start])),
                         Price = ExtractPrice(block),
-                        Year = ExtractYearCatalog(block, lines[start]),
-                        IsZeroKilometer = IsExplicitlyZeroKilometer(block)
+                        Year = ExtractYearCatalog(block, lines[start])
                     });
                 }
                 return result;
-            }
-
-            // Fail closed: unmarked or used vehicles must never generate reference prices.
-            // A model year or delivery date is not proof of a zero-kilometer vehicle.
-            private static bool IsExplicitlyZeroKilometer(string block)
-            {
-                var normalized = NormalizeText(block);
-                if (Regex.IsMatch(normalized, @"کارکرد\\s*[:：]?\\s*[1-9]\\d*|[1-9]\\d*\\s*(?:کیلومتر|کیلومتر\\s*کارکرد)|کارکرده|دست\\s*دوم|در\\s*حد\\s*صفر"))
-                    return false;
-                return Regex.IsMatch(normalized, @"(?:^|[^\\p{L}])(?:صفر\\s*(?:کیلومتر|کیلومتر\\s*کارکرد)?|کارکرد\\s*[:：]?\\s*صفر|خشک)(?:$|[^\\p{L}])");
             }
 
             // A catalog model mentioned in a delivery date, comparison or description
