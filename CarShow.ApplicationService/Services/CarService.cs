@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using CarShow.ApplicationService.Contract.Dtos.CarDto;
@@ -86,7 +87,12 @@ namespace CarShow.ApplicationService.Services
             if (car is null)
                 return Result<string>.Failure("اتوموبیلی یافت نشد");
 
-            await        // The public list is derived from the exact approved references of the latest
+            await carRepository.Delete(car);
+            await carRepository.SaveChanges();
+            return Result<string>.Success("اتوموبیل با موفقیت حذف شد");
+        }
+
+        // The public list is derived from the exact approved references of the latest
         // completed Telegram scan, rather than from stale Cars.MarketPrice flags.
         public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
         {
@@ -200,11 +206,6 @@ namespace CarShow.ApplicationService.Services
                     };
                 }).ToList();
             return rows;
-        }
-
-mpty,
-                tipName = c.TipId.HasValue ? tipNames.GetValueOrDefault(c.TipId.Value, string.Empty) : string.Empty
-            }).ToList();
         }
 
         public async Task<GetCarForCreateDto> GetCarInfoForCreate()
