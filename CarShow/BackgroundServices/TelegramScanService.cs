@@ -164,7 +164,7 @@ namespace CarShow.BackgroundServices
             // Read the catalog before parsing; the model vocabulary is database-driven.
             var catalog = await _db.Cars.AsNoTracking()
                 .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
-                .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
+                .Select(x => new { x.Id, Name = x.Name, Company = x.Company!.Name, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
                 .ToListAsync(cancellationToken);
             var modelNames = catalog.Select(x => x.Model).Distinct().ToArray();
             // Database-first: one catalog car is the unit of work. Telegram is fetched
@@ -277,7 +277,25 @@ namespace CarShow.BackgroundServices
                 SavedCars = savedCars,
                 ChannelErrors = channelErrors,
                 RejectedReferences = rejectedReferences,
-                References = priceReferences
+                References = priceReferences.Select(reference =>
+                {
+                    var carIdText = reference.Name.StartsWith("catalog:", StringComparison.Ordinal)
+                        ? reference.Name.Substring("catalog:".Length) : string.Empty;
+                    var car = long.TryParse(carIdText, out var carId)
+                        ? catalog.FirstOrDefault(item => item.Id == carId) : null;
+                    return new
+                    {
+                        reference.Name,
+                        CarName = car?.Name ?? reference.Name,
+                        CompanyName = car?.Company ?? string.Empty,
+                        ModelName = car?.Model ?? string.Empty,
+                        TipName = car?.Tip ?? string.Empty,
+                        reference.Year,
+                        reference.AdvertisementCount,
+                        reference.ReferencePriceBillion,
+                        reference.ComparedPricesBillion
+                    };
+                }).ToList()
             })
             {
                 TotalChannels = messagesByChannel.Count,
