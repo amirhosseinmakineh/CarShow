@@ -187,7 +187,7 @@ namespace CarShow.ApplicationService.Services
                         company.Trim(), StringComparison.Ordinal))
                 .OrderBy(r => r.CarId)
                 .ThenByDescending(r => r.Year, StringComparer.Ordinal)
-                .Skip(page * size).Take(size)
+                .Skip(requestedSize <= 0 ? 0 : page * size).Take(size)
                 .Select(r =>
                 {
                     var c = carsById[r.CarId];
