@@ -182,6 +182,7 @@ namespace CarShow.BackgroundServices
             // assigned to two overlapping model/trim catalog records.
             var owners = MatchAdvertisementOwners(parsedCars, catalogTuples);
             var priceReferences = new List<CarPriceReference>();
+            var rejectedReferences = new List<object>();
             foreach (var databaseCar in catalog.OrderBy(x => x.Id))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -197,13 +198,34 @@ namespace CarShow.BackgroundServices
                         Price = ad.Price
                     }).ToList();
                 if (matched.Count == 0) continue;
-                // Each manufacturing year is compared only with the same year.
-                // One valid advertisement is itself the reference.
-                priceReferences.AddRange(CarPriceReferenceBuilder.Build(matched));
+                // Compare only the same catalog car and manufacturing year.
+                var built = CarPriceReferenceBuilder.Build(matched);
+                priceReferences.AddRange(built);
+                foreach (var yearGroup in matched.GroupBy(ad => ad.Year))
+                {
+                    if (built.Any(reference => reference.Year == yearGroup.Key))
+                        continue;
+                    var prices = yearGroup.Select(ad =>
+                    {
+                        decimal amount;
+                        return CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out amount)
+                            ? (decimal?)amount : null;
+                    }).Where(amount => amount.HasValue).Select(amount => amount.Value)
+                        .OrderBy(amount => amount).ToList();
+                    rejectedReferences.Add(new
+                    {
+                        CarId = databaseCar.Id,
+                        Year = yearGroup.Key,
+                        Status = "NeedsReview",
+                        Reason = "PriceDispersionOrInsufficientConsensus",
+                        CandidatePricesBillion = prices,
+                        AdvertisementCount = prices.Count
+                    });
+                }
             }
 
             // Only reference groups, never raw advertisements, become Cars rows.
-            var savedCars = await SaveReferenceCarsAsync(priceReferences, cancellationToken);
+            var savedCars = await SaveReferenceCarsAsync(priceReferences, rejectedReferences, cancellationToken);
 
             _logger.LogInformation(
                 "Telegram scan completed. Channels: {ChannelCount}, Messages: {MessageCount}, Parsed cars: {CarCount}, Reference groups: {ReferenceCount}",
@@ -233,6 +255,7 @@ namespace CarShow.BackgroundServices
                     GroupsBeforeMinimumCount = metrics.GroupsBeforeMinimumCount,
                     GroupsWithTwoOrMoreAds = metrics.GroupsWithTwoOrMoreAds,
                     ChannelErrors = channelErrors,
+                    RejectedReferences = rejectedReferences,
                     ChannelCounts = messagesByChannel.ToDictionary(x => x.Key, x => x.Value.Count)
                 })
                 {
@@ -253,6 +276,7 @@ namespace CarShow.BackgroundServices
                 ReferenceCount = priceReferences.Count,
                 SavedCars = savedCars,
                 ChannelErrors = channelErrors,
+                RejectedReferences = rejectedReferences,
                 References = priceReferences
             })
             {
@@ -574,63 +598,80 @@ namespace CarShow.BackgroundServices
 
         // Only update existing catalog cars after a genuine reference was calculated.
         // Keep all verified years in Description; do not insert a car per advertisement/year.
-        private async Task<int> SaveReferenceCarsAsync(List<CarPriceReference> priceReferences, CancellationToken cancellationToken)
+        private async Task<int> SaveReferenceCarsAsync(List<CarPriceReference> priceReferences, List<object> rejectedReferences, CancellationToken cancellationToken)
         {
-            var ids = priceReferences.Select(x => x.Name)
-                .Where(x => x.StartsWith("catalog:", StringComparison.Ordinal))
-                .Select(x => long.TryParse(x.Substring(8), out var id) ? id : 0)
-                .Where(x => x > 0).Distinct().ToList();
-            if (ids.Count == 0) return 0;
-
-            var existing = await _db.Cars.Where(x => ids.Contains(x.Id)
-                && x.CompanyId != null && x.CarModelId != null && x.TipId != null)
-                .ToDictionaryAsync(x => x.Id, cancellationToken);
+            // Reconcile every previously approved Telegram reference, not only cars
+            // that happened to have an acceptable price in this scan.
+            var cars = await _db.Cars
+                .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null
+                    && x.Description != null && x.Description.Contains("\\"Type\\":\\"TelegramPriceReference\\""))
+                .ToListAsync(cancellationToken);
+            var referencesByCar = priceReferences
+                .Where(x => x.Name.StartsWith("catalog:", StringComparison.Ordinal))
+                .GroupBy(x => long.TryParse(x.Name.Substring(8), out var id) ? id : 0)
+                .ToDictionary(x => x.Key, x => x.ToList());
+            var rejectedByCar = rejectedReferences
+                .Select(x => JsonSerializer.SerializeToElement(x))
+                .Where(x => x.TryGetProperty("CarId", out _))
+                .GroupBy(x => x.GetProperty("CarId").GetInt64())
+                .ToDictionary(x => x.Key, x => x.ToList());
             var updated = 0;
-            foreach (var group in priceReferences.Where(x => x.Name.StartsWith("catalog:", StringComparison.Ordinal))
-                .GroupBy(x => long.TryParse(x.Name.Substring(8), out var id) ? id : 0))
+            foreach (var car in cars)
             {
-                if (!existing.TryGetValue(group.Key, out var car)) continue;
-                var references = new Dictionary<string, CarPriceReference>(StringComparer.Ordinal);
-                if (!string.IsNullOrWhiteSpace(car.Description))
+                cancellationToken.ThrowIfCancellationRequested();
+                referencesByCar.TryGetValue(car.Id, out var current);
+                rejectedByCar.TryGetValue(car.Id, out var rejected);
+                current ??= new List<CarPriceReference>();
+                rejected ??= new List<JsonElement>();
+                var historical = new Dictionary<string, CarPriceReference>(StringComparer.Ordinal);
+                try
                 {
-                    try
+                    using var document = JsonDocument.Parse(car.Description!);
+                    if (document.RootElement.TryGetProperty("Years", out var years)
+                        && years.ValueKind == JsonValueKind.Object)
                     {
-                        using var document = JsonDocument.Parse(car.Description);
-                        if (document.RootElement.TryGetProperty("Type", out var type)
-                            && type.GetString() == "TelegramPriceReference"
-                            && document.RootElement.TryGetProperty("Years", out var years))
+                        foreach (var year in years.EnumerateObject())
                         {
-                            foreach (var item in years.EnumerateObject())
-                            {
-                                var old = item.Value.Deserialize<CarPriceReference>();
-                                if (old != null) references[item.Name] = old;
-                            }
+                            var old = year.Value.Deserialize<CarPriceReference>();
+                            if (old != null) historical[year.Name] = old;
                         }
                     }
-                    catch (JsonException) { /* Existing free-text descriptions are not references. */ }
                 }
-                foreach (var reference in group)
-                    references[reference.Year] = reference;
-                // Prefer a reference computed in this scan. Old years remain history,
-                // but must not silently override a newly validated reference.
-                var latest = group
+                catch (JsonException) { /* Ignore malformed historical JSON. */ }
+                foreach (var reference in current)
+                    historical[reference.Year] = reference;
+                var selected = current
                     .OrderByDescending(x => int.TryParse(x.Year, out var year) ? year : 0)
-                    .First();
-                car.MarketPrice = latest.ReferencePriceBillion * 1_000_000_000m;
-                car.LastUpdated = DateTime.UtcNow;
+                    .FirstOrDefault();
+                // Historical prices are retained for audit, but never reused as a
+                // current approval when the scan produced no valid reference.
+                if (selected != null)
+                {
+                    car.MarketPrice = selected.ReferencePriceBillion * 1_000_000_000m;
+                    updated++;
+                }
                 car.Description = JsonSerializer.Serialize(new
                 {
                     Type = "TelegramPriceReference",
-                    Year = latest.Year,
-                    Years = references,
-                    latest.AdvertisementCount,
-                    latest.ReferencePriceBillion,
-                    ComparisonApproved = latest.AdvertisementCount >= 1 && latest.ReferencePriceBillion > 0,
+                    Year = selected?.Year,
+                    Years = historical,
+                    AdvertisementCount = selected?.AdvertisementCount ?? 0,
+                    ReferencePriceBillion = selected?.ReferencePriceBillion ?? 0m,
+                    ComparisonApproved = selected != null,
+                    PriceStatus = selected == null
+                        ? (rejected.Count > 0 ? "NeedsReview" : "Stale")
+                        : "Approved",
+                    Confidence = selected == null ? "None" :
+                        selected.AdvertisementCount == 1 ? "Low" :
+                        selected.AdvertisementCount == 2 ? "Medium" :
+                        (selected.MaxPriceBillion - selected.MinPriceBillion)
+                            / selected.ReferencePriceBillion <= 0.10m ? "High" : "Medium",
+                    RejectedReferences = rejected,
                     ComparedAtUtc = DateTime.UtcNow
                 });
-                updated++;
+                car.LastUpdated = DateTime.UtcNow;
             }
-            if (updated > 0) await _db.SaveChangesAsync(cancellationToken);
+            if (cars.Count > 0) await _db.SaveChangesAsync(cancellationToken);
             return updated;
         }
 
