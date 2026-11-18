@@ -602,9 +602,14 @@ namespace CarShow.BackgroundServices
         {
             // Reconcile every previously approved Telegram reference, not only cars
             // that happened to have an acceptable price in this scan.
+            var currentIds = priceReferences
+                .Where(x => x.Name.StartsWith("catalog:", StringComparison.Ordinal))
+                .Select(x => long.TryParse(x.Name.Substring(8), out var id) ? id : 0L)
+                .Where(x => x > 0).Distinct().ToList();
             var cars = await _db.Cars
                 .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null
-                    && x.Description != null && x.Description.Contains("\\"Type\\":\\"TelegramPriceReference\\""))
+                    && (currentIds.Contains(x.Id) || (x.Description != null
+                        && x.Description.Contains("\"Type\":\"TelegramPriceReference\""))))
                 .ToListAsync(cancellationToken);
             var referencesByCar = priceReferences
                 .Where(x => x.Name.StartsWith("catalog:", StringComparison.Ordinal))
@@ -1473,6 +1478,12 @@ namespace CarShow.BackgroundServices
                         // With three or more ads, require a strict majority after filtering.
                         if (ordered.Count > 1 &&
                             (consistent.Count == 0 || consistent.Count * 2 <= ordered.Count))
+                            return null;
+
+                        // A broad spread without an identifiable outlier is not a
+                        // reliable consensus; report it for review rather than averaging.
+                        if (consistent.Count >= 3 &&
+                            (consistent.Last() - consistent.First()) / median > 0.12m)
                             return null;
 
                         // Convert every valid price to toman before averaging.
