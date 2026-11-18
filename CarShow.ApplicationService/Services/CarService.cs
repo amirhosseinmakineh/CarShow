@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Data;
-using CarShow.Infrastracture.Context;
+using Microsoft.Data.SqlClient;
 using CarShow.ApplicationService.Contract.Dtos.CarDto;
 using CarShow.ApplicationService.Contract.Dtos.CategoryDto;
 using CarShow.ApplicationService.Contract.Dtos.CompanyDto;
@@ -16,7 +16,7 @@ namespace CarShow.ApplicationService.Services
 {
     public class CarService : ICarSErvicce
     {
-        private readonly CarShowContext db;
+        private readonly string connectionString;
         private readonly IBaseRepository<long, Car> carRepository;
         private readonly IBaseRepository<long, Tip> tipRepository;
         private readonly IBaseRepository<long, CarModel> carModelRepository;
@@ -29,9 +29,9 @@ namespace CarShow.ApplicationService.Services
             IBaseRepository<long, CarModel> carModelRepository,
             IBaseRepository<long, Category> categoryRepository,
             IBaseRepository<long, Company> companyRepository,
-            CarShowContext db)
+            IConfiguration configuration)
         {
-            this.db = db;
+            connectionString = configuration.GetConnectionString("CarShow") ?? throw new InvalidOperationException("CarShow connection string missing.");
             this.carRepository = carRepository;
             this.tipRepository = tipRepository;
             this.carModelRepository = carModelRepository;
@@ -96,7 +96,7 @@ namespace CarShow.ApplicationService.Services
             // A scan currently in progress must not expose partial results.
             // The last successfully completed scan remains visible until it is replaced.
             string? resultsJson;
-            var connection = db.Database.GetDbConnection();
+            await using var connection = new SqlConnection(connectionString);
             var closeAfter = connection.State != ConnectionState.Open;
             if (closeAfter) await connection.OpenAsync();
             try
