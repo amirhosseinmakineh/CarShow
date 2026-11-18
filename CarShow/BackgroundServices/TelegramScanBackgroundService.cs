@@ -179,8 +179,9 @@ public sealed class TelegramScanBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (_enableScheduled)
-            _ = ScheduleAsync(stoppingToken);
+        // Scans are operator-triggered only. Keep the worker for the manual queue.
+        // The legacy scheduling configuration is intentionally ignored.
+
         try
         {
             await foreach (var request in _requests.Reader.ReadAllAsync(stoppingToken))
