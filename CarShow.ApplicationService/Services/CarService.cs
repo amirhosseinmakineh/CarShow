@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Data;
+using Microsoft.Data.SqlClient;
 using CarShow.ApplicationService.Contract.Dtos.CarDto;
 using CarShow.ApplicationService.Contract.Dtos.CategoryDto;
 using CarShow.ApplicationService.Contract.Dtos.CompanyDto;
@@ -14,6 +16,7 @@ namespace CarShow.ApplicationService.Services
 {
     public class CarService : ICarSErvicce
     {
+        private readonly string connectionString;
         private readonly IBaseRepository<long, Car> carRepository;
         private readonly IBaseRepository<long, Tip> tipRepository;
         private readonly IBaseRepository<long, CarModel> carModelRepository;
@@ -25,8 +28,10 @@ namespace CarShow.ApplicationService.Services
             IBaseRepository<long, Tip> tipRepository,
             IBaseRepository<long, CarModel> carModelRepository,
             IBaseRepository<long, Category> categoryRepository,
-            IBaseRepository<long, Company> companyRepository)
+            IBaseRepository<long, Company> companyRepository,
+            IConfiguration configuration)
         {
+            connectionString = configuration.GetConnectionString("CarShow") ?? throw new InvalidOperationException("CarShow connection string missing.");
             this.carRepository = carRepository;
             this.tipRepository = tipRepository;
             this.carModelRepository = carModelRepository;
@@ -81,95 +86,123 @@ namespace CarShow.ApplicationService.Services
             if (car is null)
                 return Result<string>.Failure("اتوموبیلی یافت نشد");
 
-            await carRepository.Delete(car);
-            await carRepository.SaveChanges();
-            return Result<string>.Success("اتوموبیل با موفقیت حذف شد");
-        }
-
+            await        // The public list is derived from the exact approved references of the latest
+        // completed Telegram scan, rather than from stale Cars.MarketPrice flags.
         public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
         {
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
-            // Public listings contain only catalog cars with an actual Telegram reference.
-            var query = carRepository.GetAll().Where(c =>
-                c.CompanyId != null && c.CarModelId != null && c.TipId != null &&
-                c.MarketPrice > 0 && c.Description.Contains("TelegramPriceReference") &&
-                c.Description.Contains("\"ComparisonApproved\":true"));
-
-            if (minPrice.HasValue)
-                query = query.Where(c => c.MarketPrice >= (decimal)minPrice.Value);
-            if (maxPrice.HasValue)
-                query = query.Where(c => c.MarketPrice <= (decimal)maxPrice.Value);
-
-            if (!string.IsNullOrWhiteSpace(company))
+            // A scan currently in progress must not expose partial results.
+            // The last successfully completed scan remains visible until it is replaced.
+            string? resultsJson;
+            await using var connection = new SqlConnection(connectionString);
+            var closeAfter = connection.State != ConnectionState.Open;
+            if (closeAfter) await connection.OpenAsync();
+            try
             {
-                var companyName = company.Trim();
-                var companyIds = await companyRepository.GetAll()
-                    .Where(x => x.Name.Trim() == companyName)
-                    .Select(x => x.Id)
-                    .ToListAsync();
-
-                if (companyIds.Count == 0)
-                    return new List<CarDto>();
-
-                query = query.Where(c => c.CompanyId.HasValue && companyIds.Contains(c.CompanyId.Value));
+                await using var command = connection.CreateCommand();
+                command.CommandText = """
+                    IF OBJECT_ID(N'dbo.TelegramScanJobs', N'U') IS NULL
+                        SELECT CAST(NULL AS nvarchar(max));
+                    ELSE
+                        SELECT TOP (1) ResultsJson FROM dbo.TelegramScanJobs
+                        WHERE Status IN (N'Completed', N'PartialSuccess')
+                          AND ResultsJson IS NOT NULL
+                        ORDER BY Id DESC;
+                    """;
+                resultsJson = (await command.ExecuteScalarAsync()) as string;
             }
+            finally
+            {
+                if (closeAfter) await connection.CloseAsync();
+            }
+            if (string.IsNullOrWhiteSpace(resultsJson)) return new List<CarDto>();
 
-            var rows = await query
-                .OrderBy(c => c.Id)
-                .Skip(page * size)
-                .Take(size)
+            using var document = JsonDocument.Parse(resultsJson);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("References", out var references) ||
+                references.ValueKind != JsonValueKind.Array)
+                return new List<CarDto>();
+
+            var approved = new List<(long CarId, string Year, decimal Price)>();
+            foreach (var reference in references.EnumerateArray())
+            {
+                if (!reference.TryGetProperty("Name", out var nameNode) ||
+                    nameNode.ValueKind != JsonValueKind.String) continue;
+                var name = nameNode.GetString();
+                if (name is null || !name.StartsWith("catalog:", StringComparison.Ordinal) ||
+                    !long.TryParse(name.Substring("catalog:".Length), out var carId)) continue;
+                if (!reference.TryGetProperty("Year", out var yearNode) ||
+                    !reference.TryGetProperty("ReferencePriceBillion", out var priceNode) ||
+                    priceNode.ValueKind != JsonValueKind.Number) continue;
+                var year = yearNode.ToString();
+                if (string.IsNullOrWhiteSpace(year)) continue;
+                var price = priceNode.GetDecimal() * 1_000_000_000m;
+                if (price <= 0 || (minPrice.HasValue && price < (decimal)minPrice.Value) ||
+                    (maxPrice.HasValue && price > (decimal)maxPrice.Value)) continue;
+                approved.Add((carId, year, price));
+            }
+            if (approved.Count == 0) return new List<CarDto>();
+
+            var ids = approved.Select(x => x.CarId).Distinct().ToArray();
+            var cars = await carRepository.GetAll()
+                .AsNoTracking()
+                .Where(c => ids.Contains(c.Id) && c.CompanyId != null &&
+                    c.CarModelId != null && c.TipId != null)
                 .Select(c => new
                 {
-                    c.Id,
-                    c.Name,
-                    c.Description,
-                    c.ImageName,
-                    c.MarketPrice,
-                    c.FactoryPrice,
-                    c.SourceUrl,
-                    c.LastUpdated,
-                    c.CompanyId,
-                    c.CarModelId,
-                    c.TipId
+                    c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice,
+                    c.SourceUrl, c.LastUpdated, c.CompanyId, c.CarModelId, c.TipId
                 })
                 .ToListAsync();
 
-            if (rows.Count == 0)
-                return new List<CarDto>();
+            var companyIds = cars.Select(c => c.CompanyId!.Value).Distinct().ToArray();
+            var modelIds = cars.Select(c => c.CarModelId!.Value).Distinct().ToArray();
+            var tipIds = cars.Select(c => c.TipId!.Value).Distinct().ToArray();
+            var companies = await companyRepository.GetAll().Where(c => companyIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.Name);
+            var models = await carModelRepository.GetAll().Where(c => modelIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.Name);
+            var tips = await tipRepository.GetAll().Where(c => tipIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.Name);
+            var carsById = cars.ToDictionary(c => c.Id);
 
-            var companyIdsForRows = rows.Where(x => x.CompanyId.HasValue)
-                .Select(x => x.CompanyId!.Value).Distinct().ToList();
-            var modelIdsForRows = rows.Where(x => x.CarModelId.HasValue).Select(x => x.CarModelId!.Value).Distinct().ToList();
-            var tipIdsForRows = rows.Where(x => x.TipId.HasValue).Select(x => x.TipId!.Value).Distinct().ToList();
+            // One row per reference (car + manufacturing year). Pagination happens
+            // after expansion so all years are available independently.
+            var rows = approved
+                .Where(r => carsById.ContainsKey(r.CarId))
+                .Where(r => string.IsNullOrWhiteSpace(company) ||
+                    string.Equals(companies.GetValueOrDefault(carsById[r.CarId].CompanyId!.Value)?.Trim(),
+                        company.Trim(), StringComparison.Ordinal))
+                .OrderBy(r => r.CarId)
+                .ThenByDescending(r => r.Year, StringComparer.Ordinal)
+                .Skip(page * size).Take(size)
+                .Select(r =>
+                {
+                    var c = carsById[r.CarId];
+                    return new CarDto
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        carModeName = models.GetValueOrDefault(c.CarModelId!.Value, string.Empty),
+                        tipName = tips.GetValueOrDefault(c.TipId!.Value, string.Empty),
+                        CompanyName = companies.GetValueOrDefault(c.CompanyId!.Value, string.Empty),
+                        StartDate = r.Year,
+                        Price = (float)r.Price,
+                        MarketPrice = r.Price,
+                        FactoryPrice = c.FactoryPrice,
+                        ImageName = c.ImageName,
+                        Description = c.Description,
+                        SourceUrl = c.SourceUrl,
+                        LastUpdated = c.LastUpdated,
+                        CategoryName = string.Empty
+                    };
+                }).ToList();
+            return rows;
+        }
 
-            var companyNames = await companyRepository.GetAll()
-                .Where(x => companyIdsForRows.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => x.Name);
-            var modelNames = await carModelRepository.GetAll()
-                .Where(x => modelIdsForRows.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => x.Name);
-            var tipNames = await tipRepository.GetAll()
-                .Where(x => tipIdsForRows.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => x.Name);
-
-            return rows.Select(c => new CarDto
-            {
-                Id = c.Id,
-                CategoryName = string.Empty,
-                Name = c.Name,
-                Description = c.Description,
-                ImageName = c.ImageName,
-                Price = (float)c.MarketPrice,
-                MarketPrice = c.MarketPrice,
-                FactoryPrice = c.FactoryPrice,
-                SourceUrl = c.SourceUrl,
-                LastUpdated = c.LastUpdated,
-                carModeName = c.CarModelId.HasValue ? modelNames.GetValueOrDefault(c.CarModelId.Value, string.Empty) : string.Empty,
-                CompanyName = c.CompanyId.HasValue
-                    ? companyNames.GetValueOrDefault(c.CompanyId.Value, string.Empty)
-                    : string.Empty,
+mpty,
                 tipName = c.TipId.HasValue ? tipNames.GetValueOrDefault(c.TipId.Value, string.Empty) : string.Empty
             }).ToList();
         }
