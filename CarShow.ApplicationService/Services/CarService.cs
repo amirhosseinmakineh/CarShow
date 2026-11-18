@@ -154,8 +154,7 @@ namespace CarShow.ApplicationService.Services
             var ids = approved.Select(x => x.CarId).Distinct().ToArray();
             var cars = await carRepository.GetAll()
                 .AsNoTracking()
-                .Where(c => ids.Contains(c.Id) && c.CompanyId != null &&
-                    c.CarModelId != null && c.TipId != null)
+                .Where(c => ids.Contains(c.Id) && c.CarModelId != null && c.TipId != null)
                 .Select(c => new
                 {
                     c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice,
@@ -163,7 +162,7 @@ namespace CarShow.ApplicationService.Services
                 })
                 .ToListAsync();
 
-            var companyIds = cars.Select(c => c.CompanyId!.Value).Distinct().ToArray();
+            var companyIds = cars.Where(c => c.CompanyId.HasValue).Select(c => c.CompanyId!.Value).Distinct().ToArray();
             var modelIds = cars.Select(c => c.CarModelId!.Value).Distinct().ToArray();
             var tipIds = cars.Select(c => c.TipId!.Value).Distinct().ToArray();
             var companies = await companyRepository.GetAll().Where(c => companyIds.Contains(c.Id))
@@ -179,7 +178,7 @@ namespace CarShow.ApplicationService.Services
             var rows = approved
                 .Where(r => carsById.ContainsKey(r.CarId))
                 .Where(r => string.IsNullOrWhiteSpace(company) ||
-                    string.Equals(companies.GetValueOrDefault(carsById[r.CarId].CompanyId!.Value)?.Trim(),
+                    string.Equals((carsById[r.CarId].CompanyId.HasValue ? companies.GetValueOrDefault(carsById[r.CarId].CompanyId.Value)?.Trim() : null),
                         company.Trim(), StringComparison.Ordinal))
                 .OrderBy(r => r.CarId)
                 .ThenByDescending(r => r.Year, StringComparer.Ordinal)
@@ -193,7 +192,7 @@ namespace CarShow.ApplicationService.Services
                         Name = c.Name,
                         carModeName = models.GetValueOrDefault(c.CarModelId!.Value, string.Empty),
                         tipName = tips.GetValueOrDefault(c.TipId!.Value, string.Empty),
-                        CompanyName = companies.GetValueOrDefault(c.CompanyId!.Value, string.Empty),
+                        CompanyName = c.CompanyId.HasValue ? companies.GetValueOrDefault(c.CompanyId.Value, string.Empty) : string.Empty,
                         StartDate = r.Year,
                         Price = (float)r.Price,
                         MarketPrice = r.Price,
