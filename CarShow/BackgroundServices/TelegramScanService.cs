@@ -163,8 +163,8 @@ namespace CarShow.BackgroundServices
 
             // Read the catalog before parsing; the model vocabulary is database-driven.
             var catalog = await _db.Cars.AsNoTracking()
-                .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
-                .Select(x => new { x.Id, Name = x.Name, Company = x.Company!.Name, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
+                .Where(x => x.CarModelId != null && x.TipId != null)
+                .Select(x => new { x.Id, Name = x.Name, Company = x.Company != null ? x.Company.Name : string.Empty, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
                 .ToListAsync(cancellationToken);
             var modelNames = catalog.Select(x => x.Model).Distinct().ToArray();
             // Database-first: one catalog car is the unit of work. Telegram is fetched
@@ -350,7 +350,7 @@ namespace CarShow.BackgroundServices
             var messagesByChannel = await GetLast100MessagesAsync(
                 Channels, cancellationToken, channelErrors, null);
             var catalog = await _db.Cars.AsNoTracking()
-                .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null)
+                .Where(x => x.CarModelId != null && x.TipId != null)
                 .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
                 .ToListAsync(cancellationToken);
             var models = catalog.Select(x => x.Model).Distinct().ToArray();
@@ -625,7 +625,7 @@ namespace CarShow.BackgroundServices
                 .Select(x => long.TryParse(x.Name.Substring(8), out var id) ? id : 0L)
                 .Where(x => x > 0).Distinct().ToList();
             var cars = await _db.Cars
-                .Where(x => x.CompanyId != null && x.CarModelId != null && x.TipId != null
+                .Where(x => x.CarModelId != null && x.TipId != null
                     && (currentIds.Contains(x.Id) || (x.Description != null
                         && x.Description.Contains("\"Type\":\"TelegramPriceReference\""))))
                 .ToListAsync(cancellationToken);
