@@ -97,7 +97,8 @@ namespace CarShow.ApplicationService.Services
         public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
         {
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
-            var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
+            var requestedSize = pageSize.GetValueOrDefault();
+            var size = requestedSize <= 0 ? int.MaxValue : Math.Clamp(requestedSize, 1, 100);
 
             // A scan currently in progress must not expose partial results.
             // The last successfully completed scan remains visible until it is replaced.
@@ -127,7 +128,10 @@ namespace CarShow.ApplicationService.Services
 
             using var document = JsonDocument.Parse(resultsJson);
             var root = document.RootElement;
-            if (!root.TryGetProperty("References", out var references) ||
+            // ResultsJson stores TelegramScanOutcome, whose Value contains References.
+            if (!root.TryGetProperty("Value", out var payload) ||
+                payload.ValueKind != JsonValueKind.Object ||
+                !payload.TryGetProperty("References", out var references) ||
                 references.ValueKind != JsonValueKind.Array)
                 return new List<CarDto>();
 
@@ -182,7 +186,7 @@ namespace CarShow.ApplicationService.Services
                         company.Trim(), StringComparison.Ordinal))
                 .OrderBy(r => r.CarId)
                 .ThenByDescending(r => r.Year, StringComparer.Ordinal)
-                .Skip(page * size).Take(size)
+                .Skip(requestedSize <= 0 ? 0 : page * size).Take(size)
                 .Select(r =>
                 {
                     var c = carsById[r.CarId];
