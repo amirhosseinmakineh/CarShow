@@ -114,11 +114,32 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     private DateTimeOffset? _lastStartedAt;
     private DateTimeOffset? _lastFinishedAt;
     private string? _lastError;
-    public object Status => new { status = _status, lastStartedAt = _lastStartedAt,
-        lastFinishedAt = _lastFinishedAt, lastError = _lastError };
+    private volatile int _successfulChannels;
+    private volatile int _failedChannels;
+    private volatile int _receivedMessages;
+    private volatile int _savedMessages;
+    private Dictionary<string, string> _channelErrors = new();
+    private readonly object _diagnosticsLock = new();
+    public object Status
+    {
+        get
+        {
+            lock (_diagnosticsLock)
+                return new { status = _status, lastStartedAt = _lastStartedAt,
+                    lastFinishedAt = _lastFinishedAt, lastError = _lastError,
+                    successfulChannels = _successfulChannels, failedChannels = _failedChannels,
+                    receivedMessages = _receivedMessages, savedMessages = _savedMessages,
+                    channelErrors = _channelErrors.ToDictionary(x => x.Key, x => x.Value) };
+        }
+    }
     public bool TryQueueManualRefresh()
     {
         if (Interlocked.CompareExchange(ref _pendingOrRunning, 1, 0) != 0) return false;
+        if (_status == "Failed" && _lastStartedAt == null)
+        {
+            Interlocked.Exchange(ref _pendingOrRunning, 0);
+            return false;
+        }
         _status = "Queued";
         if (_requests.Writer.TryWrite(true)) return true;
         Interlocked.Exchange(ref _pendingOrRunning, 0);
@@ -175,6 +196,11 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 _status = "Running";
                 _lastStartedAt = DateTimeOffset.UtcNow;
                 _lastError = null;
+                _successfulChannels = 0;
+                _failedChannels = 0;
+                _receivedMessages = 0;
+                _savedMessages = 0;
+                lock (_diagnosticsLock) _channelErrors = new();
                 try
                 {
                     await RefreshAsync(stoppingToken);
@@ -217,6 +243,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             var cutoff = DateTimeOffset.UtcNow.AddHours(-24);
             var posts = new List<RawPost>();
             var successfulChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             using var semaphore = new SemaphoreSlim(3);
             var tasks = Channels.Select(async username =>
             {
@@ -227,15 +254,22 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     lock (posts) { posts.AddRange(result); successfulChannels.Add(username); }
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-                catch (Exception ex) { _logger.LogWarning(ex, "Raw Telegram fetch failed for {Channel}", username); }
+                catch (Exception ex)
+                {
+                    lock (posts) channelErrors[username] = ex.GetType().Name + ": " + ex.Message;
+                    _logger.LogWarning(ex, "Raw Telegram fetch failed for {Channel}", username);
+                }
                 finally { semaphore.Release(); }
             });
             await Task.WhenAll(tasks);
+            _successfulChannels = successfulChannels.Count;
+            _failedChannels = channelErrors.Count;
+            _receivedMessages = posts.Count;
+            lock (_diagnosticsLock) _channelErrors = channelErrors;
             if (successfulChannels.Count == 0)
-            {
-                _logger.LogWarning("No Telegram channels succeeded; previous snapshot retained.");
-                return;
-            }
+                throw new InvalidOperationException("All Telegram channels failed. See channelErrors in archive status.");
+            if (posts.Count == 0)
+                throw new InvalidOperationException("Telegram channels responded but no posts were found in the last 24 hours. Existing snapshot was preserved.");
 
             await using var connection = OpenConnection();
             await connection.OpenAsync(ct);
@@ -295,6 +329,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 await swap.ExecuteNonQueryAsync(ct);
             }
             await transaction.CommitAsync(ct);
+            _savedMessages = batch.Rows.Count;
             _logger.LogInformation("Telegram raw snapshot refreshed: {Count} messages from {Channels} channels.", posts.Count, successfulChannels.Count);
         }
         finally { _refreshLock.Release(); }
