@@ -287,10 +287,11 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     WHERE ChannelUsername IN (SELECT ChannelUsername FROM #Incoming)
                        OR ChannelUsername IN (SELECT value FROM STRING_SPLIT(@successful, ','));
                     INSERT INTO dbo.TelegramRawMessages
-                        (TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
-                    SELECT TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                        (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
+                    SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
                     DELETE FROM dbo.TelegramRawMessages WHERE PublishedAt < @cutoff;
                     """;
+                swap.CommandTimeout = 120;
                 swap.Parameters.AddWithValue("@successful", string.Join(",", successfulChannels));
                 swap.Parameters.AddWithValue("@cutoff", cutoff);
                 await swap.ExecuteNonQueryAsync(ct);
@@ -361,7 +362,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
     [HttpPost("refresh")]
     public IActionResult Refresh()
     {
-        if (!_worker.TryQueueManualRefresh()) return Conflict(new { message = "Refresh already queued or running." });
+        if (!_worker.TryQueueManualRefresh()) return Accepted(new { status = "AlreadyQueuedOrRunning", message = "Refresh already queued or running." });
         return Accepted(new { status = "Queued" });
     }
     [HttpGet("status")]
