@@ -103,6 +103,8 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     private readonly IConfiguration _config;
     private readonly ILogger<TelegramRawArchiveWorker> _logger;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private volatile bool _archiveTableReady;
     private readonly Channel<bool> _requests = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
     {
         FullMode = BoundedChannelFullMode.DropWrite,
@@ -151,6 +153,42 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     }
     private SqlConnection OpenConnection() => new(_config.GetConnectionString("CarShow")
         ?? throw new InvalidOperationException("CarShow connection string missing."));
+
+    // Dedicated archive table: never mutate the legacy TelegramRawMessages table.
+    public async Task EnsureArchiveTableAsync(CancellationToken ct)
+    {
+        if (_archiveTableReady) return;
+        await _schemaLock.WaitAsync(ct);
+        try
+        {
+        if (_archiveTableReady) return;
+        await using var connection = OpenConnection();
+        await connection.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandTimeout = 30;
+        command.CommandText = """
+            IF OBJECT_ID(N'dbo.TelegramRawArchiveSnapshots', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.TelegramRawArchiveSnapshots (
+                    Id bigint IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    TelegramMessageId bigint NOT NULL,
+                    ChannelId bigint NULL,
+                    ChannelName nvarchar(256) NULL,
+                    ChannelUsername nvarchar(128) NOT NULL,
+                    SenderName nvarchar(256) NULL,
+                    [Text] nvarchar(max) NOT NULL,
+                    MessageUrl nvarchar(512) NOT NULL,
+                    PublishedAt datetimeoffset NOT NULL,
+                    CollectedAt datetimeoffset NOT NULL,
+                    Metadata nvarchar(max) NULL
+                );
+            END;
+            """;
+        await command.ExecuteNonQueryAsync(ct);
+        _archiveTableReady = true;
+        }
+        finally { _schemaLock.Release(); }
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -238,6 +276,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             if (posts.Count == 0)
                 throw new InvalidOperationException("Telegram channels responded but no posts were found in the last 24 hours. Existing snapshot was preserved.");
 
+            await EnsureArchiveTableAsync(ct);
             await using var connection = OpenConnection();
             await connection.OpenAsync(ct);
             await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(ct);
@@ -279,53 +318,17 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
                 await bulk.WriteToServerAsync(batch, ct);
             }
-            // Verify the legacy table's required columns before deleting any existing rows.
-            // This makes future schema mismatches actionable instead of failing one column at a time.
-            await using (var inspect = connection.CreateCommand())
-            {
-                inspect.Transaction = transaction;
-                inspect.CommandText = """
-                    SELECT c.name
-                    FROM sys.columns c
-                    WHERE c.object_id = OBJECT_ID(N'dbo.TelegramRawMessages')
-                      AND c.is_nullable = 0
-                      AND c.is_identity = 0
-                      AND c.is_computed = 0
-                      AND c.default_object_id = 0
-                      AND c.name NOT IN (
-                          N'TelegramMessageId', N'ExternalMessageId', N'ChannelUsername',
-                          N'ChannelName', N'SenderName', N'Text', N'MessageText',
-                          N'MessageUrl', N'PublishedAt', N'CollectedAt'
-                      );
-                    """;
-                var missing = new List<string>();
-                await using var reader = await inspect.ExecuteReaderAsync(ct);
-                while (await reader.ReadAsync(ct)) missing.Add(reader.GetString(0));
-                if (missing.Count != 0)
-                    throw new InvalidOperationException(
-                        "TelegramRawMessages has unsupported required columns: " + string.Join(", ", missing));
-            }
             await using (var swap = connection.CreateCommand())
             {
                 swap.Transaction = transaction;
                 swap.CommandText = """
-                    DELETE FROM dbo.TelegramRawMessages
+                    DELETE FROM dbo.TelegramRawArchiveSnapshots
                     WHERE ChannelUsername IN (SELECT ChannelUsername FROM #Incoming)
                        OR ChannelUsername IN (SELECT value FROM STRING_SPLIT(@successful, ','));
-                    IF COL_LENGTH(N'dbo.TelegramRawMessages', N'MessageText') IS NOT NULL
-                    BEGIN
-                        EXEC sys.sp_executesql N'
-                            INSERT INTO dbo.TelegramRawMessages
-                                (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageText,MessageUrl,PublishedAt,CollectedAt)
-                            SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming';
-                    END
-                    ELSE
-                    BEGIN
-                        INSERT INTO dbo.TelegramRawMessages
-                            (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
-                        SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
-                    END;
-                    DELETE FROM dbo.TelegramRawMessages WHERE PublishedAt < @cutoff;
+                    INSERT INTO dbo.TelegramRawArchiveSnapshots
+                        (TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
+                    SELECT TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                    DELETE FROM dbo.TelegramRawArchiveSnapshots WHERE PublishedAt < @cutoff;
                     """;
                 swap.CommandTimeout = 120;
                 swap.Parameters.AddWithValue("@successful", string.Join(",", successfulChannels));
@@ -412,13 +415,14 @@ public sealed class TelegramRawMessagesController : ControllerBase
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
+        await _worker.EnsureArchiveTableAsync(cancellationToken);
         await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
         var ct = timeout.Token;
         await connection.OpenAsync(ct);
         var sql = """
-            FROM dbo.TelegramRawMessages
+            FROM dbo.TelegramRawArchiveSnapshots
             WHERE (@search IS NULL OR [Text] LIKE N'%' + @search + N'%' OR CONVERT(nvarchar(30),TelegramMessageId) LIKE N'%' + @search + N'%')
               AND (@channel IS NULL OR ChannelUsername LIKE N'%' + @channel + N'%' OR ChannelName LIKE N'%' + @channel + N'%')
               AND (@fromDate IS NULL OR PublishedAt >= @fromDate)
