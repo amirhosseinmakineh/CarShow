@@ -127,7 +127,7 @@ namespace CarShow.ApplicationService.Services
             var root = document.RootElement;
             if (!root.TryGetProperty("References", out var references) ||
                 references.ValueKind != JsonValueKind.Array)
-                return new List<CarDto>();
+                return (new List<CarDto>(), 0, 0);
 
             var approved = new List<(long CarId, string Year, decimal Price)>();
             foreach (var reference in references.EnumerateArray())
@@ -147,7 +147,7 @@ namespace CarShow.ApplicationService.Services
                     (maxPrice.HasValue && price > (decimal)maxPrice.Value)) continue;
                 approved.Add((carId, year, price));
             }
-            if (approved.Count == 0) return new List<CarDto>();
+            if (approved.Count == 0) return (new List<CarDto>(), 0, 0);
 
             var ids = approved.Select(x => x.CarId).Distinct().ToArray();
             var cars = await carRepository.GetAll()
