@@ -314,9 +314,10 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                        OR ChannelUsername IN (SELECT value FROM STRING_SPLIT(@successful, ','));
                     IF COL_LENGTH(N'dbo.TelegramRawMessages', N'MessageText') IS NOT NULL
                     BEGIN
-                        INSERT INTO dbo.TelegramRawMessages
-                            (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageText,MessageUrl,PublishedAt,CollectedAt)
-                        SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                        EXEC sys.sp_executesql N'
+                            INSERT INTO dbo.TelegramRawMessages
+                                (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageText,MessageUrl,PublishedAt,CollectedAt)
+                            SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming';
                     END
                     ELSE
                     BEGIN
