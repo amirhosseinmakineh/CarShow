@@ -103,6 +103,8 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     private readonly IConfiguration _config;
     private readonly ILogger<TelegramRawArchiveWorker> _logger;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private volatile bool _archiveTableReady;
     private readonly Channel<bool> _requests = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
     {
         FullMode = BoundedChannelFullMode.DropWrite,
@@ -155,6 +157,11 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     // Dedicated archive table: never mutate the legacy TelegramRawMessages table.
     public async Task EnsureArchiveTableAsync(CancellationToken ct)
     {
+        if (_archiveTableReady) return;
+        await _schemaLock.WaitAsync(ct);
+        try
+        {
+        if (_archiveTableReady) return;
         await using var connection = OpenConnection();
         await connection.OpenAsync(ct);
         await using var command = connection.CreateCommand();
@@ -178,6 +185,9 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             END;
             """;
         await command.ExecuteNonQueryAsync(ct);
+        _archiveTableReady = true;
+        }
+        finally { _schemaLock.Release(); }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
