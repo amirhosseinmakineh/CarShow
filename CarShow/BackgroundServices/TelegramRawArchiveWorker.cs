@@ -459,7 +459,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
         var items = new List<object>();
         while (await reader.ReadAsync(ct))
             items.Add(new {
-                id = reader.GetInt64(0), telegramMessageId = reader.GetInt64(1),
+                id = Convert.ToInt64(reader.GetValue(0)), telegramMessageId = Convert.ToInt64(reader.GetValue(1)),
                 channelId = reader.IsDBNull(2) ? null : reader.GetString(2),
                 channelName = reader.IsDBNull(3) ? null : reader.GetString(3),
                 channelUsername = reader.GetString(4),
