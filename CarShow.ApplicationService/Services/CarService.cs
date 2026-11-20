@@ -77,12 +77,21 @@ namespace CarShow.ApplicationService.Services
             return updated == 0 ? null : imagePath;
         }
 
+        public static string GetImageDirectory()
+        {
+            // Runflare mounts the existing persistent volume here. Local runs use wwwroot.
+            const string persistentVolume = "/data/licensing";
+            return Directory.Exists(persistentVolume)
+                ? Path.Combine(persistentVolume, "vehicle-images")
+                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "cars");
+        }
+
         private static async Task<string?> SaveImageAsync(IFormFile? file, string? extension = null)
         {
             if (file is null || file.Length == 0)
                 return null;
 
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/cars");
+            var uploadsFolder = GetImageDirectory();
             Directory.CreateDirectory(uploadsFolder);
 
             var uniqueFileName = $"{Guid.NewGuid()}{extension ?? Path.GetExtension(file.FileName)}";
