@@ -4,7 +4,6 @@ using CarShow.ApplicationService.Services;
 using CarShow.Domain.Crawling;
 using CarShow.Domain.IRepository;
 using CarShow.Domain.Models;
-using CarShow.Infrastracture.BackgroundServices;
 using CarShow.Infrastracture.Configuration;
 using CarShow.Infrastracture.Context;
 using CarShow.Infrastracture.Crawlers;
@@ -30,6 +29,7 @@ builder.Services.AddHostedService(provider => provider.GetRequiredService<Telegr
 builder.Services.AddSingleton<TelegramScanStatus>();
 builder.Services.AddScoped<TelegramScanService>();
 builder.Services.AddSingleton<TelegramScanBackgroundService>();
+builder.Services.AddScoped<TelegramRejectionDiagnosticsService>();
 builder.Services.AddSingleton<TelegramRejectionDiagnosticsWorker>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramRejectionDiagnosticsWorker>());
 // Host manual scan queue; automatic scans are opt-in via TelegramScan:EnableBackgroundScan.
@@ -53,10 +53,8 @@ builder.Services.AddDbContext<CarShowContext>(options => { options.UseSqlServer(
 builder.Services.AddHttpClient<ICarIrCrawlerService, CarIrCrawlerService>(client => { client.Timeout = TimeSpan.FromMinutes(2); client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 CarShowCrawler/1.0"); });
 builder.Services.AddScoped<ICarDataSource>(sp => sp.GetRequiredService<ICarIrCrawlerService>());
 builder.Services.AddScoped<ICarCrawlerSyncService, CarCrawlerSyncService>();
-// Keep the pre-Telegram crawler opt-in during the code rollback. The live
-// database and its configuration are not part of this rollback.
-if (builder.Configuration.GetValue("Crawler:Enabled", false))
-    builder.Services.AddHostedService<GetCarsBackgroundService>();
+// Car.ir sync remains available explicitly through CarCrawlerController;
+// no automatic crawler is started by the web host.
 builder.Services.AddScoped(typeof(IBaseRepository<,>), typeof(BaseRepository<,>));
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
