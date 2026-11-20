@@ -49,7 +49,7 @@ namespace CarShow.Controllers
         [HttpPut("{id:long}/image")]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(9 * 1024 * 1024)]
-        public async Task<IActionResult> UpdateCarImage(long id, [FromForm] IFormFile image, CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdateCarImage(long id, IFormFile image, CancellationToken cancellationToken)
         {
             if (image.Length < 12 || image.Length > 8 * 1024 * 1024)
                 return BadRequest("Choose a JPEG, PNG, or WebP image under 8 MB.");
