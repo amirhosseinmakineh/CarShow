@@ -716,6 +716,7 @@ namespace CarShow.BackgroundServices
                     Type = "TelegramPriceReference",
                     Year = selected?.Year,
                     Years = historical,
+                    CurrentYears = current.ToDictionary(reference => reference.Year, reference => reference, StringComparer.Ordinal),
                     AdvertisementCount = selected?.AdvertisementCount ?? 0,
                     ReferencePriceBillion = selected?.ReferencePriceBillion ?? 0m,
                     ComparisonApproved = selected != null,
