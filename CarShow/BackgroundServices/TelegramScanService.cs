@@ -2,6 +2,8 @@ using CarShow.Domain.Models;
 using CarShow.Infrastracture.Context;
 using HtmlAgilityPack;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
+using System.Data;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -140,26 +142,47 @@ namespace CarShow.BackgroundServices
             TelegramClient = telegramClient;
         }
 
+        // Load a committed archive snapshot once. A refresh uses a single SQL transaction,
+        // so this one SELECT cannot observe its intermediate delete/insert steps.
+        private async Task<Dictionary<string, List<string>>> ReadArchivedMessagesAsync(CancellationToken ct)
+        {
+            var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var connectionString = _db.Database.GetConnectionString()
+                ?? throw new InvalidOperationException("CarShow database connection string is missing.");
+            await using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandTimeout = 120;
+            command.CommandText = """
+                SELECT ChannelUsername, [Text]
+                FROM dbo.TelegramRawArchiveSnapshots
+                WHERE [Text] IS NOT NULL AND LEN([Text]) > 0
+                ORDER BY ChannelUsername, TelegramMessageId
+                """;
+            await using var reader = await command.ExecuteReaderAsync(
+                CommandBehavior.SequentialAccess, ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var channel = reader.GetString(0);
+                var message = reader.GetString(1);
+                if (!result.TryGetValue(channel, out var posts))
+                    result[channel] = posts = new List<string>();
+                posts.Add(message);
+            }
+            return result;
+        }
+
         // Invoked by the scheduled worker, not by an HTTP request.
         public async Task<TelegramScanOutcome> ScanAsync(
             CancellationToken cancellationToken, Action<int, int>? progress = null)
         {
-            // 1) Read the last 100 public messages from each channel.
+            // The price calculation is offline: it must never fetch Telegram HTTP pages.
+            // A single SQL query loads the committed raw archive into memory.
             var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var messagesByChannel = await GetLast100MessagesAsync(
-                Channels,
-                cancellationToken,
-                channelErrors, progress);
-
-            // A failed channel must not discard the successfully retrieved channels.
-            if (messagesByChannel.Count == 0 || messagesByChannel.Keys.All(channelErrors.ContainsKey))
-                return new TelegramScanOutcome(502, new { Message = "Telegram retrieval failed; no cars were saved.", ChannelErrors = channelErrors })
-                {
-                    TotalChannels = Channels.Select(NormalizeChannel).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
-                    FailedChannels = channelErrors.Count,
-                    MessagesProcessed = messagesByChannel.Values.Sum(x => x.Count),
-                    ChannelErrors = channelErrors
-                };
+            var messagesByChannel = await ReadArchivedMessagesAsync(cancellationToken);
+            progress?.Invoke(messagesByChannel.Count, messagesByChannel.Count);
+            if (messagesByChannel.Count == 0)
+                return new TelegramScanOutcome(422, new { Message = "Telegram archive is empty; no prices were changed." });
 
             // Read the catalog before parsing; the model vocabulary is database-driven.
             var catalog = await _db.Cars.AsNoTracking()
@@ -169,11 +192,7 @@ namespace CarShow.BackgroundServices
             var modelNames = catalog.Select(x => x.Model).Distinct().ToArray();
             // Database-first: one catalog car is the unit of work. Telegram is fetched
             // once for efficiency, then searched independently for each database car.
-            var messages = messagesByChannel
-                .Where(channel => !channelErrors.ContainsKey(channel.Key))
-                .SelectMany(channel => channel.Value)
-                .Distinct(StringComparer.Ordinal)
-                .ToList();
+            var messages = messagesByChannel.SelectMany(channel => channel.Value).ToList();
             var parsedCars = messages
                 .SelectMany(message => TelegramCarParser.ParseCatalog(message, modelNames))
                 .ToList();
@@ -181,14 +200,15 @@ namespace CarShow.BackgroundServices
             // Resolve ownership once to prevent a Telegram advertisement from being
             // assigned to two overlapping model/trim catalog records.
             var owners = MatchAdvertisementOwners(parsedCars, catalogTuples);
+            var adsByCar = owners.GroupBy(pair => pair.Value)
+                .ToDictionary(group => group.Key, group => group.Select(pair => parsedCars[pair.Key]).ToList());
             var priceReferences = new List<CarPriceReference>();
             var rejectedReferences = new List<object>();
             foreach (var databaseCar in catalog.OrderBy(x => x.Id))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var matched = owners
-                    .Where(pair => pair.Value == databaseCar.Id)
-                    .Select(pair => parsedCars[pair.Key])
+                adsByCar.TryGetValue(databaseCar.Id, out var carAdvertisements);
+                var matched = (carAdvertisements ?? new List<ParsedCar>())
                     .Where(ad => NormalizeManufacturingYear(ad.Year) != null &&
                         CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out _))
                     .Select(ad => new ParsedCar
@@ -224,8 +244,10 @@ namespace CarShow.BackgroundServices
                 }
             }
 
-            // Only reference groups, never raw advertisements, become Cars rows.
-            var savedCars = await SaveReferenceCarsAsync(priceReferences, rejectedReferences, cancellationToken);
+            // No successful references means no database mutation: preserve existing prices.
+            var savedCars = priceReferences.Count == 0
+                ? 0
+                : await SaveReferenceCarsAsync(priceReferences, rejectedReferences, cancellationToken);
 
             _logger.LogInformation(
                 "Telegram scan completed. Channels: {ChannelCount}, Messages: {MessageCount}, Parsed cars: {CarCount}, Reference groups: {ReferenceCount}",
@@ -468,7 +490,8 @@ namespace CarShow.BackgroundServices
 
         private static string CatalogNormalize(string? value)
         {
-            var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا');
+            var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا')
+                .Replace('ي', 'ی').Replace('ك', 'ک').Replace('\u200c', ' ');
             text = new string(text.Select(c => c >= '۰' && c <= '۹' ? (char)('0' + c - '۰') :
                 c >= '٠' && c <= '٩' ? (char)('0' + c - '٠') : c).ToArray());
             return Regex.Replace(Regex.Replace(text, @"[^\p{L}\p{N}]+", " "), @"\s+", " ").Trim().ToLowerInvariant();
@@ -487,12 +510,18 @@ namespace CarShow.BackgroundServices
             return Regex.Replace(text, @"\s+", " ").Trim();
         }
 
+        // Every catalog Tip.Name generates its own regex; the catalog vocabulary is
+        // never restricted to the hard-coded spelling aliases above.
         private static bool TrimContains(string advertisement, string trim)
         {
             var value = NormalizeTrimTerms(advertisement);
             var token = NormalizeTrimTerms(trim);
-            return token.Length > 0 &&
-                (" " + value + " ").Contains(" " + token + " ", StringComparison.Ordinal);
+            if (token.Length == 0) return false;
+            var words = token.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var pattern = @"(?<![\p{L}\p{N}])" +
+                string.Join(@"\s+", words.Select(Regex.Escape)) +
+                @"(?![\p{L}\p{N}])";
+            return Regex.IsMatch(value, pattern, RegexOptions.CultureInvariant);
         }
 
         // Compare normalized trim feature tokens independent of word order.
