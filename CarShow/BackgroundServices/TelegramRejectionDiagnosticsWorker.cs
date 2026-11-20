@@ -70,8 +70,8 @@ public sealed class TelegramRejectionDiagnosticsWorker : BackgroundService
                 try
                 {
                     using var scope = _scopes.CreateScope();
-                    var service = scope.ServiceProvider.GetRequiredService<TelegramScanService>();
-                    var outcome = await service.DiagnoseRejectionsAsync(stoppingToken);
+                    var service = scope.ServiceProvider.GetRequiredService<TelegramRejectionDiagnosticsService>();
+                    var outcome = await service.RunAsync(stoppingToken);
                     lock (_gate)
                     {
                         _result = outcome.Value;
