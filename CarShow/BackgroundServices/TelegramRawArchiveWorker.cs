@@ -279,6 +279,32 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
                 await bulk.WriteToServerAsync(batch, ct);
             }
+            // Verify the legacy table's required columns before deleting any existing rows.
+            // This makes future schema mismatches actionable instead of failing one column at a time.
+            await using (var inspect = connection.CreateCommand())
+            {
+                inspect.Transaction = transaction;
+                inspect.CommandText = """
+                    SELECT c.name
+                    FROM sys.columns c
+                    WHERE c.object_id = OBJECT_ID(N'dbo.TelegramRawMessages')
+                      AND c.is_nullable = 0
+                      AND c.is_identity = 0
+                      AND c.is_computed = 0
+                      AND c.default_object_id = 0
+                      AND c.name NOT IN (
+                          N'TelegramMessageId', N'ExternalMessageId', N'ChannelUsername',
+                          N'ChannelName', N'SenderName', N'Text', N'MessageText',
+                          N'MessageUrl', N'PublishedAt', N'CollectedAt'
+                      );
+                    """;
+                var missing = new List<string>();
+                await using var reader = await inspect.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct)) missing.Add(reader.GetString(0));
+                if (missing.Count != 0)
+                    throw new InvalidOperationException(
+                        "TelegramRawMessages has unsupported required columns: " + string.Join(", ", missing));
+            }
             await using (var swap = connection.CreateCommand())
             {
                 swap.Transaction = transaction;
@@ -287,8 +313,8 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     WHERE ChannelUsername IN (SELECT ChannelUsername FROM #Incoming)
                        OR ChannelUsername IN (SELECT value FROM STRING_SPLIT(@successful, ','));
                     INSERT INTO dbo.TelegramRawMessages
-                        (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
-                    SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                        (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageText,MessageUrl,PublishedAt,CollectedAt)
+                    SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
                     DELETE FROM dbo.TelegramRawMessages WHERE PublishedAt < @cutoff;
                     """;
                 swap.CommandTimeout = 120;
