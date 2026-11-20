@@ -410,7 +410,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
     [HttpGet("channels")]
     public async Task<IActionResult> GetChannels(CancellationToken cancellationToken)
     {
-        await _worker.EnsureArchiveTableAsync(cancellationToken);
+        // Read-only endpoint: archive table is created by migration or manual collection.
         await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -441,7 +441,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
-        await _worker.EnsureArchiveTableAsync(cancellationToken);
+        // Read-only endpoint: archive table is created by migration or manual collection.
         await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
