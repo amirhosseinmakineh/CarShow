@@ -25,6 +25,8 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // Explicitly set Testing__DisableApiAuthentication=true only on an isolated test server.
 var disableApiAuthentication = builder.Configuration.GetValue<bool>("Testing:DisableApiAuthentication");
 builder.Services.AddControllers();
+builder.Services.AddSingleton<TelegramRawArchiveWorker>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramRawArchiveWorker>());
 builder.Services.AddSingleton<TelegramScanStatus>();
 builder.Services.AddScoped<TelegramScanService>();
 builder.Services.AddSingleton<TelegramScanBackgroundService>();
