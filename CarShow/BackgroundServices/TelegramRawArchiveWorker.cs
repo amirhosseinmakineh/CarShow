@@ -312,9 +312,18 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     DELETE FROM dbo.TelegramRawMessages
                     WHERE ChannelUsername IN (SELECT ChannelUsername FROM #Incoming)
                        OR ChannelUsername IN (SELECT value FROM STRING_SPLIT(@successful, ','));
-                    INSERT INTO dbo.TelegramRawMessages
-                        (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageText,MessageUrl,PublishedAt,CollectedAt)
-                    SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                    IF COL_LENGTH(N'dbo.TelegramRawMessages', N'MessageText') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.TelegramRawMessages
+                            (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageText,MessageUrl,PublishedAt,CollectedAt)
+                        SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                    END
+                    ELSE
+                    BEGIN
+                        INSERT INTO dbo.TelegramRawMessages
+                            (TelegramMessageId,ExternalMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
+                        SELECT TelegramMessageId,CONVERT(nvarchar(30), TelegramMessageId),ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                    END;
                     DELETE FROM dbo.TelegramRawMessages WHERE PublishedAt < @cutoff;
                     """;
                 swap.CommandTimeout = 120;
