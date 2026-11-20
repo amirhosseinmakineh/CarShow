@@ -30,7 +30,7 @@ TelegramScanService.ParsedCar Ad(string year, string price) =>
     new() { Name = "catalog:75354", Year = year, Price = price };
 
 var parsed = Parse("تیگو 8 پرو مکس مدل 1404\nقیمت 4 تومن", "تیگو");
-Check(parsed.Count == 1 && parsed[0].Year == "1404" && parsed[0].Price == "4 میلیارد",
+Check(parsed.Count == 1 && parsed[0].Year == "2025" && parsed[0].Price == "4 میلیارد",
     "Colloquial 4 toman means 4 billion in car advertisements");
 
 parsed = Parse("تیگو 8 پرو مکس مدل 1404\nقیمت 4200", "تیگو");
