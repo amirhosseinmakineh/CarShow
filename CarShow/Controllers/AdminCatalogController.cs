@@ -36,7 +36,8 @@ public sealed class AdminCatalogController : ControllerBase
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
-            query = query.Where(x => x.Name.Contains(term)
+            var matchesId = long.TryParse(term, out var id);
+            query = query.Where(x => (matchesId && x.Id == id) || x.Name.Contains(term)
                 || (x.CarModel != null && x.CarModel.Name.Contains(term))
                 || (x.Tip != null && x.Tip.Name.Contains(term))
                 || (x.Company != null && x.Company.Name.Contains(term)));
@@ -50,6 +51,7 @@ public sealed class AdminCatalogController : ControllerBase
             .Select(x => new
             {
                 x.Id,
+                x.ImageName,
                 x.Name,
                 x.CompanyId,
                 Company = x.Company != null ? x.Company.Name : null,
