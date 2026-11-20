@@ -487,12 +487,21 @@ namespace CarShow.BackgroundServices
             return Regex.Replace(text, @"\s+", " ").Trim();
         }
 
+        // Build a trim-specific regex from the actual catalog Tip.Name.
+        // No fixed list of catalog trims is required: each new database trim
+        // automatically produces its own matching pattern at scan time.
         private static bool TrimContains(string advertisement, string trim)
         {
             var value = NormalizeTrimTerms(advertisement);
             var token = NormalizeTrimTerms(trim);
-            return token.Length > 0 &&
-                (" " + value + " ").Contains(" " + token + " ", StringComparison.Ordinal);
+            if (token.Length == 0) return false;
+
+            var words = token.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var pattern = @"(?<![\p{L}\p{N}])" +
+                string.Join(@"\s+", words.Select(Regex.Escape)) +
+                @"(?![\p{L}\p{N}])";
+
+            return Regex.IsMatch(value, pattern, RegexOptions.CultureInvariant);
         }
 
         // Compare normalized trim feature tokens independent of word order.
