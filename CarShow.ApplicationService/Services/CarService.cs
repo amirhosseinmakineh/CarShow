@@ -94,65 +94,18 @@ namespace CarShow.ApplicationService.Services
 
         // The public list is derived from the exact approved references of the latest
         // completed Telegram scan, rather than from stale Cars.MarketPrice flags.
-        private async Task<(List<CarDto> Rows, int ReferenceCount, int MissingCars)> LoadReferenceCars(float? minPrice, float? maxPrice, string? company)
+        private async Task<(List<CarDto> Rows, int ReferenceCount, int MissingCars)> LoadReferenceCars(
+            float? minPrice, float? maxPrice, string? company)
         {
-
-            // A scan currently in progress must not expose partial results.
-            // The last successfully completed scan remains visible until it is replaced.
-            string? resultsJson;
-            await using var connection = new SqlConnection(connectionString);
-            var closeAfter = connection.State != ConnectionState.Open;
-            if (closeAfter) await connection.OpenAsync();
-            try
-            {
-                await using var command = connection.CreateCommand();
-                command.CommandText = """
-                    IF OBJECT_ID(N'dbo.TelegramScanJobs', N'U') IS NULL
-                        SELECT CAST(NULL AS nvarchar(max));
-                    ELSE
-                        SELECT TOP (1) ResultsJson FROM dbo.TelegramScanJobs
-                        WHERE Status IN (N'Completed', N'PartialSuccess')
-                          AND ResultsJson IS NOT NULL
-                        ORDER BY Id DESC;
-                    """;
-                resultsJson = (await command.ExecuteScalarAsync()) as string;
-            }
-            finally
-            {
-                if (closeAfter) await connection.CloseAsync();
-            }
-            if (string.IsNullOrWhiteSpace(resultsJson)) return (new List<CarDto>(), 0, 0);
-
-            using var document = JsonDocument.Parse(resultsJson);
-            var root = document.RootElement;
-            if (!root.TryGetProperty("References", out var references) ||
-                references.ValueKind != JsonValueKind.Array)
-                return (new List<CarDto>(), 0, 0);
-
-            var approved = new List<(long CarId, string Year, decimal Price)>();
-            foreach (var reference in references.EnumerateArray())
-            {
-                if (!reference.TryGetProperty("Name", out var nameNode) ||
-                    nameNode.ValueKind != JsonValueKind.String) continue;
-                var name = nameNode.GetString();
-                if (name is null || !name.StartsWith("catalog:", StringComparison.Ordinal) ||
-                    !long.TryParse(name.Substring("catalog:".Length), out var carId)) continue;
-                if (!reference.TryGetProperty("Year", out var yearNode) ||
-                    !reference.TryGetProperty("ReferencePriceBillion", out var priceNode) ||
-                    priceNode.ValueKind != JsonValueKind.Number) continue;
-                var year = yearNode.ToString();
-                if (string.IsNullOrWhiteSpace(year)) continue;
-                var price = priceNode.GetDecimal() * 1_000_000_000m;
-                if (price <= 0 || (minPrice.HasValue && price < (decimal)minPrice.Value) ||
-                    (maxPrice.HasValue && price > (decimal)maxPrice.Value)) continue;
-                approved.Add((carId, year, price));
-            }
-            if (approved.Count == 0) return (new List<CarDto>(), 0, 0);
-
-            var ids = approved.Select(x => x.CarId).Distinct().ToArray();
-            var cars = await carRepository.GetAll()
+            // Cars is the source of truth for public visibility. Historical years
+            // in Description are audit-only and must never reactivate stale prices.
+            var approvedCars = await carRepository.GetAll()
                 .AsNoTracking()
-                .Where(c => ids.Contains(c.Id) && c.CarModelId != null && c.TipId != null)
+                .Where(c => c.CarModelId != null && c.TipId != null
+                    && c.Description != null
+                    && c.Description.Contains("\\"Type\\":\\"TelegramPriceReference\\"")
+                    && c.Description.Contains("\\"ComparisonApproved\\":true")
+                    && c.Description.Contains("\\"PriceStatus\\":\\"Approved\\""))
                 .Select(c => new
                 {
                     c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice,
@@ -160,49 +113,80 @@ namespace CarShow.ApplicationService.Services
                 })
                 .ToListAsync();
 
-            var companyIds = cars.Where(c => c.CompanyId.HasValue).Select(c => c.CompanyId!.Value).Distinct().ToArray();
-            var modelIds = cars.Select(c => c.CarModelId!.Value).Distinct().ToArray();
-            var tipIds = cars.Select(c => c.TipId!.Value).Distinct().ToArray();
-            var companies = await companyRepository.GetAll().Where(c => companyIds.Contains(c.Id))
-                .ToDictionaryAsync(c => c.Id, c => c.Name);
-            var models = await carModelRepository.GetAll().Where(c => modelIds.Contains(c.Id))
-                .ToDictionaryAsync(c => c.Id, c => c.Name);
-            var tips = await tipRepository.GetAll().Where(c => tipIds.Contains(c.Id))
-                .ToDictionaryAsync(c => c.Id, c => c.Name);
-            var carsById = cars.ToDictionary(c => c.Id);
+            var companyIds = approvedCars.Where(c => c.CompanyId.HasValue)
+                .Select(c => c.CompanyId!.Value).Distinct().ToArray();
+            var modelIds = approvedCars.Select(c => c.CarModelId!.Value).Distinct().ToArray();
+            var tipIds = approvedCars.Select(c => c.TipId!.Value).Distinct().ToArray();
+            var companies = await companyRepository.GetAll()
+                .Where(c => companyIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name);
+            var models = await carModelRepository.GetAll()
+                .Where(c => modelIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name);
+            var tips = await tipRepository.GetAll()
+                .Where(c => tipIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name);
 
-            // One row per reference (car + manufacturing year). Pagination happens
-            // after expansion so all years are available independently.
-            var rows = approved
-                .Where(r => carsById.ContainsKey(r.CarId))
-                .Where(r => string.IsNullOrWhiteSpace(company) ||
-                    string.Equals((carsById[r.CarId].CompanyId.HasValue ? companies.GetValueOrDefault(carsById[r.CarId].CompanyId.Value)?.Trim() : null),
-                        company.Trim(), StringComparison.Ordinal))
-                .OrderBy(r => r.CarId)
-                .ThenByDescending(r => r.Year, StringComparer.Ordinal)
-                .Select(r =>
+            var rows = new List<CarDto>();
+            foreach (var car in approvedCars)
+            {
+                if (!string.IsNullOrWhiteSpace(company)
+                    && (!car.CompanyId.HasValue
+                        || !string.Equals(companies.GetValueOrDefault(car.CompanyId.Value)?.Trim(),
+                            company.Trim(), StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                using var doc = JsonDocument.Parse(car.Description);
+                var root = doc.RootElement;
+                var references = new List<(string Year, decimal Price)>();
+                if (root.TryGetProperty("CurrentYears", out var currentYears)
+                    && currentYears.ValueKind == JsonValueKind.Object)
                 {
-                    var c = carsById[r.CarId];
-                    return new CarDto
+                    foreach (var year in currentYears.EnumerateObject())
                     {
-                        Id = c.Id,
-                        Name = c.Name,
-                        carModeName = models.GetValueOrDefault(c.CarModelId!.Value, string.Empty),
-                        tipName = tips.GetValueOrDefault(c.TipId!.Value, string.Empty),
-                        CompanyName = c.CompanyId.HasValue ? companies.GetValueOrDefault(c.CompanyId.Value, string.Empty) : string.Empty,
-                        StartDate = r.Year,
-                        Price = (float)r.Price,
-                        MarketPrice = r.Price,
-                        FactoryPrice = c.FactoryPrice,
-                        ImageName = c.ImageName,
-                        Description = c.Description,
-                        SourceUrl = c.SourceUrl,
-                        LastUpdated = c.LastUpdated,
+                        if (!year.Value.TryGetProperty("ReferencePriceBillion", out var priceNode)
+                            || priceNode.ValueKind != JsonValueKind.Number
+                            || !priceNode.TryGetDecimal(out var priceBillion)
+                            || priceBillion <= 0) continue;
+                        references.Add((year.Name, priceBillion * 1_000_000_000m));
+                    }
+                }
+                else if (root.TryGetProperty("Year", out var yearNode)
+                    && root.TryGetProperty("ReferencePriceBillion", out var priceNode)
+                    && priceNode.ValueKind == JsonValueKind.Number
+                    && priceNode.TryGetDecimal(out var priceBillion) && priceBillion > 0)
+                {
+                    // Compatibility for cars approved before CurrentYears was added.
+                    var year = yearNode.ToString();
+                    if (!string.IsNullOrWhiteSpace(year))
+                        references.Add((year, priceBillion * 1_000_000_000m));
+                }
+
+                foreach (var reference in references)
+                {
+                    if ((minPrice.HasValue && reference.Price < (decimal)minPrice.Value)
+                        || (maxPrice.HasValue && reference.Price > (decimal)maxPrice.Value))
+                        continue;
+                    rows.Add(new CarDto
+                    {
+                        Id = car.Id,
+                        Name = car.Name,
+                        carModeName = models.GetValueOrDefault(car.CarModelId!.Value, string.Empty),
+                        tipName = tips.GetValueOrDefault(car.TipId!.Value, string.Empty),
+                        CompanyName = car.CompanyId.HasValue
+                            ? companies.GetValueOrDefault(car.CompanyId.Value, string.Empty) : string.Empty,
+                        StartDate = reference.Year,
+                        Price = (float)reference.Price,
+                        MarketPrice = reference.Price,
+                        FactoryPrice = car.FactoryPrice,
+                        ImageName = car.ImageName,
+                        Description = car.Description,
+                        SourceUrl = car.SourceUrl,
+                        LastUpdated = car.LastUpdated,
                         CategoryName = string.Empty
-                    };
-                }).ToList();
-            var missingCars = approved.Count(r => !carsById.ContainsKey(r.CarId));
-            return (rows, approved.Count, missingCars);
+                    });
+                }
+            }
+            rows = rows.OrderBy(r => r.Id)
+                .ThenByDescending(r => r.StartDate, StringComparer.Ordinal).ToList();
+            return (rows, rows.Count, 0);
         }
 
         // Retain the original array response for existing clients.
