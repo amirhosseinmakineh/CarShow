@@ -23,6 +23,16 @@ namespace CarShow.Controllers
             return Ok(result);
         }
 
+        [HttpGet("references")]
+        public async Task<IActionResult> GetReferenceCars(
+            [FromQuery] float? minPrice, [FromQuery] float? maxPrice,
+            [FromQuery] string? company, [FromQuery] int pageSize = 12,
+            [FromQuery] int pageNumber = 0)
+        {
+            var result = await servicce.GetPagedReferenceCars(minPrice, maxPrice, company, pageSize, pageNumber);
+            return Ok(result);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateCar(CreateCarDto dto)
         {
