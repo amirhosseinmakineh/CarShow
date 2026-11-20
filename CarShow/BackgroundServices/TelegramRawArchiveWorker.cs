@@ -407,9 +407,35 @@ public sealed class TelegramRawMessagesController : ControllerBase
     [HttpGet("status")]
     public IActionResult GetStatus() => Ok(_worker.Status);
 
+    [HttpGet("channels")]
+    public async Task<IActionResult> GetChannels(CancellationToken cancellationToken)
+    {
+        await _worker.EnsureArchiveTableAsync(cancellationToken);
+        await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandTimeout = 30;
+        command.CommandText = """
+            SELECT ChannelUsername, MAX(ChannelName) AS ChannelName, COUNT_BIG(*) AS MessageCount
+            FROM dbo.TelegramRawArchiveSnapshots
+            GROUP BY ChannelUsername
+            ORDER BY ChannelUsername;
+            """;
+        var channels = new List<object>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            channels.Add(new {
+                channelUsername = reader.GetString(0),
+                channelName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                messageCount = reader.GetInt64(2)
+            });
+        return Ok(channels);
+    }
+
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 25,
         [FromQuery] string? search = null, [FromQuery] string? channel = null,
+        [FromQuery] string? channelUsername = null,
         [FromQuery] DateTimeOffset? fromDate = null, [FromQuery] DateTimeOffset? toDate = null,
         CancellationToken cancellationToken = default)
     {
@@ -425,6 +451,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
             FROM dbo.TelegramRawArchiveSnapshots
             WHERE (@search IS NULL OR [Text] LIKE N'%' + @search + N'%' OR CONVERT(nvarchar(30),TelegramMessageId) LIKE N'%' + @search + N'%')
               AND (@channel IS NULL OR ChannelUsername LIKE N'%' + @channel + N'%' OR ChannelName LIKE N'%' + @channel + N'%')
+              AND (@channelUsername IS NULL OR ChannelUsername = @channelUsername)
               AND (@fromDate IS NULL OR PublishedAt >= @fromDate)
               AND (@toDate IS NULL OR PublishedAt < DATEADD(day,1,@toDate))
             """;
@@ -434,6 +461,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
             + " ORDER BY PublishedAt DESC, Id DESC OFFSET @skip ROWS FETCH NEXT @take ROWS ONLY;";
         cmd.Parameters.Add("@search", SqlDbType.NVarChar, 500).Value = string.IsNullOrWhiteSpace(search) ? DBNull.Value : search.Trim();
         cmd.Parameters.Add("@channel", SqlDbType.NVarChar, 128).Value = string.IsNullOrWhiteSpace(channel) ? DBNull.Value : channel.Trim();
+        cmd.Parameters.Add("@channelUsername", SqlDbType.NVarChar, 128).Value = string.IsNullOrWhiteSpace(channelUsername) ? DBNull.Value : channelUsername.Trim();
         cmd.Parameters.Add("@fromDate", SqlDbType.DateTimeOffset).Value = (object?)fromDate ?? DBNull.Value;
         cmd.Parameters.Add("@toDate", SqlDbType.DateTimeOffset).Value = (object?)toDate ?? DBNull.Value;
         cmd.Parameters.AddWithValue("@skip", (page - 1L) * pageSize);
