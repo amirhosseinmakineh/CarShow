@@ -94,10 +94,8 @@ namespace CarShow.ApplicationService.Services
 
         // The public list is derived from the exact approved references of the latest
         // completed Telegram scan, rather than from stale Cars.MarketPrice flags.
-        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
+        private async Task<(List<CarDto> Rows, int ReferenceCount, int MissingCars)> LoadReferenceCars(float? minPrice, float? maxPrice, string? company)
         {
-            var page = Math.Max(0, pageNumber.GetValueOrDefault());
-            var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
 
             // A scan currently in progress must not expose partial results.
             // The last successfully completed scan remains visible until it is replaced.
@@ -123,7 +121,7 @@ namespace CarShow.ApplicationService.Services
             {
                 if (closeAfter) await connection.CloseAsync();
             }
-            if (string.IsNullOrWhiteSpace(resultsJson)) return new List<CarDto>();
+            if (string.IsNullOrWhiteSpace(resultsJson)) return (new List<CarDto>(), 0, 0);
 
             using var document = JsonDocument.Parse(resultsJson);
             var root = document.RootElement;
@@ -182,7 +180,6 @@ namespace CarShow.ApplicationService.Services
                         company.Trim(), StringComparison.Ordinal))
                 .OrderBy(r => r.CarId)
                 .ThenByDescending(r => r.Year, StringComparer.Ordinal)
-                .Skip(page * size).Take(size)
                 .Select(r =>
                 {
                     var c = carsById[r.CarId];
@@ -204,7 +201,34 @@ namespace CarShow.ApplicationService.Services
                         CategoryName = string.Empty
                     };
                 }).ToList();
-            return rows;
+            return (rows, approved.Count, approved.Count - rows.Count);
+        }
+
+        // Retain the original array response for existing clients.
+        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
+        {
+            var (rows, _, _) = await LoadReferenceCars(minPrice, maxPrice, company);
+            var page = Math.Max(0, pageNumber.GetValueOrDefault());
+            var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
+            return rows.Skip((long)page * size > int.MaxValue ? int.MaxValue : page * size).Take(size).ToList();
+        }
+
+        public async Task<object> GetPagedReferenceCars(float? minPrice, float? maxPrice, string? company, int pageSize = 12, int pageNumber = 0)
+        {
+            var (rows, referenceCount, missingCars) = await LoadReferenceCars(minPrice, maxPrice, company);
+            var page = Math.Max(0, pageNumber);
+            var size = Math.Clamp(pageSize, 1, 100);
+            var offset = (long)page * size;
+            return new
+            {
+                Items = rows.Skip(offset > int.MaxValue ? int.MaxValue : (int)offset).Take(size).ToList(),
+                TotalCount = rows.Count,
+                PageNumber = page,
+                PageSize = size,
+                TotalPages = (rows.Count + size - 1) / size,
+                ApprovedReferenceCount = referenceCount,
+                MissingCatalogMatches = missingCars
+            };
         }
 
         public async Task<GetCarForCreateDto> GetCarInfoForCreate()
