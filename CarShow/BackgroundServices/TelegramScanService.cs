@@ -154,9 +154,18 @@ namespace CarShow.BackgroundServices
             await using var command = connection.CreateCommand();
             command.CommandTimeout = 120;
             command.CommandText = """
+                WITH Deduplicated AS (
+                    SELECT ChannelUsername, TelegramMessageId, [Text],
+                           ROW_NUMBER() OVER (
+                               PARTITION BY ChannelUsername, TelegramMessageId
+                               ORDER BY CollectedAt DESC, Id DESC
+                           ) AS rn
+                    FROM dbo.TelegramRawArchiveSnapshots
+                    WHERE [Text] IS NOT NULL AND LEN([Text]) > 0
+                )
                 SELECT ChannelUsername, [Text]
-                FROM dbo.TelegramRawArchiveSnapshots
-                WHERE [Text] IS NOT NULL AND LEN([Text]) > 0
+                FROM Deduplicated
+                WHERE rn = 1
                 ORDER BY ChannelUsername, TelegramMessageId
                 """;
             await using var reader = await command.ExecuteReaderAsync(
