@@ -65,7 +65,19 @@ namespace CarShow.ApplicationService.Services
             return Result<object>.Success(car, "ماشین مورد نظر با موفقیت ایجاد شد");
         }
 
-        private static async Task<string?> SaveImageAsync(IFormFile? file)
+        public async Task<string?> UpdateCarImage(long id, IFormFile image, string extension, CancellationToken cancellationToken)
+        {
+            var cars = carRepository.GetAll().Where(car => car.Id == id && !car.IsDelete);
+            if (!await cars.AnyAsync(cancellationToken))
+                return null;
+
+            var imagePath = await SaveImageAsync(image, extension);
+            var updated = await cars.ExecuteUpdateAsync(
+                setters => setters.SetProperty(car => car.ImageName, imagePath!), cancellationToken);
+            return updated == 0 ? null : imagePath;
+        }
+
+        private static async Task<string?> SaveImageAsync(IFormFile? file, string? extension = null)
         {
             if (file is null || file.Length == 0)
                 return null;
@@ -73,7 +85,7 @@ namespace CarShow.ApplicationService.Services
             var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/cars");
             Directory.CreateDirectory(uploadsFolder);
 
-            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var uniqueFileName = $"{Guid.NewGuid()}{extension ?? Path.GetExtension(file.FileName)}";
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
             await using var stream = new FileStream(filePath, FileMode.Create);
