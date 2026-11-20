@@ -201,7 +201,8 @@ namespace CarShow.ApplicationService.Services
                         CategoryName = string.Empty
                     };
                 }).ToList();
-            return (rows, approved.Count, approved.Count - rows.Count);
+            var missingCars = approved.Count(r => !carsById.ContainsKey(r.CarId));
+            return (rows, approved.Count, missingCars);
         }
 
         // Retain the original array response for existing clients.
