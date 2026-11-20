@@ -1384,10 +1384,31 @@ namespace CarShow.BackgroundServices
                             candidates.Add(price);
                     }
                 }
-                // Conflicting prices are ambiguous, not a license to guess.
-                return candidates.Count == 1
-                    ? (candidates.Single() * 1000m).ToString("0", CultureInfo.InvariantCulture)
-                    : null;
+                // Preserve the parsed unit for explicit and colloquial prices.
+                // A plain numeric price remains in millions (e.g. 4200).
+                // The reference builder accepts both formats through TryConvertPrice.
+                if (candidates.Count != 1) return null;
+                var candidate = candidates.Single();
+                foreach (var rawLine in block.Split('\n'))
+                {
+                    var normalized = PhoneRegex.Replace(NormalizeText(rawLine), " ");
+                    if (Regex.IsMatch(normalized, @"پیش\s*پرداخت|بیعانه|اقساط|قسط|ودیعه|کاور|لوازم|بیمه|مالیات"))
+                        continue;
+                    var explicitMatch = ExplicitPriceRegex.Match(normalized);
+                    if (explicitMatch.Success &&
+                        CarPriceReferenceBuilder.TryConvertPrice(explicitMatch.Value, out var explicitAmount) &&
+                        explicitAmount == candidate)
+                        return explicitMatch.Value;
+                    var colloquialMatch = ColloquialPriceRegex.Match(normalized);
+                    if (colloquialMatch.Success)
+                    {
+                        var amount = colloquialMatch.Groups["amount"].Value.Replace('/', '.').Replace(',', '.');
+                        if (decimal.TryParse(amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
+                            && number == candidate)
+                            return number.ToString(CultureInfo.InvariantCulture) + " میلیارد";
+                    }
+                }
+                return (candidate * 1000m).ToString("0", CultureInfo.InvariantCulture);
             }
 
             private static string ExtractYear(string block)
