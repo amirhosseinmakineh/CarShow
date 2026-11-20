@@ -135,11 +135,6 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     public bool TryQueueManualRefresh()
     {
         if (Interlocked.CompareExchange(ref _pendingOrRunning, 1, 0) != 0) return false;
-        if (_status == "Failed" && _lastStartedAt == null)
-        {
-            Interlocked.Exchange(ref _pendingOrRunning, 0);
-            return false;
-        }
         _status = "Queued";
         if (_requests.Writer.TryWrite(true)) return true;
         Interlocked.Exchange(ref _pendingOrRunning, 0);
@@ -157,70 +152,11 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     private SqlConnection OpenConnection() => new(_config.GetConnectionString("CarShow")
         ?? throw new InvalidOperationException("CarShow connection string missing."));
 
-    public async Task EnsureSchemaAsync(CancellationToken ct)
-    {
-        await using var connection = OpenConnection();
-        await connection.OpenAsync(ct);
-        await using var cmd = connection.CreateCommand();
-        cmd.CommandText = """
-            IF OBJECT_ID(N'dbo.TelegramRawMessages', N'U') IS NULL
-            BEGIN
-                CREATE TABLE dbo.TelegramRawMessages (
-                    Id bigint IDENTITY(1,1) NOT NULL PRIMARY KEY,
-                    TelegramMessageId bigint NOT NULL,
-                    ChannelId bigint NULL,
-                    ChannelName nvarchar(256) NULL,
-                    ChannelUsername nvarchar(128) NOT NULL,
-                    SenderName nvarchar(256) NULL,
-                    [Text] nvarchar(max) NOT NULL,
-                    MessageUrl nvarchar(512) NOT NULL,
-                    PublishedAt datetimeoffset NOT NULL,
-                    CollectedAt datetimeoffset NOT NULL,
-                    Metadata nvarchar(max) NULL
-                );
-            END;
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'Id') IS NULL
-                THROW 51001, 'TelegramRawMessages lacks Id; manual schema review required to preserve existing rows.', 1;
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'TelegramMessageId') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD TelegramMessageId bigint NOT NULL CONSTRAINT DF_TRM_TelegramMessageId DEFAULT(0);
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'ChannelId') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD ChannelId nvarchar(128) NULL;
-            -- Public t.me/s HTML supplies a username, not a numeric Telegram channel ID.
-            -- Preserve existing numeric IDs and allow unknown IDs to remain NULL.
-            IF EXISTS (
-                SELECT 1 FROM sys.columns c
-                JOIN sys.types t ON c.user_type_id = t.user_type_id
-                WHERE c.object_id = OBJECT_ID(N'dbo.TelegramRawMessages')
-                  AND c.name = N'ChannelId' AND t.name = N'bigint' AND c.is_nullable = 0
-            )
-                ALTER TABLE dbo.TelegramRawMessages ALTER COLUMN ChannelId bigint NULL;
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'ChannelName') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD ChannelName nvarchar(256) NULL;
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'ChannelUsername') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD ChannelUsername nvarchar(128) NOT NULL CONSTRAINT DF_TRM_ChannelUsername DEFAULT(N'legacy');
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'SenderName') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD SenderName nvarchar(256) NULL;
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'Text') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD [Text] nvarchar(max) NOT NULL CONSTRAINT DF_TRM_Text DEFAULT(N'');
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'MessageUrl') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD MessageUrl nvarchar(512) NOT NULL CONSTRAINT DF_TRM_MessageUrl DEFAULT(N'');
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'PublishedAt') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD PublishedAt datetimeoffset NOT NULL CONSTRAINT DF_TRM_PublishedAt DEFAULT('2000-01-01T00:00:00+00:00');
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'CollectedAt') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD CollectedAt datetimeoffset NOT NULL CONSTRAINT DF_TRM_CollectedAt DEFAULT('2000-01-01T00:00:00+00:00');
-            IF COL_LENGTH(N'dbo.TelegramRawMessages', N'Metadata') IS NULL
-                ALTER TABLE dbo.TelegramRawMessages ADD Metadata nvarchar(max) NULL;
-            IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.TelegramRawMessages') AND name = N'IX_TelegramRawMessages_PublishedAt')
-                CREATE INDEX IX_TelegramRawMessages_PublishedAt ON dbo.TelegramRawMessages(PublishedAt DESC);
-            """;
-        await cmd.ExecuteNonQueryAsync(ct);
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            await EnsureSchemaAsync(stoppingToken);
+            // Schema changes belong to EF migrations/deployment, never request or worker startup.
             // Manual-only: no initial scan and no periodic timer.
             await foreach (var _ in _requests.Reader.ReadAllAsync(stoppingToken))
             {
@@ -439,7 +375,6 @@ public sealed class TelegramRawMessagesController : ControllerBase
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
-        await _worker.EnsureSchemaAsync(cancellationToken);
         await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
@@ -453,6 +388,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
               AND (@toDate IS NULL OR PublishedAt < DATEADD(day,1,@toDate))
             """;
         await using var cmd = connection.CreateCommand();
+        cmd.CommandTimeout = 15;
         cmd.CommandText = "SELECT COUNT_BIG(*) " + sql + "; SELECT Id,TelegramMessageId,ChannelId,ChannelName,ChannelUsername,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt,Metadata " + sql
             + " ORDER BY PublishedAt DESC, Id DESC OFFSET @skip ROWS FETCH NEXT @take ROWS ONLY;";
         cmd.Parameters.Add("@search", SqlDbType.NVarChar, 500).Value = string.IsNullOrWhiteSpace(search) ? DBNull.Value : search.Trim();
