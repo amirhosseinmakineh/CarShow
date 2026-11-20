@@ -168,7 +168,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 CREATE TABLE dbo.TelegramRawMessages (
                     Id bigint IDENTITY(1,1) NOT NULL PRIMARY KEY,
                     TelegramMessageId bigint NOT NULL,
-                    ChannelId nvarchar(128) NULL,
+                    ChannelId bigint NULL,
                     ChannelName nvarchar(256) NULL,
                     ChannelUsername nvarchar(128) NOT NULL,
                     SenderName nvarchar(256) NULL,
@@ -185,6 +185,15 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 ALTER TABLE dbo.TelegramRawMessages ADD TelegramMessageId bigint NOT NULL CONSTRAINT DF_TRM_TelegramMessageId DEFAULT(0);
             IF COL_LENGTH(N'dbo.TelegramRawMessages', N'ChannelId') IS NULL
                 ALTER TABLE dbo.TelegramRawMessages ADD ChannelId nvarchar(128) NULL;
+            -- Public t.me/s HTML supplies a username, not a numeric Telegram channel ID.
+            -- Preserve existing numeric IDs and allow unknown IDs to remain NULL.
+            IF EXISTS (
+                SELECT 1 FROM sys.columns c
+                JOIN sys.types t ON c.user_type_id = t.user_type_id
+                WHERE c.object_id = OBJECT_ID(N'dbo.TelegramRawMessages')
+                  AND c.name = N'ChannelId' AND t.name = N'bigint' AND c.is_nullable = 0
+            )
+                ALTER TABLE dbo.TelegramRawMessages ALTER COLUMN ChannelId bigint NULL;
             IF COL_LENGTH(N'dbo.TelegramRawMessages', N'ChannelName') IS NULL
                 ALTER TABLE dbo.TelegramRawMessages ADD ChannelName nvarchar(256) NULL;
             IF COL_LENGTH(N'dbo.TelegramRawMessages', N'ChannelUsername') IS NULL
@@ -302,7 +311,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 create.Transaction = transaction;
                 create.CommandText = """
                     CREATE TABLE #Incoming (
-                        TelegramMessageId bigint NOT NULL, ChannelId nvarchar(128) NOT NULL, ChannelUsername nvarchar(128) NOT NULL,
+                        TelegramMessageId bigint NOT NULL, ChannelUsername nvarchar(128) NOT NULL,
                         ChannelName nvarchar(256) NULL, SenderName nvarchar(256) NULL,
                         [Text] nvarchar(max) NOT NULL, MessageUrl nvarchar(512) NOT NULL,
                         PublishedAt datetimeoffset NOT NULL, CollectedAt datetimeoffset NOT NULL
@@ -313,7 +322,6 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             var now = DateTimeOffset.UtcNow;
             var batch = new DataTable();
             batch.Columns.Add("TelegramMessageId", typeof(long));
-            batch.Columns.Add("ChannelId", typeof(string));
             batch.Columns.Add("ChannelUsername", typeof(string));
             batch.Columns.Add("ChannelName", typeof(string));
             batch.Columns.Add("SenderName", typeof(string));
@@ -322,9 +330,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             batch.Columns.Add("PublishedAt", typeof(DateTimeOffset));
             batch.Columns.Add("CollectedAt", typeof(DateTimeOffset));
             foreach (var post in posts.DistinctBy(p => (p.Username, p.MessageId)))
-                // The public HTML exposes the channel username, not Telegram's numeric peer ID.
-                // Store that stable public identifier rather than NULL for legacy NOT NULL schemas.
-                batch.Rows.Add(post.MessageId, post.Username, post.Username,
+                batch.Rows.Add(post.MessageId, post.Username,
                     (object?)post.ChannelName ?? DBNull.Value,
                     (object?)post.SenderName ?? DBNull.Value,
                     post.Text, post.Url, post.PublishedAt, now);
@@ -345,8 +351,8 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     WHERE ChannelUsername IN (SELECT ChannelUsername FROM #Incoming)
                        OR ChannelUsername IN (SELECT value FROM STRING_SPLIT(@successful, ','));
                     INSERT INTO dbo.TelegramRawMessages
-                        (TelegramMessageId,ChannelId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
-                    SELECT TelegramMessageId,ChannelId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
+                        (TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
+                    SELECT TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
                     DELETE FROM dbo.TelegramRawMessages WHERE PublishedAt < @cutoff;
                     """;
                 swap.Parameters.AddWithValue("@successful", string.Join(",", successfulChannels));
@@ -463,7 +469,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
         while (await reader.ReadAsync(ct))
             items.Add(new {
                 id = Convert.ToInt64(reader.GetValue(0)), telegramMessageId = Convert.ToInt64(reader.GetValue(1)),
-                channelId = reader.IsDBNull(2) ? null : reader.GetString(2),
+                channelId = reader.IsDBNull(2) ? null : Convert.ToString(reader.GetValue(2), CultureInfo.InvariantCulture),
                 channelName = reader.IsDBNull(3) ? null : reader.GetString(3),
                 channelUsername = reader.GetString(4),
                 senderName = reader.IsDBNull(5) ? null : reader.GetString(5),
