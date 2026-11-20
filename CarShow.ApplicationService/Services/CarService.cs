@@ -103,9 +103,9 @@ namespace CarShow.ApplicationService.Services
                 .AsNoTracking()
                 .Where(c => c.CarModelId != null && c.TipId != null
                     && c.Description != null
-                    && c.Description.Contains("\\"Type\\":\\"TelegramPriceReference\\"")
-                    && c.Description.Contains("\\"ComparisonApproved\\":true")
-                    && c.Description.Contains("\\"PriceStatus\\":\\"Approved\\""))
+                    && c.Description.Contains(""" "Type":"TelegramPriceReference" """.Trim())
+                    && c.Description.Contains(""" "ComparisonApproved":true """.Trim())
+                    && c.Description.Contains(""" "PriceStatus":"Approved" """.Trim()))
                 .Select(c => new
                 {
                     c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice,
