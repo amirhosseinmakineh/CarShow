@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CarShow.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/catalog")]
 public sealed class AdminCatalogController : ControllerBase
 {
@@ -52,6 +52,10 @@ public sealed class AdminCatalogController : ControllerBase
             {
                 x.Id,
                 x.ImageName,
+                x.Description,
+                x.FactoryPrice,
+                x.MarketPrice,
+                x.StartDate,
                 x.Name,
                 x.CompanyId,
                 Company = x.Company != null ? x.Company.Name : null,
