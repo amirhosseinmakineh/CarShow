@@ -55,7 +55,7 @@ public sealed class AdminCatalogController : ControllerBase
                 x.Description,
                 x.FactoryPrice,
                 x.MarketPrice,
-                x.StartDate,
+                StartDate = string.Empty,
                 x.Name,
                 x.CompanyId,
                 Company = x.Company != null ? x.Company.Name : null,
