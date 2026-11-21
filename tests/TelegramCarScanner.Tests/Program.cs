@@ -78,8 +78,8 @@ var catalog = new (long Id, string Model, string Tip)[]
     (4, "پژو 207 sd", "اتوماتیک"),
     (5, "دنا", "اتوماتیک")
 };
-Check(TelegramScanService.MatchCatalogCar("پژو 207 اتوماتیک", catalog) == 2,
-    "Trim selection respects token boundaries");
+Check(TelegramScanService.MatchCatalogCar("پژو 207 اتوماتیک", catalog) == null,
+    "Duplicate normalized automatic trims are ambiguous");
 Check(TelegramScanService.MatchCatalogCar("پژو 207 sd اتوماتیک", catalog) == 4,
     "Specific model wins over contained shorter model");
 Check(TelegramScanService.MatchCatalogCar("پژو 207 دنده ای", catalog) == 3,
