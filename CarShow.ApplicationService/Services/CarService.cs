@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using CarShow.ApplicationService.Contract.Dtos.CarDto;
-using CarShow.ApplicationService.Contract.Dtos.CategoryDto;
 using CarShow.ApplicationService.Contract.Dtos.CompanyDto;
 using CarShow.ApplicationService.Contract.Dtos.ModelDto;
 using CarShow.ApplicationService.Contract.Dtos.TipDto;
@@ -21,14 +20,12 @@ namespace CarShow.ApplicationService.Services
         private readonly IBaseRepository<long, Car> carRepository;
         private readonly IBaseRepository<long, Tip> tipRepository;
         private readonly IBaseRepository<long, CarModel> carModelRepository;
-        private readonly IBaseRepository<long, Category> categoryRepository;
         private readonly IBaseRepository<long, Company> companyRepository;
 
         public CarService(
             IBaseRepository<long, Car> carRepository,
             IBaseRepository<long, Tip> tipRepository,
             IBaseRepository<long, CarModel> carModelRepository,
-            IBaseRepository<long, Category> categoryRepository,
             IBaseRepository<long, Company> companyRepository,
             IConfiguration configuration)
         {
@@ -36,7 +33,6 @@ namespace CarShow.ApplicationService.Services
             this.carRepository = carRepository;
             this.tipRepository = tipRepository;
             this.carModelRepository = carModelRepository;
-            this.categoryRepository = categoryRepository;
             this.companyRepository = companyRepository;
         }
 
@@ -201,7 +197,6 @@ namespace CarShow.ApplicationService.Services
                         Description = car.Description,
                         SourceUrl = car.SourceUrl,
                         LastUpdated = car.LastUpdated,
-                        CategoryName = string.Empty
                     });
                 }
             }
@@ -239,8 +234,6 @@ namespace CarShow.ApplicationService.Services
 
         public async Task<GetCarForCreateDto> GetCarInfoForCreate()
         {
-            var categories = categoryRepository.GetAll()
-                .Select(x => new CategoryDto { Name = x.Name }).ToListAsync();
             var companies = companyRepository.GetAll()
                 .Select(x => new CompanyDto { Name = x.Name }).ToListAsync();
             var models = carModelRepository.GetAll()
@@ -248,10 +241,9 @@ namespace CarShow.ApplicationService.Services
             var tips = tipRepository.GetAll()
                 .Select(x => new TipDto { Name = x.Name }).ToListAsync();
 
-            await Task.WhenAll(categories, companies, models, tips);
+            await Task.WhenAll(companies, models, tips);
             return new GetCarForCreateDto
             {
-                Categories = await categories,
                 Companys = await companies,
                 Models = await models,
                 Tips = await tips
@@ -264,15 +256,13 @@ namespace CarShow.ApplicationService.Services
             if (car is null)
                 throw new Exception("اتوموبیلی یافت نشد");
 
-            var categories = categoryRepository.GetAll().Select(x => new CategoryDto { Name = x.Name }).ToListAsync();
             var companies = companyRepository.GetAll().Select(x => new CompanyDto { Name = x.Name }).ToListAsync();
             var models = carModelRepository.GetAll().Select(x => new ModelDto { Name = x.Name }).ToListAsync();
             var tips = tipRepository.GetAll().Select(x => new TipDto { Name = x.Name }).ToListAsync();
 
-            await Task.WhenAll(categories, companies, models, tips);
+            await Task.WhenAll(companies, models, tips);
             return new GetCarForUpdateDto
             {
-                Categories = await categories,
                 Companys = await companies,
                 Models = await models,
                 Tips = await tips,
@@ -349,7 +339,6 @@ namespace CarShow.ApplicationService.Services
             {
                 Id = car.Id,
                 carModeName = car.CarModel?.Name ?? string.Empty,
-                CategoryName = string.Empty,
                 CompanyName = car.Company?.Name ?? string.Empty,
                 Description = details?.Description ?? car.Description,
                 Details = details,
