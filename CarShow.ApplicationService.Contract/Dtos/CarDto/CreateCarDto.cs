@@ -12,6 +12,5 @@ namespace CarShow.ApplicationService.Contract.Dtos.CarDto
         public string Description { get; set; } = string.Empty;
         public long? TipId { get; set; }
         public long? CompanyId { get; set; }
-        public long CategoryId { get; set; }
     }
 }

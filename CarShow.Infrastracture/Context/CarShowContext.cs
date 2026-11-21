@@ -12,7 +12,6 @@ namespace CarShow.Infrastracture.Context
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<UserRole> UserRoles { get; set; } = null!;
         public DbSet<Role> Roles { get; set; } = null!;
-        public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<Car> Cars { get; set; } = null!;
         public DbSet<Tip> Tips { get; set; } = null!;
         public DbSet<CarModel> CarModels { get; set; } = null!;

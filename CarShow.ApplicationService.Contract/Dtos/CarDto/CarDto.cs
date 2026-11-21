@@ -15,7 +15,6 @@ namespace CarShow.ApplicationService.Contract.Dtos.CarDto
         public DateTime LastUpdated { get; set; }
         public string tipName { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;
-        public string CategoryName { get; set; } = string.Empty;
         public CarDetailsDto? Details { get; set; }
     }
 }
