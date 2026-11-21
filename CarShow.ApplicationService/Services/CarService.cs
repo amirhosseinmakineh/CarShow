@@ -119,10 +119,7 @@ namespace CarShow.ApplicationService.Services
             var approvedCars = await carRepository.GetAll()
                 .AsNoTracking()
                 .Where(c => c.CarModelId != null && c.TipId != null
-                    && c.Description != null
-                    && c.Description.Contains(""" "Type":"TelegramPriceReference" """.Trim())
-                    && c.Description.Contains(""" "ComparisonApproved":true """.Trim())
-                    && c.Description.Contains(""" "PriceStatus":"Approved" """.Trim()))
+                    && c.IsReferenceApproved && c.Description != null)
                 .Select(c => new
                 {
                     c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice,
@@ -214,7 +211,7 @@ namespace CarShow.ApplicationService.Services
             return rows.Skip((long)page * size > int.MaxValue ? int.MaxValue : page * size).Take(size).ToList();
         }
 
-        public async Task<object> GetPagedReferenceCars(float? minPrice, float? maxPrice, string? company, int pageSize = 12, int pageNumber = 0)
+        public async Task<object> GetPagedReferenceCars(float? minPrice, float? maxPrice, string? company, int pageSize = 10, int pageNumber = 0)
         {
             var (rows, referenceCount, missingCars) = await LoadReferenceCars(minPrice, maxPrice, company);
             var page = Math.Max(0, pageNumber);

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CarShow.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/catalog")]
 public sealed class AdminCatalogController : ControllerBase
 {
@@ -19,13 +19,13 @@ public sealed class AdminCatalogController : ControllerBase
     public async Task<IActionResult> GetCatalog(
         [FromQuery] string? search,
         [FromQuery] int pageNumber = 0,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
         pageNumber = Math.Max(0, pageNumber);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
-        var all = _db.Cars.AsNoTracking();
+        var all = _db.Cars.AsNoTracking().Where(x => x.IsReferenceApproved && !x.IsDelete);
         var totalCars = await all.CountAsync(cancellationToken);
         var eligibleCars = await all.CountAsync(x =>
             x.CarModelId != null && x.TipId != null, cancellationToken);
@@ -52,6 +52,11 @@ public sealed class AdminCatalogController : ControllerBase
             {
                 x.Id,
                 x.ImageName,
+                x.IsReferenceApproved,
+                x.Description,
+                x.FactoryPrice,
+                x.MarketPrice,
+                StartDate = string.Empty,
                 x.Name,
                 x.CompanyId,
                 Company = x.Company != null ? x.Company.Name : null,
