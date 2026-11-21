@@ -57,7 +57,7 @@ Check(Build(Ad("1405", "912 میلیون"), Ad("1405", "11840 میلیون")).Co
     "Two conflicting ads produce no reference");
 
 Check(Build(Ad("1405", "4290 میلیون"), Ad("1404", "4295 میلیون"))
-    is [{ Year: "1404", AdvertisementCount: 1 }, { Year: "1405", AdvertisementCount: 1 }],
+    is [{ Year: "2025", AdvertisementCount: 1 }, { Year: "2026", AdvertisementCount: 1 }],
     "Different model years produce separate single-ad references");
 
 Check(Build(Ad("1405", "4290 میلیون"))
