@@ -238,7 +238,16 @@ namespace CarShow.ApplicationService.Services
             return Result<string>.Failure("حذف کاربر با خطا مواجه شد");
         }
 
-        public object GetAllUsers(int pageSize = 15, int pageNumber = 0, string? search = null)
+        public List<UserDto> GetAllUsers(int pageSize = 10, int pageNumber = 0)
+        {
+            return _userRepository.GetAll().AsNoTracking().Where(x => !x.IsDelete)
+                .OrderBy(x => x.Id).Skip(Math.Max(0, pageNumber) * Math.Clamp(pageSize, 1, 100))
+                .Take(Math.Clamp(pageSize, 1, 100))
+                .Select(x => new UserDto { Id = x.Id, Name = x.Name, Family = x.Family,
+                    Email = x.Email, MobileNumber = x.MobileNumber }).ToList();
+        }
+
+        public object GetPagedUsers(int pageSize = 15, int pageNumber = 0, string? search = null)
         {
             pageSize = Math.Clamp(pageSize, 1, 100);
             pageNumber = Math.Max(0, pageNumber);
