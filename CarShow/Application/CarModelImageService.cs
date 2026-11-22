@@ -75,20 +75,22 @@ public sealed class CarModelImageService(CarShowContext db)
         model.ImageName = newImage;
 
         // Do not replace images uploaded specifically for individual cars.
-        var affectedCars = await db.Cars
-            .Where(x => x.CarModelId == modelId && x.IsReferenceApproved && !x.IsDelete
-                && (x.ImageName == "" || x.ImageName == previousImage))
-            .ToListAsync(cancellationToken);
-        foreach (var car in affectedCars) car.ImageName = newImage;
         try
         {
+            // Persist model first; use one SQL UPDATE for approved cars instead of
+            // tracking and updating every matching record.
             await db.SaveChangesAsync(cancellationToken);
+            var updatedCars = await db.Cars
+                .Where(x => x.CarModelId == modelId && x.IsReferenceApproved && !x.IsDelete
+                    && (x.ImageName == null || x.ImageName == ""
+                        || (previousImage != null && x.ImageName == previousImage)))
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ImageName, newImage), cancellationToken);
+            return (newImage, updatedCars);
         }
         catch
         {
             File.Delete(ToFullPath(newImage));
             throw;
         }
-        return (newImage, affectedCars.Count);
     }
 }
