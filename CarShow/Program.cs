@@ -1,4 +1,5 @@
 using CarShow.BackgroundServices;
+using CarShow.Application;
 using CarShow.ApplicationService.Contract.IService;
 using CarShow.ApplicationService.Services;
 using CarShow.Domain.Crawling;
@@ -63,6 +64,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
 builder.Services.AddScoped<ICarSErvicce, CarService>();
 builder.Services.AddScoped<CatalogImportService>();
+builder.Services.AddScoped<CarModelImageService>();
 builder.Services.AddScoped<ITipService, TipService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IModelService, ModelService>();
