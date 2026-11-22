@@ -46,7 +46,7 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<RegisterDto>> Register(RegisterDto dto)
         {
             var existingUser = _userRepository.GetAll()
-                .FirstOrDefault(u => u.MobileNumber == dto.MobileNumber);
+                .FirstOrDefault(u => !u.IsDelete && u.MobileNumber == dto.MobileNumber);
 
             if (existingUser != null)
                 return Result<RegisterDto>
@@ -148,9 +148,11 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<object>> CreateUser(CreateUserDto dto)
         {
             var user = await _userRepository.GetAll()
-                .FirstOrDefaultAsync(x => x.MobileNumber == dto.MobileNumber);
+                .FirstOrDefaultAsync(x => !x.IsDelete && x.MobileNumber == dto.MobileNumber);
             if (user == null)
             {
+                if (string.IsNullOrWhiteSpace(dto.Password) || !await _roleRepository.GetAll().AnyAsync(r => r.RoleName == dto.RoleName))
+                    return Result<object>.Failure("رمز عبور یا نقش معتبر نیست");
                 user = new User()
                 {
                     Id = Guid.NewGuid(),
@@ -160,10 +162,20 @@ namespace CarShow.ApplicationService.Services
                     Password = PasswordHasher.HashPassword(dto.Password),
                     MobileNumber = dto.MobileNumber,
                 };
-                await _userRepository.Create(user);
-                await _userRepository.SaveChanges();
-                await AddRoleToUser(user.Id, dto.RoleName);
-                return Result<object>.Success(dto, "ثبت کاربر با موفقیت انجام شد");
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    await _userRepository.Create(user);
+                    await _userRepository.SaveChanges();
+                    await AddRoleToUser(user.Id, dto.RoleName);
+                    await _unitOfWork.CommitAsync();
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackAsync();
+                    throw;
+                }
+                return Result<object>.Success(new { user.Id }, "ثبت کاربر با موفقیت انجام شد");
             }
             else
                 return Result<object>.Failure("ثبت کاربر با خطا مواجه شد");
@@ -172,16 +184,41 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<object>> UpdateUser(UpdateUserDto dto)
         {
             var user = await _userRepository.GetById(dto.Id);
-            if (user != null)
+            if (user != null && !user.IsDelete)
             {
+                if (await _userRepository.GetAll().AnyAsync(x => x.Id != dto.Id && !x.IsDelete && x.MobileNumber == dto.MobileNumber))
+                    return Result<object>.Failure("شماره موبایل تکراری است");
                 user.Name = dto.Name;
                 user.Email = dto.Email;
                 user.Family = dto.Family;
-                user.Password = PasswordHasher.HashPassword(dto.Password);
+                if (!string.IsNullOrWhiteSpace(dto.Password))
+                    user.Password = PasswordHasher.HashPassword(dto.Password);
                 user.MobileNumber = dto.MobileNumber;
-                await _userRepository.Update(user);
-                await _userRepository.SaveChanges();
-                return Result<object>.Success(user, "ویرایش کاربر با موفقیت انجام شد");
+                if (!string.IsNullOrWhiteSpace(dto.RoleName) && !await _roleRepository.GetAll().AnyAsync(x => x.RoleName == dto.RoleName))
+                    return Result<object>.Failure("نقش معتبر نیست");
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    await _userRepository.Update(user);
+                    await _userRepository.SaveChanges();
+                    if (!string.IsNullOrWhiteSpace(dto.RoleName))
+                    {
+                        var role = await _roleRepository.GetAll().FirstAsync(x => x.RoleName == dto.RoleName);
+                        var existing = await _userRoleRepository.GetAll().Where(x => x.UserId == user.Id).ToListAsync();
+                        foreach (var assignment in existing.Where(x => x.RoleId != role.Id))
+                            await _userRoleRepository.Delete(assignment);
+                        if (!existing.Any(x => x.RoleId == role.Id))
+                            await _userRoleRepository.Create(new UserRole { UserId = user.Id, RoleId = role.Id });
+                        await _userRoleRepository.SaveChanges();
+                    }
+                    await _unitOfWork.CommitAsync();
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackAsync();
+                    throw;
+                }
+                return Result<object>.Success(new { user.Id }, "ویرایش کاربر با موفقیت انجام شد");
             }
             else
                 return Result<object>.Failure("ویرایش کاربر با خطا مواجه شد");
@@ -191,9 +228,10 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<string>> DeleteUser(Guid id)
         {
             var user = await _userRepository.GetById(id);
-            if (user != null)
+            if (user != null && !user.IsDelete)
             {
-                await _userRepository.Delete(user);
+                user.IsDelete = true;
+                await _userRepository.Update(user);
                 await _userRepository.SaveChanges();
                 return Result<string>.Success("حذف کاربر با موفقیت انجام شد");
             }
@@ -202,17 +240,38 @@ namespace CarShow.ApplicationService.Services
 
         public List<UserDto> GetAllUsers(int pageSize = 10, int pageNumber = 0)
         {
-            return _userRepository.GetAll().OrderBy(x => x.Id).Select(x => new UserDto()
+            return _userRepository.GetAll().AsNoTracking().Where(x => !x.IsDelete)
+                .OrderBy(x => x.Id).Skip(Math.Max(0, pageNumber) * Math.Clamp(pageSize, 1, 100))
+                .Take(Math.Clamp(pageSize, 1, 100))
+                .Select(x => new UserDto { Id = x.Id, Name = x.Name, Family = x.Family,
+                    Email = x.Email, MobileNumber = x.MobileNumber }).ToList();
+        }
+
+        public object GetPagedUsers(int pageSize = 15, int pageNumber = 0, string? search = null)
+        {
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            pageNumber = Math.Max(0, pageNumber);
+            var query = _userRepository.GetAll().AsNoTracking().Where(x => !x.IsDelete);
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                Id = x.Id,
-                Name = x.Name,
-                Email = x.Email,
-                Family = x.Family,
-                MobileNumber = x.MobileNumber,
-            })
-            .Skip(pageNumber * pageSize)
-            .Take(pageSize)
-            .ToList();
+                var term = search.Trim();
+                query = query.Where(x => x.Name.Contains(term) || x.Family.Contains(term)
+                    || (x.Email != null && x.Email.Contains(term)) || x.MobileNumber.Contains(term));
+            }
+            var totalCount = query.Count();
+            var users = query.OrderBy(x => x.Id)
+                .Skip((int)Math.Min((long)pageNumber * pageSize, int.MaxValue))
+                .Take(pageSize)
+                .Select(x => new UserDto
+                {
+                    Id = x.Id, Name = x.Name, Family = x.Family,
+                    Email = x.Email, MobileNumber = x.MobileNumber,
+                    RoleName = _userRoleRepository.GetAll()
+                        .Where(ur => ur.UserId == x.Id)
+                        .Join(_roleRepository.GetAll(), ur => ur.RoleId, r => r.Id, (ur, r) => r.RoleName)
+                        .FirstOrDefault()
+                }).ToList();
+            return new { Items = users, TotalCount = totalCount, PageNumber = pageNumber, PageSize = pageSize };
         }
 
         public List<RoleDto> GetAllRoles()

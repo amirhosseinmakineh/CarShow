@@ -30,9 +30,9 @@ namespace CarShow.Controllers
         }
         [Authorize(Roles = "Admin")]
         [HttpGet("GetUsers")]
-        public IActionResult GetAllUsers(int pageSize = 10, int pageNumber = 0)
+        public IActionResult GetAllUsers(int pageSize = 15, int pageNumber = 0, string? search = null)
         {
-            var result = userService.GetAllUsers(pageSize, pageNumber);
+            var result = userService.GetPagedUsers(pageSize, pageNumber, search);
             return Ok(result);
         }
         [Authorize(Roles = "Admin")]
@@ -42,12 +42,14 @@ namespace CarShow.Controllers
             var result = await userService.CreateUser(dto);
             return Ok(result);
         }
+        [Authorize(Roles = "Admin")]
         [HttpPost("UpdateUser")]
         public async Task<IActionResult> UpdateUser(UpdateUserDto dto)
         {
             var result = await userService.UpdateUser(dto);
             return Ok(result);
         }
+        [Authorize(Roles = "Admin")]
         [HttpGet("DeleteUser/{id}")]
         public async Task<IActionResult> DeleteUser(Guid id)
         {

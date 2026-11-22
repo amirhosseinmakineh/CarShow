@@ -13,6 +13,7 @@ namespace CarShow.ApplicationService.Contract.IService
         Task<Result<object>> UpdateUser(UpdateUserDto dto);
         Task<Result<string>> DeleteUser(Guid id);
         List<UserDto> GetAllUsers(int pageSize = 10, int pageNumber = 0);
+        object GetPagedUsers(int pageSize = 15, int pageNumber = 0, string? search = null);
         List<RoleDto> GetAllRoles();
     }
 }
