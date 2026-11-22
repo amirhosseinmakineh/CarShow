@@ -92,3 +92,4 @@ Check(Parse("پژو 207 اتوماتیک مدل 1404\nقیمت 4 میلیارد\
     "Trade-in mention does not create another vehicle");
 
 Console.WriteLine($"PASS: {count} scanner regression checks");
+await CatalogUploadChecks.RunAsync(Check);

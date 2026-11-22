@@ -202,7 +202,7 @@ namespace CarShow.ApplicationService.Services
 
         public List<UserDto> GetAllUsers(int pageSize = 10, int pageNumber = 0)
         {
-            return _userRepository.GetAll().Select(x => new UserDto()
+            return _userRepository.GetAll().OrderBy(x => x.Id).Select(x => new UserDto()
             {
                 Id = x.Id,
                 Name = x.Name,

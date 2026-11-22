@@ -17,6 +17,7 @@ namespace CarShow.ApplicationService.Services
     public class CarService : ICarSErvicce
     {
         private readonly string connectionString;
+        private readonly string imageDirectory;
         private readonly IBaseRepository<long, Car> carRepository;
         private readonly IBaseRepository<long, Tip> tipRepository;
         private readonly IBaseRepository<long, CarModel> carModelRepository;
@@ -30,6 +31,7 @@ namespace CarShow.ApplicationService.Services
             IConfiguration configuration)
         {
             connectionString = configuration.GetConnectionString("CarShow") ?? throw new InvalidOperationException("CarShow connection string missing.");
+            imageDirectory = GetImageDirectory(configuration);
             this.carRepository = carRepository;
             this.tipRepository = tipRepository;
             this.carModelRepository = carModelRepository;
@@ -73,8 +75,12 @@ namespace CarShow.ApplicationService.Services
             return updated == 0 ? null : imagePath;
         }
 
-        public static string GetImageDirectory()
+        public static string GetImageDirectory(IConfiguration? configuration = null)
         {
+            var configured = configuration?["VehicleImages:Directory"];
+            if (!string.IsNullOrWhiteSpace(configured))
+                return Path.GetFullPath(configured);
+
             // Runflare mounts the existing persistent volume here. Local runs use wwwroot.
             const string persistentVolume = "/data/licensing";
             return Directory.Exists(persistentVolume)
@@ -82,12 +88,12 @@ namespace CarShow.ApplicationService.Services
                 : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "cars");
         }
 
-        private static async Task<string?> SaveImageAsync(IFormFile? file, string? extension = null)
+        private async Task<string?> SaveImageAsync(IFormFile? file, string? extension = null)
         {
             if (file is null || file.Length == 0)
                 return null;
 
-            var uploadsFolder = GetImageDirectory();
+            var uploadsFolder = imageDirectory;
             Directory.CreateDirectory(uploadsFolder);
 
             var uniqueFileName = $"{Guid.NewGuid()}{extension ?? Path.GetExtension(file.FileName)}";
