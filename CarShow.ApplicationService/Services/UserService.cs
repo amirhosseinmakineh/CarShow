@@ -46,7 +46,7 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<RegisterDto>> Register(RegisterDto dto)
         {
             var existingUser = _userRepository.GetAll()
-                .FirstOrDefault(u => u.MobileNumber == dto.MobileNumber);
+                .FirstOrDefault(u => !u.IsDelete && u.MobileNumber == dto.MobileNumber);
 
             if (existingUser != null)
                 return Result<RegisterDto>
