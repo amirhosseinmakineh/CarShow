@@ -20,8 +20,18 @@ public sealed class CarModelImageService(CarShowContext db)
         var cars = await db.Cars.AsNoTracking()
             .Where(x => !x.IsDelete && x.CarModelId == modelId)
             .OrderBy(x => x.Name).ThenBy(x => x.Id)
-            .Select(x => new { x.Id, x.Name, x.ImageName, x.IsReferenceApproved,
-                Tip = x.Tip != null ? x.Tip.Name : null })
+            .Select(x => new
+            {
+                x.Id, x.Name, x.ImageName,
+                // A catalog entry may have a different row ID than the approved
+                // reference record. Match the same model AND trim in Cars.
+                IsReferenceApproved = x.IsReferenceApproved || (x.TipId != null
+                    && db.Cars.Any(reference => !reference.IsDelete
+                        && reference.IsReferenceApproved
+                        && reference.CarModelId == x.CarModelId
+                        && reference.TipId == x.TipId)),
+                Tip = x.Tip != null ? x.Tip.Name : null
+            })
             .ToListAsync(cancellationToken);
         return cars.Cast<object>().ToList();
     }
