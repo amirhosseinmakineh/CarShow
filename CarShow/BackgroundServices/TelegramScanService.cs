@@ -667,6 +667,11 @@ namespace CarShow.BackgroundServices
                     && (currentIds.Contains(x.Id) || (x.Description != null
                         && x.Description.Contains("\"Type\":\"TelegramPriceReference\""))))
                 .ToListAsync(cancellationToken);
+            // Resolve shared model images once per scan; do not alter the price comparison.
+            var modelImages = await _db.CarModels.AsNoTracking()
+                .Where(x => x.ImageName != null && x.ImageName != "")
+                .Select(x => new { x.Id, x.ImageName })
+                .ToDictionaryAsync(x => x.Id, x => x.ImageName!, cancellationToken);
             var referencesByCar = priceReferences
                 .Where(x => x.Name.StartsWith("catalog:", StringComparison.Ordinal))
                 .GroupBy(x => long.TryParse(x.Name.Substring(8), out var id) ? id : 0)
@@ -711,6 +716,10 @@ namespace CarShow.BackgroundServices
                     car.MarketPrice = selected.ReferencePriceBillion * 1_000_000_000m;
                     updated++;
                 }
+                if (selected != null && string.IsNullOrWhiteSpace(car.ImageName)
+                    && car.CarModelId is long modelId
+                    && modelImages.TryGetValue(modelId, out var modelImage))
+                    car.ImageName = modelImage;
                 car.IsReferenceApproved = selected != null;
                 car.Description = JsonSerializer.Serialize(new
                 {
