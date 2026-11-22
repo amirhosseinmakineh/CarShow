@@ -32,7 +32,7 @@ namespace CarShow.Controllers
         [HttpGet("GetUsers")]
         public IActionResult GetAllUsers(int pageSize = 15, int pageNumber = 0, string? search = null)
         {
-            var result = userService.GetAllUsers(pageSize, pageNumber, search);
+            var result = userService.GetPagedUsers(pageSize, pageNumber, search);
             return Ok(result);
         }
         [Authorize(Roles = "Admin")]
