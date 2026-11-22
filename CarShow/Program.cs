@@ -118,6 +118,16 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnony
 app.MapGet("/health/ready", async (CarShowContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok("Healthy") : Results.StatusCode(503))
     .AllowAnonymous();
+// Apply pending EF Core migrations before any catalog queries or hosted workers run.
+// This also creates Cars.IsReferenceApproved on databases deployed before the schema change.
+using (var migrationScope = app.Services.CreateScope())
+{
+    var db = migrationScope.ServiceProvider.GetRequiredService<CarShowContext>();
+    app.Logger.LogInformation("Applying pending database migrations before startup initialization.");
+    await db.Database.MigrateAsync();
+    app.Logger.LogInformation("Database migrations applied successfully.");
+}
+
 // Import the versioned catalog from the published repository asset before the
 // Telegram background scanner starts. ImportAsync is idempotent for existing
 // company/model/trim combinations and never resets verified prices.
