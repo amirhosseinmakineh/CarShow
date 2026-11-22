@@ -41,7 +41,7 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<object>> CreateCar(CreateCarDto dto)
         {
             var existingCar = await carRepository.GetAll()
-                .FirstOrDefaultAsync(x => x.Name == dto.Name);
+                .FirstOrDefaultAsync(x => !x.IsDelete && x.CarModelId == dto.CarModelId && x.TipId == dto.TipId && x.Name == dto.Name);
 
             if (existingCar != null)
                 return Result<object>.Failure("ماشین مورد نظر جهت ثبت در سیستم موجود می‌باشد");
@@ -287,10 +287,24 @@ namespace CarShow.ApplicationService.Services
                 return Result<object>.Failure("اتوموبیلی یافت نشد");
 
             car.Name = dto.Name;
-            car.MarketPrice = (decimal)dto.Price;
-            car.Description = dto.Description;
-            car.ImageName = dto.ImageName;
-            car.IsDelete = dto.IsDelete;
+            if (car.IsReferenceApproved)
+            {
+                // A manually edited car must not overwrite Telegram-approved reference prices
+                // or their structured comparison audit description.
+                if (dto.CarModelId.HasValue && dto.CarModelId != car.CarModelId
+                    || dto.TipId.HasValue && dto.TipId != car.TipId)
+                    return Result<object>.Failure("مدل و تیپ خودروی مرجع را نمی‌توان بدون اسکن مجدد تغییر داد");
+            }
+            else
+            {
+                car.MarketPrice = (decimal)dto.Price;
+                car.Description = dto.Description;
+                if (dto.CarModelId.HasValue) car.CarModelId = dto.CarModelId;
+                if (dto.TipId.HasValue) car.TipId = dto.TipId;
+                if (dto.CompanyId.HasValue) car.CompanyId = dto.CompanyId;
+            }
+            if (!string.IsNullOrWhiteSpace(dto.ImageName))
+                car.ImageName = dto.ImageName;
 
             await carRepository.Update(car);
             await carRepository.SaveChanges();
