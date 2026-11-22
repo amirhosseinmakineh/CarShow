@@ -10,7 +10,7 @@ namespace CarShow.ApplicationService.Contract.IService
         Task<Result<object>> CreateCar(CreateCarDto dto);
         Task<Result<object>> UpdateCar(UpdateCarDto dto);
         Task<string?> UpdateCarImage(long id, IFormFile image, string extension, CancellationToken cancellationToken);
-        Task<object> GetPagedReferenceCars(float? minPrice, float? maxPrice, string? company, int pageSize = 12, int pageNumber = 0);
+        Task<object> GetPagedReferenceCars(float? minPrice, float? maxPrice, string? company, int pageSize = 10, int pageNumber = 0);
         Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0);
         Task<Result<string>> DeleteCar(long id);
         Task<GetCarForCreateDto> GetCarInfoForCreate();

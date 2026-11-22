@@ -57,7 +57,7 @@ Check(Build(Ad("1405", "912 میلیون"), Ad("1405", "11840 میلیون")).Co
     "Two conflicting ads produce no reference");
 
 Check(Build(Ad("1405", "4290 میلیون"), Ad("1404", "4295 میلیون"))
-    is [{ Year: "1404", AdvertisementCount: 1 }, { Year: "1405", AdvertisementCount: 1 }],
+    is [{ Year: "2025", AdvertisementCount: 1 }, { Year: "2026", AdvertisementCount: 1 }],
     "Different model years produce separate single-ad references");
 
 Check(Build(Ad("1405", "4290 میلیون"))
@@ -78,8 +78,8 @@ var catalog = new (long Id, string Model, string Tip)[]
     (4, "پژو 207 sd", "اتوماتیک"),
     (5, "دنا", "اتوماتیک")
 };
-Check(TelegramScanService.MatchCatalogCar("پژو 207 اتوماتیک", catalog) == 2,
-    "Trim selection respects token boundaries");
+Check(TelegramScanService.MatchCatalogCar("پژو 207 اتوماتیک", catalog) == null,
+    "Duplicate normalized automatic trims are ambiguous");
 Check(TelegramScanService.MatchCatalogCar("پژو 207 sd اتوماتیک", catalog) == 4,
     "Specific model wins over contained shorter model");
 Check(TelegramScanService.MatchCatalogCar("پژو 207 دنده ای", catalog) == 3,

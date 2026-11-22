@@ -26,7 +26,7 @@ namespace CarShow.Controllers
         [HttpGet("references")]
         public async Task<IActionResult> GetReferenceCars(
             [FromQuery] float? minPrice, [FromQuery] float? maxPrice,
-            [FromQuery] string? company, [FromQuery] int pageSize = 12,
+            [FromQuery] string? company, [FromQuery] int pageSize = 10,
             [FromQuery] int pageNumber = 0)
         {
             var result = await servicce.GetPagedReferenceCars(minPrice, maxPrice, company, pageSize, pageNumber);

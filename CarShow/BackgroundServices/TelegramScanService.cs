@@ -711,6 +711,7 @@ namespace CarShow.BackgroundServices
                     car.MarketPrice = selected.ReferencePriceBillion * 1_000_000_000m;
                     updated++;
                 }
+                car.IsReferenceApproved = selected != null;
                 car.Description = JsonSerializer.Serialize(new
                 {
                     Type = "TelegramPriceReference",
