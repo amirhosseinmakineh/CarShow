@@ -4,6 +4,9 @@
     {
         public long Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public long? CarModelId { get; set; }
+        public long? TipId { get; set; }
+        public long? CompanyId { get; set; }
         public string Model { get; set; } = string.Empty;
         public string Create { get; set; } = string.Empty;
         public float Price { get; set; }
