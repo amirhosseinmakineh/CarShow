@@ -14,7 +14,7 @@ public sealed class AdminCatalogController : ControllerBase
 
     public AdminCatalogController(CarShowContext db) => _db = db;
 
-    // Shows the cars currently stored in SQL Server, not the latest Telegram scan.
+    // Show only currently approved reference cars in the admin listing.
     [HttpGet]
     public async Task<IActionResult> GetCatalog(
         [FromQuery] string? search,
@@ -25,9 +25,9 @@ public sealed class AdminCatalogController : ControllerBase
         pageNumber = Math.Max(0, pageNumber);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
-        // Admin catalog manages all active catalog cars, including those not yet approved by Telegram.
-        // IsReferenceApproved restricts the public listing only.
-        var all = _db.Cars.AsNoTracking().Where(x => !x.IsDelete);
+        // Counts and pagination must reflect the approved Cars records, not all catalog rows.
+        // The separate model-image management endpoint still exposes all model/trim options.
+        var all = _db.Cars.AsNoTracking().Where(x => !x.IsDelete && x.IsReferenceApproved);
         var totalCars = await all.CountAsync(cancellationToken);
         var eligibleCars = await all.CountAsync(x =>
             x.CarModelId != null && x.TipId != null, cancellationToken);
