@@ -55,7 +55,6 @@ public sealed class AdminModelImagesController(CarModelImageService images) : Co
             [0x52, 0x49, 0x46, 0x46, _, _, _, _, 0x57, 0x45, 0x42, 0x50] => ".webp",
             _ => null
         };
-        if (extension is null) return BadRequest("Unsupported image format.");
         return extension;
     }
 }
