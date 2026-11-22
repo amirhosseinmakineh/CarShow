@@ -35,14 +35,14 @@ namespace CarShow.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> CreateCar(CreateCarDto dto)
+        public async Task<IActionResult> CreateCar([FromForm] CreateCarDto dto)
         {
             var result = await servicce.CreateCar(dto);
             return Ok(result);
         }
         [Authorize(Roles = "Admin")]
         [HttpPatch]
-        public async Task<IActionResult> UpdateCar(UpdateCarDto dto)
+        public async Task<IActionResult> UpdateCar([FromForm] UpdateCarDto dto)
         {
             var result = await servicce.UpdateCar(dto);
             return Ok(result);
