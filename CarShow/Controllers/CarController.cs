@@ -33,17 +33,19 @@ namespace CarShow.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> CreateCar(CreateCarDto dto)
+        public async Task<IActionResult> CreateCar([FromForm] CreateCarDto dto)
         {
-            await servicce.CreateCar(dto);
-            return Ok(dto);
+            var result = await servicce.CreateCar(dto);
+            return Ok(result);
         }
+        [Authorize(Roles = "Admin")]
         [HttpPatch]
-        public async Task<IActionResult> UpdateCar(UpdateCarDto dto)
+        public async Task<IActionResult> UpdateCar([FromForm] UpdateCarDto dto)
         {
-            await servicce.UpdateCar(dto);
-            return Ok(dto);
+            var result = await servicce.UpdateCar(dto);
+            return Ok(result);
         }
         [Authorize(Roles = "Admin")]
         [HttpPut("{id:long}/image")]
@@ -72,6 +74,7 @@ namespace CarShow.Controllers
             return path is null ? NotFound() : Ok(new { imageName = path });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCar(long id)
         {
