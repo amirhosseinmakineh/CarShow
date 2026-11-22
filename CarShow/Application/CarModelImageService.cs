@@ -1,96 +1,104 @@
+#nullable enable
 using CarShow.ApplicationService.Services;
-using CarShow.Infrastracture.Context;
-using Microsoft.EntityFrameworkCore;
+using CarShow.Diagnostics;
+using CarShow.Infrastracture.Repository;
 
 namespace CarShow.Application;
 
-public sealed class CarModelImageService(CarShowContext db)
+public sealed class CarModelImageService(
+    CarModelImageRepository repository,
+    UploadDiagnostics diagnostics,
+    IConfiguration configuration,
+    ILogger<CarModelImageService> logger)
 {
-    public async Task<IReadOnlyList<object>> GetModelsAsync(CancellationToken cancellationToken)
-    {
-        var models = await db.CarModels.AsNoTracking().Where(x => !x.IsDelete)
-            .OrderBy(x => x.Name)
-            .Select(x => new { x.Id, x.Name, x.ImageName })
-            .ToListAsync(cancellationToken);
-        return models.Cast<object>().ToList();
-    }
+    private readonly string directory = CarService.GetImageDirectory(configuration);
 
-    public async Task<IReadOnlyList<object>> GetCarsForModelAsync(long modelId, CancellationToken cancellationToken)
-    {
-        var cars = await db.Cars.AsNoTracking()
-            .Where(x => !x.IsDelete && x.CarModelId == modelId)
-            .OrderBy(x => x.Name).ThenBy(x => x.Id)
-            .Select(x => new
-            {
-                x.Id, x.Name, x.ImageName,
-                // A catalog entry may have a different row ID than the approved
-                // reference record. Match the same model AND trim in Cars.
-                IsReferenceApproved = x.IsReferenceApproved || (x.TipId != null
-                    && db.Cars.Any(reference => !reference.IsDelete
-                        && reference.IsReferenceApproved
-                        && reference.CarModelId == x.CarModelId
-                        && reference.TipId == x.TipId)),
-                Tip = x.Tip != null ? x.Tip.Name : null
-            })
-            .ToListAsync(cancellationToken);
-        return cars.Cast<object>().ToList();
-    }
+    public Task<IReadOnlyList<object>> GetModelsAsync(CancellationToken cancellationToken) =>
+        repository.GetModelsAsync(cancellationToken);
+
+    public Task<IReadOnlyList<object>> GetCarsForModelAsync(long modelId, CancellationToken cancellationToken) =>
+        repository.GetCarsForModelAsync(modelId, cancellationToken);
 
     public async Task<(string? ImageName, bool UpdatedReference)> SaveCarAsync(
         long carId, Stream imageStream, string extension, CancellationToken cancellationToken)
     {
-        var car = await db.Cars.FirstOrDefaultAsync(x => x.Id == carId && !x.IsDelete, cancellationToken);
-        if (car is null) return (null, false);
-        var path = await SaveFileAsync($"car-{carId}", imageStream, extension, cancellationToken);
-        car.ImageName = path;
-        try { await db.SaveChangesAsync(cancellationToken); }
-        catch { File.Delete(ToFullPath(path)); throw; }
-        return (path, car.IsReferenceApproved);
-    }
+        diagnostics.Start("DatabaseLookup");
+        var car = await repository.FindCarAsync(carId, cancellationToken);
+        diagnostics.Complete(car is null ? "Missing" : "Completed");
+        if (car is null)
+            return (null, false);
 
-    private static string ToFullPath(string imagePath) =>
-        Path.Combine(CarService.GetImageDirectory(), Path.GetFileName(imagePath));
-
-    private static async Task<string> SaveFileAsync(string prefix, Stream input, string extension,
-        CancellationToken cancellationToken)
-    {
-        var directory = CarService.GetImageDirectory();
-        Directory.CreateDirectory(directory);
-        var name = $"{prefix}-{Guid.NewGuid():N}{extension}";
-        var path = Path.Combine(directory, name);
-        await using (var output = new FileStream(path, FileMode.CreateNew))
-            await input.CopyToAsync(output, cancellationToken);
-        return $"/images/cars/{name}";
+        return await PersistAsync($"car-{carId}", imageStream, extension, async (imageName, committing) =>
+        {
+            await repository.SaveCarAsync(car, imageName, committing, cancellationToken);
+            return (imageName, car.IsReferenceApproved);
+        }, cancellationToken);
     }
 
     public async Task<(string? ImageName, int UpdatedCars)> SaveAsync(
         long modelId, Stream imageStream, string extension, CancellationToken cancellationToken)
     {
-        var model = await db.CarModels.FirstOrDefaultAsync(x => x.Id == modelId && !x.IsDelete, cancellationToken);
-        if (model is null) return (null, 0);
+        diagnostics.Start("DatabaseLookup");
+        var model = await repository.FindModelAsync(modelId, cancellationToken);
+        diagnostics.Complete(model is null ? "Missing" : "Completed");
+        if (model is null)
+            return (null, 0);
 
-        var newImage = await SaveFileAsync($"model-{modelId}", imageStream, extension, cancellationToken);
+        return await PersistAsync($"model-{modelId}", imageStream, extension, async (imageName, committing) =>
+        {
+            var updated = await repository.SaveModelAsync(model, imageName, committing, cancellationToken);
+            return (imageName, updated);
+        }, cancellationToken);
+    }
 
-        var previousImage = model.ImageName;
-        model.ImageName = newImage;
-
-        // Do not replace images uploaded specifically for individual cars.
+    private async Task<TResult> PersistAsync<TResult>(string prefix, Stream input, string extension,
+        Func<string, Action, Task<TResult>> update, CancellationToken cancellationToken)
+    {
+        var name = $"{prefix}-{Guid.NewGuid():N}{extension}";
+        var path = Path.Combine(directory, name);
+        var created = false;
+        var commitStarted = false;
         try
         {
-            // Persist model first; use one SQL UPDATE for approved cars instead of
-            // tracking and updating every matching record.
-            await db.SaveChangesAsync(cancellationToken);
-            var updatedCars = await db.Cars
-                .Where(x => x.CarModelId == modelId && x.IsReferenceApproved && !x.IsDelete
-                    && (x.ImageName == null || x.ImageName == ""
-                        || (previousImage != null && x.ImageName == previousImage)))
-                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ImageName, newImage), cancellationToken);
-            return (newImage, updatedCars);
+            diagnostics.Start("FilePersistence");
+            Directory.CreateDirectory(directory);
+            await using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write,
+                             FileShare.None, 4096, FileOptions.Asynchronous))
+            {
+                created = true;
+                await input.CopyToAsync(output, cancellationToken);
+            }
+            diagnostics.Complete();
+
+            diagnostics.Start("DatabaseUpdate");
+            var result = await update($"/images/cars/{name}", () =>
+            {
+                commitStarted = true;
+                diagnostics.Complete();
+                diagnostics.Start("DatabaseCommit");
+            });
+            diagnostics.Complete();
+            return result;
         }
         catch
         {
-            File.Delete(ToFullPath(newImage));
+            // A commit failure can be ambiguous. Retain the file if SQL might have committed.
+            if (created && !commitStarted)
+                TryDelete(path);
             throw;
+        }
+    }
+
+    private void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning("Could not remove failed upload. ExceptionType={ExceptionType}",
+                exception.GetType().Name);
         }
     }
 }

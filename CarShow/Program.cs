@@ -1,5 +1,6 @@
 using CarShow.BackgroundServices;
 using CarShow.Application;
+using CarShow.Diagnostics;
 using CarShow.ApplicationService.Contract.IService;
 using CarShow.ApplicationService.Services;
 using CarShow.Domain.Crawling;
@@ -26,7 +27,10 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // Temporary testing switch. Defaults to false, including published deployments.
 // Explicitly set Testing__DisableApiAuthentication=true only on an isolated test server.
 var disableApiAuthentication = builder.Configuration.GetValue<bool>("Testing:DisableApiAuthentication");
+builder.Logging.AddJsonConsole(options => options.IncludeScopes = true);
 builder.Services.AddControllers();
+builder.Services.AddScoped<UploadDiagnostics>();
+builder.Services.AddScoped<CarModelImageRepository>();
 builder.Services.AddSingleton<TelegramRawArchiveWorker>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<TelegramRawArchiveWorker>());
 builder.Services.AddSingleton<TelegramScanStatus>();
@@ -97,12 +101,23 @@ builder.Services
 var app = builder.Build();
 if (disableApiAuthentication)
     app.Logger.LogWarning("SECURITY WARNING: API authentication is DISABLED for testing. All API endpoints, including admin/write operations, are publicly accessible.");
+app.UseMiddleware<ApiRequestLoggingMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShow API v1"); c.RoutePrefix = "swagger"; });
 app.UseCors("Frontend");
 app.UseStaticFiles();
-var vehicleImageDirectory = CarService.GetImageDirectory();
+var vehicleImageDirectory = CarService.GetImageDirectory(app.Configuration);
 Directory.CreateDirectory(vehicleImageDirectory);
+if (app.Environment.IsProduction()
+    && vehicleImageDirectory == Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "cars"))
+{
+    app.Logger.LogWarning("Vehicle images are using local storage at {ImageDirectory}; verify the persistent volume",
+        vehicleImageDirectory);
+}
+else
+{
+    app.Logger.LogInformation("Vehicle image directory {ImageDirectory}", vehicleImageDirectory);
+}
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(vehicleImageDirectory),
@@ -112,6 +127,7 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.Use(ApiRequestLoggingMiddleware.TrackAuthorizedUploadAsync);
 // Endpoint metadata is evaluated by AuthorizationMiddleware before MVC filters.
 var apiEndpoints = app.MapControllers();
 if (disableApiAuthentication)
