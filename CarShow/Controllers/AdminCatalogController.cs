@@ -25,7 +25,9 @@ public sealed class AdminCatalogController : ControllerBase
         pageNumber = Math.Max(0, pageNumber);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
-        var all = _db.Cars.AsNoTracking().Where(x => x.IsReferenceApproved && !x.IsDelete);
+        // Admin catalog manages all active catalog cars, including those not yet approved by Telegram.
+        // IsReferenceApproved restricts the public listing only.
+        var all = _db.Cars.AsNoTracking().Where(x => !x.IsDelete);
         var totalCars = await all.CountAsync(cancellationToken);
         var eligibleCars = await all.CountAsync(x =>
             x.CarModelId != null && x.TipId != null, cancellationToken);
