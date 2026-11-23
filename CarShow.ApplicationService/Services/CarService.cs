@@ -69,10 +69,27 @@ namespace CarShow.ApplicationService.Services
             if (!await cars.AnyAsync(cancellationToken))
                 return null;
 
-            var imagePath = await SaveImageAsync(image, extension);
-            var updated = await cars.ExecuteUpdateAsync(
-                setters => setters.SetProperty(car => car.ImageName, imagePath!), cancellationToken);
-            return updated == 0 ? null : imagePath;
+            // Save the replacement before changing the existing car record.
+            // If the database update fails, remove the newly uploaded file.
+            var imagePath = await SaveImageAsync(image, extension, cancellationToken);
+            if (imagePath is null)
+                return null;
+
+            try
+            {
+                var updated = await cars.ExecuteUpdateAsync(
+                    setters => setters.SetProperty(car => car.ImageName, imagePath), cancellationToken);
+                if (updated > 0)
+                    return imagePath;
+            }
+            catch
+            {
+                DeleteImageIfExists(imagePath);
+                throw;
+            }
+
+            DeleteImageIfExists(imagePath);
+            return null;
         }
 
         public static string GetImageDirectory(IConfiguration? configuration = null)
@@ -88,7 +105,7 @@ namespace CarShow.ApplicationService.Services
                 : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "cars");
         }
 
-        private async Task<string?> SaveImageAsync(IFormFile? file, string? extension = null)
+        private async Task<string?> SaveImageAsync(IFormFile? file, string? extension = null, CancellationToken cancellationToken = default)
         {
             if (file is null || file.Length == 0)
                 return null;
@@ -99,9 +116,32 @@ namespace CarShow.ApplicationService.Services
             var uniqueFileName = $"{Guid.NewGuid()}{extension ?? Path.GetExtension(file.FileName)}";
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            await file.CopyToAsync(stream);
+            try
+            {
+                await using var stream = new FileStream(
+                    filePath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                    bufferSize: 81920, useAsync: true);
+                await file.CopyToAsync(stream, cancellationToken);
+            }
+            catch
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+                throw;
+            }
+
             return $"/images/cars/{uniqueFileName}";
+        }
+
+        private void DeleteImageIfExists(string imagePath)
+        {
+            var fileName = Path.GetFileName(imagePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+                return;
+
+            var path = Path.Combine(imageDirectory, fileName);
+            if (File.Exists(path))
+                File.Delete(path);
         }
 
         public async Task<Result<string>> DeleteCar(long id)
