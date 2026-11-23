@@ -11,6 +11,7 @@
         public string Create { get; set; } = string.Empty;
         public float Price { get; set; }
         public string ImageName { get; set; } = string.Empty;
+        public Microsoft.AspNetCore.Http.IFormFile? Image { get; set; }
         public string Description { get; set; } = string.Empty;
         public string Tip { get; set; } = string.Empty;
         public string Company { get; set; } = string.Empty;
