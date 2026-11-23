@@ -323,32 +323,63 @@ namespace CarShow.ApplicationService.Services
         public async Task<Result<object>> UpdateCar(UpdateCarDto dto)
         {
             var car = await carRepository.GetById(dto.Id);
-            if (car is null)
+            if (car is null || car.IsDelete)
                 return Result<object>.Failure("اتوموبیلی یافت نشد");
 
-            car.Name = dto.Name;
-            if (car.IsReferenceApproved)
-            {
-                // A manually edited car must not overwrite Telegram-approved reference prices
-                // or their structured comparison audit description.
-                if (dto.CarModelId.HasValue && dto.CarModelId != car.CarModelId
-                    || dto.TipId.HasValue && dto.TipId != car.TipId)
-                    return Result<object>.Failure("مدل و تیپ خودروی مرجع را نمی‌توان بدون اسکن مجدد تغییر داد");
-            }
-            else
-            {
-                car.MarketPrice = (decimal)dto.Price;
-                car.Description = dto.Description;
-                if (dto.CarModelId.HasValue) car.CarModelId = dto.CarModelId;
-                if (dto.TipId.HasValue) car.TipId = dto.TipId;
-                if (dto.CompanyId.HasValue) car.CompanyId = dto.CompanyId;
-            }
-            if (!string.IsNullOrWhiteSpace(dto.ImageName))
-                car.ImageName = dto.ImageName;
+            if (car.IsReferenceApproved &&
+                ((dto.CarModelId.HasValue && dto.CarModelId != car.CarModelId)
+                 || (dto.TipId.HasValue && dto.TipId != car.TipId)))
+                return Result<object>.Failure("مدل و تیپ خودروی مرجع را نمی‌توان بدون اسکن مجدد تغییر داد");
 
-            await carRepository.Update(car);
-            await carRepository.SaveChanges();
-            return Result<object>.Success(car, "ویرایش اتوموبیل مورد نظر با موفقیت انجام شد");
+            string? newImagePath = null;
+            if (dto.Image is { Length: > 0 } image)
+            {
+                if (image.Length < 12 || image.Length > 8 * 1024 * 1024)
+                    return Result<object>.Failure("حجم عکس باید کمتر از ۸ مگابایت باشد");
+
+                var header = new byte[12];
+                await using (var input = image.OpenReadStream())
+                    await input.ReadExactlyAsync(header);
+                var extension = header switch
+                {
+                    [0xff, 0xd8, 0xff, ..] => ".jpg",
+                    [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ..] => ".png",
+                    [0x52, 0x49, 0x46, 0x46, _, _, _, _, 0x57, 0x45, 0x42, 0x50] => ".webp",
+                    _ => null
+                };
+                if (extension is null)
+                    return Result<object>.Failure("فرمت تصویر پشتیبانی نمی‌شود");
+                newImagePath = await SaveImageAsync(image, extension);
+            }
+
+            try
+            {
+                car.Name = dto.Name;
+                if (!car.IsReferenceApproved)
+                {
+                    car.MarketPrice = (decimal)dto.Price;
+                    car.Description = dto.Description;
+                    if (dto.CarModelId.HasValue) car.CarModelId = dto.CarModelId;
+                    if (dto.TipId.HasValue) car.TipId = dto.TipId;
+                    if (dto.CompanyId.HasValue) car.CompanyId = dto.CompanyId;
+                }
+
+                // Never accept a client-supplied image path when replacing an image.
+                if (newImagePath is not null)
+                    car.ImageName = newImagePath;
+                else if (!string.IsNullOrWhiteSpace(dto.ImageName))
+                    car.ImageName = dto.ImageName;
+
+                await carRepository.Update(car);
+                await carRepository.SaveChanges();
+                return Result<object>.Success(car, "ویرایش اتوموبیل مورد نظر با موفقیت انجام شد");
+            }
+            catch
+            {
+                if (newImagePath is not null)
+                    DeleteImageIfExists(newImagePath);
+                throw;
+            }
         }
 
         private static string ReadReferenceYear(string description)
