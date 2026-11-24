@@ -1468,7 +1468,7 @@ namespace CarShow.BackgroundServices
             internal static string NormalizeArchiveYears(string message)
             {
                 var normalized = NormalizeText(message);
-                return Regex.Replace(normalized,
+                var labelled = Regex.Replace(normalized,
                     @"(?<![\p{L}\d])(?<label>سال[ \t]+ساخت|سال[ \t]+تولید|مدل|تولید)[ \t]*[:：]?[ \t]*(?<year>40[0-9]|0[0-9])(?=$|[ \t\r\n،؛]|[/.-](?:0?[1-9]|1[0-2])(?!\d))",
                     match =>
                     {
@@ -1487,6 +1487,42 @@ namespace CarShow.BackgroundServices
                         var fullYear = year.Length == 3 ? "1" + year.Value : "14" + year.Value;
                         return match.Value.Substring(0, year.Index - match.Index) + fullYear;
                     });
+                // Only rewrite a single short year on a recognized vehicle header.
+                // Keep line boundaries and all suffixes exactly as received.
+                return Regex.Replace(labelled, @"[^\r\n]+", lineMatch =>
+                {
+                    var line = lineMatch.Value;
+                    var header = CleanLine(line);
+                    if (!VehiclePrefixes.Any(prefix =>
+                        header.Equals(prefix, StringComparison.Ordinal) ||
+                        header.StartsWith(prefix + " ", StringComparison.Ordinal)))
+                        return line;
+
+                    if (Regex.IsMatch(header, @"تحویل|ثبت[ \t]*نام|پلاک|معاوضه|مقایسه|خریدار|کارکرد|کیلومتر|آمپر|قیمت|مبلغ|تا[ \t]+\d|یا[ \t]+\d"))
+                        return line;
+
+                    var candidates = Regex.Matches(line,
+                        @"(?<![\p{L}\d/.,-])40[0-9](?!\d)(?=[ \t]+(?:روز+|رووز|برج[ \t]+(?:0?[1-9]|1[0-2])(?!\d))(?=$|[ \t،؛\p{S}]))");
+                    if (candidates.Count != 1)
+                        return line;
+
+                    var year = candidates[0];
+                    var before = line.Substring(0, year.Index);
+                    var after = line.Substring(year.Index + year.Length);
+                    if (Regex.IsMatch(before, @"(?:پژو|مدل|تولید|ساخت)[ \t]*[:：]?[ \t]*$") ||
+                        Regex.IsMatch(before, @"(?:\d[ \t]*[-–—/]|تا|یا)[ \t]*$") ||
+                        Regex.IsMatch(after, @"(?:تا|یا|[-–—/])[ \t]*(?:40[0-9]|14\d{2}|20\d{2})(?!\d)") ||
+                        FullYearRegex.IsMatch(line) ||
+                        Regex.Matches(line, @"(?<!\d)40[0-9](?!\d)").Count != 1)
+                        return line;
+
+                    // Restrict implicit years to familiar domestic model families;
+                    // other numeric model designations require explicit year labels.
+                    if (!Regex.IsMatch(header, @"^(?:رانا|تارا|دنا|ساینا|سورن|شاهین|کوییک|اطلس|سهند|ریرا|آریسان|207|پژو[ \t]+207|لاماری)(?:[ \t]|$)"))
+                        return line;
+
+                    return before + "مدل 1" + year.Value + after;
+                });
             }
 
             internal static string NormalizeText(string value)
