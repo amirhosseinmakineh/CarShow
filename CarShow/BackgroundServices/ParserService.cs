@@ -1,10 +1,3 @@
-using CarShow.Domain.Models;
-using CarShow.Infrastracture.Context;
-using HtmlAgilityPack;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
-using System.Data;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,7 +8,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
 
 using static CarShow.BackgroundServices.TelegramScanService;
 
@@ -42,6 +34,8 @@ namespace CarShow.BackgroundServices
             text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:دنده\s*ای|دنده)(?![\p{L}\p{N}])", "دنده");
             text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:ارتقاء|ارتقا\s*یافته|ارتقا)(?![\p{L}\p{N}])", "ارتقا");
             text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:تیو\s*تری|تیوتری|tu\s*3)(?![\p{L}\p{N}])", "tu3");
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:آپشنال|اپشنال|ابشنال)(?![\p{L}\p{N}])", "اپشنال");
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:6\s*سرعته|6\s*دنده)(?![\p{L}\p{N}])", "6 دنده");
             return Regex.Replace(text, @"\s+", " ").Trim();
         }
 
