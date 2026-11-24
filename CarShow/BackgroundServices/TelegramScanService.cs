@@ -1125,7 +1125,7 @@ namespace CarShow.BackgroundServices
         // Splits multi-car messages and extracts name, price and year.
         // =========================================================
 
-        private static class TelegramCarParser
+        internal static class TelegramCarParser
         {
             private static readonly string[] VehiclePrefixes =
             {
@@ -1464,7 +1464,7 @@ namespace CarShow.BackgroundServices
                 return Regex.Replace(line, @"\s+", " ").Trim();
             }
 
-            private static string NormalizeText(string value)
+            internal static string NormalizeText(string value)
             {
                 if (string.IsNullOrEmpty(value))
                     return string.Empty;
