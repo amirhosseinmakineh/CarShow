@@ -10,7 +10,7 @@ void Check(bool ok, string name)
 }
 
 var scanner = typeof(TelegramScanService);
-var parser = scanner.GetNestedType("TelegramCarParser", BindingFlags.NonPublic)
+var parser = scanner.Assembly.GetType("CarShow.BackgroundServices.ParserService")
     ?? throw new Exception("Telegram parser missing");
 var parseMethod = parser.GetMethod("ParseCatalog", BindingFlags.Public | BindingFlags.Static)
     ?? throw new Exception("ParseCatalog missing");
