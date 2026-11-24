@@ -9,7 +9,7 @@ using Microsoft.Data.SqlClient;
 
 namespace CarShow.BackgroundServices;
 
-// Independent snapshot collector. Never invokes the price scan or its parsers.
+// Independent snapshot collector. Reuses text normalization without invoking the price scan.
 public sealed class TelegramRawArchiveWorker : BackgroundService
 {
     private static readonly string[] Channels = new[]
@@ -379,7 +379,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                         br.ParentNode?.ReplaceChild(document.CreateTextNode("\n"), br);
                 var text = clone == null ? "" : HtmlEntity.DeEntitize(clone.InnerText).Trim();
                 var title = node.SelectSingleNode(".//*[contains(concat(' ',normalize-space(@class),' '),' tgme_widget_message_author ')]")?.InnerText.Trim();
-                result[id] = new RawPost(id, username, HtmlEntity.DeEntitize(title ?? username), null, text, published);
+                result[id] = new RawPost(id, username, HtmlEntity.DeEntitize(title ?? username), null, TelegramScanService.TelegramCarParser.NormalizeText(text), published);
             }
             if (foundOld || !oldest.HasValue || (before.HasValue && oldest.Value >= before.Value)) break;
             before = oldest;
