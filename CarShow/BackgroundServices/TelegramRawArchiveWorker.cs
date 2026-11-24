@@ -1,4 +1,7 @@
 using System.Data;
+using CarShow.Infrastracture.Context;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Channels;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -101,6 +104,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
     };
     private static readonly HttpClient Client = CreateClient();
     private readonly IConfiguration _config;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TelegramRawArchiveWorker> _logger;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
@@ -143,8 +147,8 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
         _status = "Idle";
         return false;
     }
-    public TelegramRawArchiveWorker(IConfiguration config, ILogger<TelegramRawArchiveWorker> logger)
-    { _config = config; _logger = logger; }
+    public TelegramRawArchiveWorker(IConfiguration config, ILogger<TelegramRawArchiveWorker> logger, IServiceScopeFactory scopeFactory)
+    { _config = config; _logger = logger; _scopeFactory = scopeFactory; }
     private static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
@@ -246,6 +250,9 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
         try
         {
             var cutoff = DateTimeOffset.UtcNow.AddHours(-24);
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
+            var models = await db.CarModels.AsNoTracking().Select(x => x.Name).ToListAsync(ct);
             var posts = new List<RawPost>();
             var successfulChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -308,7 +315,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 batch.Rows.Add(post.MessageId, post.Username,
                     (object?)post.ChannelName ?? DBNull.Value,
                     (object?)post.SenderName ?? DBNull.Value,
-                    post.Text, post.Url, post.PublishedAt, now);
+                    TelegramScanService.TelegramCarParser.NormalizeArchiveYears(post.Text, models), post.Url, post.PublishedAt, now);
             using (var bulk = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
             {
                 DestinationTableName = "#Incoming", BatchSize = 1000, BulkCopyTimeout = 120
@@ -379,7 +386,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                         br.ParentNode?.ReplaceChild(document.CreateTextNode("\n"), br);
                 var text = clone == null ? "" : HtmlEntity.DeEntitize(clone.InnerText).Trim();
                 var title = node.SelectSingleNode(".//*[contains(concat(' ',normalize-space(@class),' '),' tgme_widget_message_author ')]")?.InnerText.Trim();
-                result[id] = new RawPost(id, username, HtmlEntity.DeEntitize(title ?? username), null, TelegramScanService.TelegramCarParser.NormalizeArchiveYears(text), published);
+                result[id] = new RawPost(id, username, HtmlEntity.DeEntitize(title ?? username), null, text, published);
             }
             if (foundOld || !oldest.HasValue || (before.HasValue && oldest.Value >= before.Value)) break;
             before = oldest;
