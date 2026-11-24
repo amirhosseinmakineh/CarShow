@@ -1464,6 +1464,31 @@ namespace CarShow.BackgroundServices
                 return Regex.Replace(line, @"\s+", " ").Trim();
             }
 
+            // Archive-only rewriting: preserve calendar and require explicit year evidence.
+            internal static string NormalizeArchiveYears(string message)
+            {
+                var normalized = NormalizeText(message);
+                return Regex.Replace(normalized,
+                    @"(?<![\p{L}\d])(?<label>سال[ \t]+ساخت|سال[ \t]+تولید|مدل|تولید)[ \t]*[:：]?[ \t]*(?<year>40[0-9]|0[0-9])(?=$|[ \t\r\n،؛]|[/.-](?:0?[1-9]|1[0-2])(?!\d))",
+                    match =>
+                    {
+                        var lineStart = normalized.LastIndexOf('\n', match.Index) + 1;
+                        var lineEnd = normalized.IndexOf('\n', match.Index);
+                        if (lineEnd < 0) lineEnd = normalized.Length;
+                        var line = normalized.Substring(lineStart, lineEnd - lineStart);
+                        var before = normalized.Substring(lineStart, match.Index - lineStart);
+                        var after = normalized.Substring(match.Index + match.Length, lineEnd - match.Index - match.Length);
+                        // Avoid delivery/registration contexts, ranges, and numeric model references.
+                        if (Regex.IsMatch(before, @"تحویل|ثبت[ \t]*نام|پلاک|معاوضه|مقایسه|پژو[ \t]*$") ||
+                            Regex.IsMatch(after, @"^[ \t]*(?:تا|یا|[-–—/])[ \t]*(?:13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?!\d)") ||
+                            Regex.IsMatch(line, @"خریدار|خریداری|بازه"))
+                            return match.Value;
+                        var year = match.Groups["year"];
+                        var fullYear = year.Length == 3 ? "1" + year.Value : "14" + year.Value;
+                        return match.Value.Substring(0, year.Index - match.Index) + fullYear;
+                    });
+            }
+
             internal static string NormalizeText(string value)
             {
                 if (string.IsNullOrEmpty(value))
