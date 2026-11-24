@@ -1467,68 +1467,39 @@ namespace CarShow.BackgroundServices
             // Archive-only rewriting: preserve calendar and require explicit year evidence.
             internal static string NormalizeArchiveYears(string message, IReadOnlyCollection<string> models)
             {
-                var normalized = NormalizeText(message);
-                var labelled = Regex.Replace(normalized,
-                    @"(?<![\p{L}\d])(?<label>سال[ \t]+ساخت|سال[ \t]+تولید|مدل|تولید)[ \t]*[:：]?[ \t]*(?<year>40[0-9]|0[0-9])(?=$|[ \t\r\n،؛]|[/.-](?:0?[1-9]|1[0-2])(?!\d))",
-                    match =>
-                    {
-                        var lineStart = normalized.LastIndexOf('\n', match.Index) + 1;
-                        var lineEnd = normalized.IndexOf('\n', match.Index);
-                        if (lineEnd < 0) lineEnd = normalized.Length;
-                        var line = normalized.Substring(lineStart, lineEnd - lineStart);
-                        var before = normalized.Substring(lineStart, match.Index - lineStart);
-                        var after = normalized.Substring(match.Index + match.Length, lineEnd - match.Index - match.Length);
-                        // Avoid delivery/registration contexts, ranges, and numeric model references.
-                        if (Regex.IsMatch(before, @"تحویل|ثبت[ \t]*نام|پلاک|معاوضه|مقایسه|پژو[ \t]*$") ||
-                            Regex.IsMatch(after, @"^[ \t]*(?:تا|یا|[-–—/])[ \t]*(?:13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?!\d)") ||
-                            Regex.IsMatch(line, @"خریدار|خریداری|بازه"))
-                            return match.Value;
-                        var year = match.Groups["year"];
-                        var fullYear = year.Length == 3 ? "1" + year.Value : "14" + year.Value;
-                        return match.Value.Substring(0, year.Index - match.Index) + fullYear;
-                    });
-                // The catalog protects numeric model names; it is loaded once per refresh.
-                // Explicit labels above are processed for every message, even unknown models.
-                return Regex.Replace(labelled, @"[^\r\n]+(?:\r?\n[ \t]*)*", lineMatch =>
+                var text = NormalizeText(message);
+                var modelNames = models.Select(CatalogNormalize)
+                    .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray();
+                return Regex.Replace(text, @"(?<![\p{L}\d/.,-])(?:13\d{2}|14\d{2}|20\d{2}|4\d{2}|0\d)(?![\p{L}\d])", match =>
                 {
-                    var line = lineMatch.Value;
-                    var header = CleanLine(line.Split('\n')[0].TrimEnd('\r'));
-                    if (!IsCatalogVehicleHeader(header, models))
-                        return line;
+                    var start = text.LastIndexOf('\n', match.Index) + 1;
+                    var end = text.IndexOf('\n', match.Index);
+                    if (end < 0) end = text.Length;
+                    var before = text.Substring(start, match.Index - start);
+                    var after = text.Substring(match.Index + match.Length, end - match.Index - match.Length);
+                    var line = text.Substring(start, end - start);
+                    var prefix = CatalogNormalize(before + match.Value);
+                    if (modelNames.Any(name => name == prefix || name.StartsWith(prefix + " ", StringComparison.Ordinal)))
+                        return match.Value;
+                    if (Regex.IsMatch(before, @"(?:تحویل|ثبت[ \t]*نام|پلاک|کارکرد|کیلومتر|آمپر|قیمت|مبلغ|بیعانه|اقساط|تا|یا)[ \t]*[:：]?[ \t]*$") ||
+                        Regex.IsMatch(after, @"^[ \t]*(?:کیلومتر|km\b|میلیون|میلیارد|تومان|ریال|تا\b|یا\b|[-–—][ \t]*\d|[.,]\d|/\d{3,})") ||
+                        Regex.IsMatch(before, @"\d[ \t]*[-–—/][ \t]*$") ||
+                        Regex.IsMatch(line, @"خریدار|خریداری|بازه"))
+                        return match.Value;
 
-                    if (Regex.IsMatch(header, @"تحویل|ثبت[ \t]*نام|پلاک|معاوضه|مقایسه|خریدار|کارکرد|کیلومتر|آمپر|قیمت|مبلغ|تا[ \t]+\d|یا[ \t]+\d"))
-                        return line;
-
-                    var candidates = Regex.Matches(line,
-                        @"(?<![\p{L}\d/.,-])40[0-9](?!\d)(?=[ \t]*(?:\r?\n[ \t]*)*(?:روز+|رووز|برج[ \t]+(?:0?[1-9]|1[0-2])(?!\d))(?=$|[ \t\r\n،؛\p{S}]))");
-                    // The following nonempty line may contain the year qualifier.
-                    var following = labelled.Substring(lineMatch.Index + lineMatch.Length);
-                    if (candidates.Count == 0 && Regex.IsMatch(following, @"^(?:روز+|رووز|برج[ \t]+(?:0?[1-9]|1[0-2]))(?=$|[ \t\r\n،؛])") &&
-                        Regex.IsMatch(line, @"\r?\n"))
-                        candidates = Regex.Matches(line, @"(?<![\p{L}\d/.,-])40[0-9](?!\d)(?=[ \t\r\n]*$)");
-                    if (candidates.Count != 1)
-                        return line;
-
-                    var year = candidates[0];
-                    var before = line.Substring(0, year.Index);
-                    var after = line.Substring(year.Index + year.Length);
-                    var throughYear = CatalogNormalize(before + year.Value);
-                    // Never rewrite a number that belongs to any matching catalog model.
-                    if (models.Any(model =>
-                    {
-                        var token = CatalogNormalize(model);
-                        return token.Length > 0 &&
-                            (token == throughYear || token.StartsWith(throughYear + " ", StringComparison.Ordinal));
-                    }))
-                        return line;
-                    if (Regex.IsMatch(before, @"(?:مدل|تولید|ساخت)[ \t]*[:：]?[ \t]*$") ||
-                        Regex.IsMatch(before, @"(?:\d[ \t]*[-–—/]|تا|یا)[ \t]*$") ||
-                        Regex.IsMatch(after, @"(?:تا|یا|[-–—/])[ \t]*(?:40[0-9]|14\d{2}|20\d{2})(?!\d)") ||
-                        FullYearRegex.IsMatch(line) ||
-                        Regex.Matches(line, @"(?<!\d)40[0-9](?!\d)").Count != 1)
-                        return line;
-
-                    return before + "مدل 1" + year.Value + after;
+                    var explicitYear = Regex.IsMatch(before, @"(?:سال[ \t]+ساخت|سال[ \t]+تولید|مدل|تولید)[ \t]*[:：]?[ \t]*$");
+                    var header = IsCatalogVehicleHeader(CleanLine(line), models);
+                    var following = text.Substring(match.Index + match.Length);
+                    var qualifier = Regex.IsMatch(following, @"^[ \t\r\n]+(?:روز+|رووز|برج[ \t]+(?:روز+|رووز|0?[1-9]|1[0-2]))(?=$|[ \t\r\n،؛\p{S}])");
+                    var terminal = string.IsNullOrWhiteSpace(after);
+                    var deliveryFollows = Regex.IsMatch(after, @"^[ \t]+تحویل(?:[ \t]|$)");
+                    var plausibleShort = match.Value.Length == 3 && match.Value.StartsWith("40", StringComparison.Ordinal);
+                    if (!explicitYear && !(header && plausibleShort && (qualifier || terminal || deliveryFollows)))
+                        return match.Value;
+                    if (Regex.IsMatch(before, @"تحویل|ثبت[ \t]*نام|کارکرد|قیمت|مبلغ|بیعانه|اقساط"))
+                        return match.Value;
+                    var year = NormalizeManufacturingYear(match.Value);
+                    return year ?? match.Value;
                 });
             }
 
