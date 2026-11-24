@@ -1465,7 +1465,7 @@ namespace CarShow.BackgroundServices
             }
 
             // Archive-only rewriting: preserve calendar and require explicit year evidence.
-            internal static string NormalizeArchiveYears(string message)
+            internal static string NormalizeArchiveYears(string message, IReadOnlyCollection<string> models)
             {
                 var normalized = NormalizeText(message);
                 var labelled = Regex.Replace(normalized,
@@ -1487,38 +1487,45 @@ namespace CarShow.BackgroundServices
                         var fullYear = year.Length == 3 ? "1" + year.Value : "14" + year.Value;
                         return match.Value.Substring(0, year.Index - match.Index) + fullYear;
                     });
-                // Only rewrite a single short year on a recognized vehicle header.
-                // Keep line boundaries and all suffixes exactly as received.
-                return Regex.Replace(labelled, @"[^\r\n]+", lineMatch =>
+                // The catalog protects numeric model names; it is loaded once per refresh.
+                // Explicit labels above are processed for every message, even unknown models.
+                return Regex.Replace(labelled, @"[^\r\n]+(?:\r?\n[ \t]*)*", lineMatch =>
                 {
                     var line = lineMatch.Value;
-                    var header = CleanLine(line);
-                    if (!VehiclePrefixes.Any(prefix =>
-                        header.Equals(prefix, StringComparison.Ordinal) ||
-                        header.StartsWith(prefix + " ", StringComparison.Ordinal)))
+                    var header = CleanLine(line.Split('\n')[0].TrimEnd('\r'));
+                    if (!IsCatalogVehicleHeader(header, models))
                         return line;
 
                     if (Regex.IsMatch(header, @"تحویل|ثبت[ \t]*نام|پلاک|معاوضه|مقایسه|خریدار|کارکرد|کیلومتر|آمپر|قیمت|مبلغ|تا[ \t]+\d|یا[ \t]+\d"))
                         return line;
 
                     var candidates = Regex.Matches(line,
-                        @"(?<![\p{L}\d/.,-])40[0-9](?!\d)(?=[ \t]+(?:روز+|رووز|برج[ \t]+(?:0?[1-9]|1[0-2])(?!\d))(?=$|[ \t،؛\p{S}]))");
+                        @"(?<![\p{L}\d/.,-])40[0-9](?!\d)(?=[ \t]*(?:\r?\n[ \t]*)*(?:روز+|رووز|برج[ \t]+(?:0?[1-9]|1[0-2])(?!\d))(?=$|[ \t\r\n،؛\p{S}]))");
+                    // The following nonempty line may contain the year qualifier.
+                    var following = labelled.Substring(lineMatch.Index + lineMatch.Length);
+                    if (candidates.Count == 0 && Regex.IsMatch(following, @"^(?:روز+|رووز|برج[ \t]+(?:0?[1-9]|1[0-2]))(?=$|[ \t\r\n،؛])") &&
+                        Regex.IsMatch(line, @"\r?\n"))
+                        candidates = Regex.Matches(line, @"(?<![\p{L}\d/.,-])40[0-9](?!\d)(?=[ \t\r\n]*$)");
                     if (candidates.Count != 1)
                         return line;
 
                     var year = candidates[0];
                     var before = line.Substring(0, year.Index);
                     var after = line.Substring(year.Index + year.Length);
-                    if (Regex.IsMatch(before, @"(?:پژو|مدل|تولید|ساخت)[ \t]*[:：]?[ \t]*$") ||
+                    var throughYear = CatalogNormalize(before + year.Value);
+                    // Never rewrite a number that belongs to any matching catalog model.
+                    if (models.Any(model =>
+                    {
+                        var token = CatalogNormalize(model);
+                        return token.Length > 0 &&
+                            (token == throughYear || token.StartsWith(throughYear + " ", StringComparison.Ordinal));
+                    }))
+                        return line;
+                    if (Regex.IsMatch(before, @"(?:مدل|تولید|ساخت)[ \t]*[:：]?[ \t]*$") ||
                         Regex.IsMatch(before, @"(?:\d[ \t]*[-–—/]|تا|یا)[ \t]*$") ||
                         Regex.IsMatch(after, @"(?:تا|یا|[-–—/])[ \t]*(?:40[0-9]|14\d{2}|20\d{2})(?!\d)") ||
                         FullYearRegex.IsMatch(line) ||
                         Regex.Matches(line, @"(?<!\d)40[0-9](?!\d)").Count != 1)
-                        return line;
-
-                    // Restrict implicit years to familiar domestic model families;
-                    // other numeric model designations require explicit year labels.
-                    if (!Regex.IsMatch(header, @"^(?:رانا|تارا|دنا|ساینا|سورن|شاهین|کوییک|اطلس|سهند|ریرا|آریسان|207|پژو[ \t]+207|لاماری)(?:[ \t]|$)"))
                         return line;
 
                     return before + "مدل 1" + year.Value + after;
