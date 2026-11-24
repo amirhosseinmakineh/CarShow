@@ -315,7 +315,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 batch.Rows.Add(post.MessageId, post.Username,
                     (object?)post.ChannelName ?? DBNull.Value,
                     (object?)post.SenderName ?? DBNull.Value,
-                    TelegramScanService.TelegramCarParser.NormalizeArchiveYears(post.Text, models), post.Url, post.PublishedAt, now);
+                    ParserService.NormalizeArchiveYears(post.Text, models), post.Url, post.PublishedAt, now);
             using (var bulk = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
             {
                 DestinationTableName = "#Incoming", BatchSize = 1000, BulkCopyTimeout = 120

@@ -17,6 +17,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using static System.Net.WebRequestMethods;
 
+using static CarShow.BackgroundServices.ParserService;
+
 namespace CarShow.BackgroundServices
 {
     public sealed record TelegramScanOutcome(int StatusCode, object? Value)
@@ -203,7 +205,7 @@ namespace CarShow.BackgroundServices
             // once for efficiency, then searched independently for each database car.
             var messages = messagesByChannel.SelectMany(channel => channel.Value).ToList();
             var parsedCars = messages
-                .SelectMany(message => TelegramCarParser.ParseCatalog(message, modelNames))
+                .SelectMany(message => ParserService.ParseCatalog(message, modelNames))
                 .ToList();
             var catalogTuples = catalog.Select(item => (Id: (long)item.Id, Model: item.Model, Tip: item.Tip)).ToList();
             // Resolve ownership once to prevent a Telegram advertisement from being
@@ -406,7 +408,7 @@ namespace CarShow.BackgroundServices
             var parsedAdvertisements = new List<ParsedCar>();
             foreach (var message in messages)
             {
-                var cars = TelegramCarParser.ParseCatalog(message, models);
+                var cars = ParserService.ParseCatalog(message, models);
                 if (cars.Count == 0) noVehicleMessages++;
                 parsedAdvertisements.AddRange(cars);
             }
@@ -497,108 +499,7 @@ namespace CarShow.BackgroundServices
             };
         }
 
-        private static string CatalogNormalize(string? value)
-        {
-            var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا')
-                .Replace('ي', 'ی').Replace('ك', 'ک').Replace('\u200c', ' ');
-            text = new string(text.Select(c => c >= '۰' && c <= '۹' ? (char)('0' + c - '۰') :
-                c >= '٠' && c <= '٩' ? (char)('0' + c - '٠') : c).ToArray());
-            return Regex.Replace(Regex.Replace(text, @"[^\p{L}\p{N}]+", " "), @"\s+", " ").Trim().ToLowerInvariant();
-        }
-
-        // Normalize only well-established spelling variants of the SAME trim feature.
-        // This is deliberately not fuzzy matching: unknown or conflicting trims remain rejected.
-        private static string NormalizeTrimTerms(string value)
-        {
-            var text = CatalogNormalize(value);
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:پانوراما|پانورامیک|پانا)(?![\p{L}\p{N}])", "پانوراما");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:اتوماتیک|اتومات)(?![\p{L}\p{N}])", "اتومات");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:دنده\s*ای|دنده)(?![\p{L}\p{N}])", "دنده");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:ارتقاء|ارتقا\s*یافته|ارتقا)(?![\p{L}\p{N}])", "ارتقا");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:تیو\s*تری|تیوتری|tu\s*3)(?![\p{L}\p{N}])", "tu3");
-            return Regex.Replace(text, @"\s+", " ").Trim();
-        }
-
-        // Every catalog Tip.Name generates its own regex; the catalog vocabulary is
-        // never restricted to the hard-coded spelling aliases above.
-        private static bool TrimContains(string advertisement, string trim)
-        {
-            var value = NormalizeTrimTerms(advertisement);
-            var token = NormalizeTrimTerms(trim);
-            if (token.Length == 0) return false;
-            var words = token.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var pattern = @"(?<![\p{L}\p{N}])" +
-                string.Join(@"\s+", words.Select(Regex.Escape)) +
-                @"(?![\p{L}\p{N}])";
-            return Regex.IsMatch(value, pattern, RegexOptions.CultureInvariant);
-        }
-
-        // Compare normalized trim feature tokens independent of word order.
-        // Only a strict superset can eliminate a less-specific trim; equal token
-        // sets (including duplicate catalog rows) remain ambiguous.
-        private static bool IsStrictlyMoreSpecificTrim(string candidate, string other)
-        {
-            var candidateTokens = NormalizeTrimTerms(candidate).Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .ToHashSet(StringComparer.Ordinal);
-            var otherTokens = NormalizeTrimTerms(other).Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .ToHashSet(StringComparer.Ordinal);
-            return candidateTokens.IsProperSupersetOf(otherTokens);
-        }
-
-        private static bool CatalogContains(string advertisement, string term)
-        {
-            var value = CatalogNormalize(advertisement);
-            var token = CatalogNormalize(term);
-            return token.Length > 0 && (" " + value + " ").Contains(" " + token + " ", StringComparison.Ordinal);
-        }
-
-        // Match model first, then trim within that model. Ambiguity is never
-        // resolved using string length: a wrong CarId would corrupt reference prices.
-        public static long? MatchCatalogCar(string advertisement,
-            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
-        {
-            var text = CatalogNormalize(advertisement);
-            if (text.Length == 0) return null;
-
-            var models = catalog.Select(x => x.Model).Distinct(StringComparer.OrdinalIgnoreCase)
-                .Where(model => CatalogContains(text, model))
-                .OrderByDescending(model => CatalogNormalize(model).Length).ToList();
-            if (models.Count == 0) return null;
-
-            // A longer model may include a shorter model name (e.g. "207" vs "207 sd").
-            // Only discard shorter names when they are fully contained in the longer one.
-            var specificModels = models.Where(model => !models.Any(other =>
-                !string.Equals(model, other, StringComparison.OrdinalIgnoreCase) &&
-                CatalogContains(other, model))).ToList();
-            if (specificModels.Count != 1) return null;
-
-            var modelName = specificModels[0];
-            var candidates = catalog.Where(item =>
-                string.Equals(item.Model, modelName, StringComparison.OrdinalIgnoreCase) &&
-                TrimContains(text, item.Tip)).ToList();
-
-            // More specific trim wins only if all other matching trims are its
-            // component phrases. Independent trim matches mean ambiguous ad.
-            var specificTrims = candidates.Where(item => !candidates.Any(other =>
-                item.Id != other.Id && IsStrictlyMoreSpecificTrim(other.Tip, item.Tip))).ToList();
-            return specificTrims.Count == 1 ? specificTrims[0].Id : null;
-        }
-
-        // Canonical comparison key: 1405 / 405 / 05 => 2026.
-        // This is a model-year convention, not a calendar-date conversion.
-        private static string NormalizeManufacturingYear(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return null;
-            var value = CatalogNormalize(raw).Trim();
-            if (!Regex.IsMatch(value, @"^\d{2,4}$")) return null;
-            if (!int.TryParse(value, out var year)) return null;
-            if (year >= 2000 && year <= 2099) return year.ToString(CultureInfo.InvariantCulture);
-            if (year >= 1300 && year <= 1399) return (year + 621).ToString(CultureInfo.InvariantCulture);
-            if (year >= 1400 && year <= 1499) return (year + 621).ToString(CultureInfo.InvariantCulture);
-            if (year >= 400 && year <= 499) return (year + 1621).ToString(CultureInfo.InvariantCulture);
-            if (value.Length == 2 && year <= 30) return (2021 + year).ToString(CultureInfo.InvariantCulture);
-            return null;
-        }
+        public static long? MatchCatalogCar(string advertisement, IReadOnlyCollection<(long Id, string Model, string Tip)> catalog) => ParserService.MatchCatalogCar(advertisement, catalog);
 
         // The database car is the unit of work. Never choose a CarId by searching
         // the entire catalog for each advertisement.
@@ -754,10 +655,11 @@ namespace CarShow.BackgroundServices
             var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var channels = await GetLast100MessagesAsync(
                 Channels, cancellationToken, channelErrors);
+            var models = await _db.CarModels.AsNoTracking().Select(x => x.Name).ToListAsync(cancellationToken);
             var cars = channels
                 .Where(channel => !channelErrors.ContainsKey(channel.Key))
                 .SelectMany(channel => channel.Value)
-                .SelectMany(TelegramCarParser.Parse)
+                .SelectMany(message => ParserService.ParseCatalog(message, models))
                 .ToList();
 
             var totalMessages = channels.Values.Sum(messages => messages.Count);
@@ -1125,418 +1027,11 @@ namespace CarShow.BackgroundServices
         // Splits multi-car messages and extracts name, price and year.
         // =========================================================
 
-        internal static class TelegramCarParser
-        {
-            private static readonly string[] VehiclePrefixes =
-            {
-                "بی وای دی", "بی ام و", "ام وی ام", "گگ امپو", "گک امپو",
-                "فراتلندر", "فیدلیتی", "اکستریم", "هایلندر", "کرولا",
-                "چانگان", "سوزوکی", "دیگنیتی", "بیجینگ", "آریزو", "اریزو",
-                "آریسان", "رانا", "تیگو", "سهند", "لوکانو", "تارا",
-                "کوییک", "دنا", "شاهین", "هایما", "نیسان", "ریرا",
-                "النترا", "سوناتا", "ساینا", "سورن", "ایگل", "اطلس",
-                "توسان", "مزدا", "شوال", "تیسان", "جک", "بنز",
-                "کمری", "رافور", "لاماری", "رسپکت", "پراید", "پارس",
-                "پژو", "ام جی", "mg", "bmw", "207",
-                "ایدی", "اینووی", "وایلندر", "گک", "فراتلندر"
-            };
-
-            private static readonly Regex FullYearRegex = new Regex(
-                @"(?<!\d)(?:13\d{2}|14\d{2}|20\d{2})(?!\d)",
-                RegexOptions.Compiled);
-
-            private static readonly Regex ShortYearRegex = new Regex(
-                @"(?<!\d)(?<year>40[0-9])(?=\s*(?:روز|رووز|برج|ب\s*\d+|مدل))",
-                RegexOptions.Compiled);
-
-            private static readonly Regex PriceTokenRegex = new Regex(
-                @"(?<!\d)(?:\d{1,3}(?:[.,/]\d{3,6})+|\d{4,8})(?!\d)",
-                RegexOptions.Compiled);
-
-            private static readonly Regex ExplicitPriceRegex = new Regex(
-                @"(?<!\d)\d+(?:[.,/]\d{1,3})?\s*(?:میلیارد|میلیون)",
-                RegexOptions.Compiled);
-
-            // Colloquial Iranian car-ad prices: "4 تومن" means four billion in this context.
-            private static readonly Regex ColloquialPriceRegex = new Regex(
-                @"(?<![\p{L}\d])(?<amount>\d+(?:[.,/]\d{1,3})?)\s*(?:تومن|تومان)(?![\p{L}])",
-                RegexOptions.Compiled);
-
-            private static readonly Regex PhoneRegex = new Regex(
-                @"09[\s\-]*\d{9}",
-                RegexOptions.Compiled);
-
-            private static readonly Regex MileageRegex = new Regex(
-                @"کارکرد|کیلومتر|آمپر|هزار\s*تا",
-                RegexOptions.Compiled);
-
-            private static readonly Regex NoiseRegex = new Regex(
-                @"(?<![\p{L}\p{N}])(?:قابل\s+تحویل|تحویل|سفید|مشکی|سیاه|" +
-                @"خاکستری|طوسی|نقره\s*ای|ذغالی|کرم|قرمز|آبی|سبز|تهران|" +
-                @"اصفهان|قم|پلاک|سند|آماده|گارانتی|خودرو)(?![\p{L}\p{N}])",
-                RegexOptions.Compiled);
-
-            public static List<ParsedCar> ParseCatalog(string message, IReadOnlyCollection<string> models)
-            {
-                var result = new List<ParsedCar>();
-                if (string.IsNullOrWhiteSpace(message) || models.Count == 0) return result;
-                var lines = message.Replace("\r", "").Split('\n');
-                var starts = Enumerable.Range(0, lines.Length)
-                    .Where(index => IsCatalogVehicleHeader(CleanLine(lines[index]), models))
-                    .ToList();
-                for (var i = 0; i < starts.Count; i++)
-                {
-                    var start = starts[i];
-                    var end = i + 1 < starts.Count ? starts[i + 1] : lines.Length;
-                    var block = string.Join("\n", lines.Skip(start).Take(end - start));
-                    result.Add(new ParsedCar
-                    {
-                        Name = ExtractName(CleanLine(lines[start])),
-                        Price = ExtractPrice(block),
-                        Year = ExtractYearCatalog(block, lines[start])
-                    });
-                }
-                return result;
-            }
-
-            // A catalog model mentioned in a delivery date, comparison or description
-            // is not a new vehicle. Require the model to begin the cleaned header.
-            private static bool IsCatalogVehicleHeader(string line, IReadOnlyCollection<string> models)
-            {
-                if (string.IsNullOrWhiteSpace(line) ||
-                    Regex.IsMatch(line, @"^(?:معاوضه|تعویض|مقایسه|مشابه|در\s+حد|با\s+خودروی|برج|روز|مدل|قیمت|مبلغ|فروش|تحویل|رینگ|قالپاق)(?:\s|$)"))
-                    return false;
-
-                return models.Any(model =>
-                {
-                    var token = CatalogNormalize(model);
-                    if (token.Length == 0) return false;
-                    // Avoid interpreting numeric catalog names as delivery months.
-                    if (Regex.IsMatch(token, @"^\d{1,2}$")) return false;
-                    var normalized = CatalogNormalize(line);
-                    return normalized.Equals(token, StringComparison.Ordinal) ||
-                        normalized.StartsWith(token + " ", StringComparison.Ordinal);
-                });
-            }
-
-            private static string ExtractYearCatalog(string block, string header)
-            {
-                // The vehicle header is authoritative. Delivery years in later lines
-                // must never override the actual manufacturing year.
-                var normalizedHeader = NormalizeText(header);
-                var candidates = new HashSet<string>(StringComparer.Ordinal);
-                var explicitYears = Regex.Matches(normalizedHeader,
-                    @"(?<!\d)(?:13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?=\s*(?:[/.-]\s*(?:0?[1-9]|1[0-2]))?(?:\s|$|روز|برج|پلاک|،|🔷|🔶))");
-                foreach (Match match in explicitYears)
-                {
-                    if (match.Value == "405" &&
-                        Regex.IsMatch(normalizedHeader[..match.Index], @"پژو\s*$"))
-                        continue;
-                    var year = NormalizeManufacturingYear(match.Value);
-                    if (year != null) candidates.Add(year);
-                }
-                // If the header is silent, accept only an explicitly labelled model year
-                // in the remaining block; never infer from delivery dates.
-                if (candidates.Count == 0)
-                {
-                    var labelled = Regex.Matches(NormalizeText(block),
-                        @"مدل\s*(?<year>13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?=\D|$)");
-                    foreach (Match match in labelled)
-                    {
-                        var year = NormalizeManufacturingYear(match.Groups["year"].Value);
-                        if (year != null) candidates.Add(year);
-                    }
-                }
-                return candidates.Count == 1 ? candidates.Single() : null;
-            }
-
-            public static List<ParsedCar> Parse(string message)
-            {
-                var result = new List<ParsedCar>();
-
-                if (string.IsNullOrWhiteSpace(message))
-                    return result;
-
-                var blocks = SplitMessage(message);
-
-                foreach (var block in blocks)
-                {
-                    var header = GetVehicleHeader(block);
-
-                    if (string.IsNullOrWhiteSpace(header))
-                        continue;
-
-                    var name = ExtractName(header);
-
-                    if (string.IsNullOrWhiteSpace(name))
-                        continue;
-
-                    result.Add(new ParsedCar
-                    {
-                        Name = name,
-                        Price = ExtractPrice(block),
-                        Year = ExtractYear(block)
-                    });
-                }
-
-                return result;
-            }
-
-            private static List<string> SplitMessage(string message)
-            {
-                var lines = message.Replace("\r", string.Empty).Split('\n');
-                var starts = new List<int>();
-
-                for (var i = 0; i < lines.Length; i++)
-                {
-                    if (IsVehicleLine(lines[i]))
-                        starts.Add(i);
-                }
-
-                var blocks = new List<string>();
-
-                for (var i = 0; i < starts.Count; i++)
-                {
-                    var start = starts[i];
-                    var end = i + 1 < starts.Count ? starts[i + 1] : lines.Length;
-
-                    blocks.Add(string.Join("\n", lines.Skip(start).Take(end - start)));
-                }
-
-                return blocks;
-            }
-
-            private static bool IsVehicleLine(string line)
-            {
-                var normalized = CleanLine(line);
-
-                return VehiclePrefixes.Any(prefix =>
-                    normalized.StartsWith(
-                        NormalizeText(prefix),
-                        StringComparison.OrdinalIgnoreCase));
-            }
-
-            private static string GetVehicleHeader(string block)
-            {
-                return block
-                    .Split('\n')
-                    .Select(CleanLine)
-                    .FirstOrDefault(IsVehicleLine);
-            }
-
-            private static string ExtractName(string header)
-            {
-                var name = NormalizeText(header);
-
-                name = FullYearRegex.Replace(name, " ");
-                name = ShortYearRegex.Replace(name, " ");
-                name = Regex.Replace(name, @"مدل\s*(?:40[0-9]|0[0-9])(?=\D|$)", " ");
-                name = ExplicitPriceRegex.Replace(name, " ");
-                name = PriceTokenRegex.Replace(name, " ");
-                name = NoiseRegex.Replace(name, " ");
-                // Remove delivery and presentation details, never the preceding trim.
-                // A standalone "405" in "مدل 405 روز" is not the model of a 207.
-                name = Regex.Replace(name,
-                    @"\b(?:برج\s*\d{1,2}|روز{2,}\S*|قالپاق|با\s+رینگ\s+شرکتی|رینگ\s+شرکتی)\b",
-                    " ");
-                name = Regex.Replace(name, @"\s+", " ").Trim();
-                return name.Trim(' ', '-', '/', ',', '،', ':', '؛');
-            }
-
-            private static string ExtractPrice(string block)
-            {
-                var candidates = new HashSet<decimal>();
-                foreach (var rawLine in block.Split('\n'))
-                {
-                    var normalized = PhoneRegex.Replace(NormalizeText(rawLine), " ");
-                    if (Regex.IsMatch(normalized, @"پیش\s*پرداخت|بیعانه|اقساط|قسط|ودیعه|کاور|لوازم|بیمه|مالیات"))
-                        continue;
-                    // Mileage and asking price can coexist on one line. Only accept a
-                    // numeric token on such lines when an explicit price label exists.
-                    var labelled = Regex.IsMatch(normalized, @"قیمت|مبلغ|نرخ|فروش");
-                    if (MileageRegex.IsMatch(normalized) && !labelled) continue;
-                    foreach (Match match in ExplicitPriceRegex.Matches(normalized))
-                        if (CarPriceReferenceBuilder.TryConvertPrice(match.Value, out var price))
-                            candidates.Add(price);
-                    foreach (Match match in ColloquialPriceRegex.Matches(normalized))
-                    {
-                        var amount = match.Groups["amount"].Value.Replace('/', '.').Replace(',', '.');
-                        if (decimal.TryParse(amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
-                            && number >= 1m && number < 100m)
-                            candidates.Add(number);
-                    }
-                    // A bare figure must be on its own line, have a price label,
-                    // or follow a price marker. Never treat a date as a price.
-                    var priceLine = Regex.Replace(normalized, @"[🔥🔷🔶✅⚡️\s]", "");
-                    var bareLine = Regex.IsMatch(priceLine, @"^\d{4,5}$|^\d{1,2}[/.,]\d{3}$|^\d{1,3}(?:,\d{3}){2,3}$");
-                    if (!labelled && !bareLine) continue;
-                    foreach (Match match in Regex.Matches(normalized,
-                        @"(?<![\p{L}\d])(?:\d{1,3}(?:,\d{3}){2,3}|\d{1,2}[/.,]\d{3}|\d{4,5})(?![\d])"))
-                    {
-                        var token = match.Value;
-                        if (Regex.IsMatch(token, @"^(?:13\d{2}|14\d{2}|20\d{2}|40[0-9])$")) continue;
-                        if (Regex.IsMatch(token, @"^\d{1,2}[/.,]\d{3}$"))
-                        {
-                            var decimalText = token.Replace('/', '.').Replace(',', '.');
-                            if (decimal.TryParse(decimalText, NumberStyles.Number,
-                                CultureInfo.InvariantCulture, out var billion) &&
-                                billion >= 1m && billion < 100m)
-                                candidates.Add(billion);
-                            continue;
-                        }
-                        if (Regex.IsMatch(token, @"^\d{1,3}(?:,\d{3}){2,3}$"))
-                        {
-                            var digits = token.Replace(",", "");
-                            if (decimal.TryParse(digits, out var toman) && toman >= 1_000_000_000m)
-                                candidates.Add(toman / 1_000_000_000m);
-                            continue;
-                        }
-                        if (CarPriceReferenceBuilder.TryConvertPrice(token, out var price))
-                            candidates.Add(price);
-                    }
-                }
-                // Preserve the parsed unit for explicit and colloquial prices.
-                // A plain numeric price remains in millions (e.g. 4200).
-                // The reference builder accepts both formats through TryConvertPrice.
-                if (candidates.Count != 1) return null;
-                var candidate = candidates.Single();
-                foreach (var rawLine in block.Split('\n'))
-                {
-                    var normalized = PhoneRegex.Replace(NormalizeText(rawLine), " ");
-                    if (Regex.IsMatch(normalized, @"پیش\s*پرداخت|بیعانه|اقساط|قسط|ودیعه|کاور|لوازم|بیمه|مالیات"))
-                        continue;
-                    var explicitMatch = ExplicitPriceRegex.Match(normalized);
-                    if (explicitMatch.Success &&
-                        CarPriceReferenceBuilder.TryConvertPrice(explicitMatch.Value, out var explicitAmount) &&
-                        explicitAmount == candidate)
-                        return explicitMatch.Value;
-                    var colloquialMatch = ColloquialPriceRegex.Match(normalized);
-                    if (colloquialMatch.Success)
-                    {
-                        var amount = colloquialMatch.Groups["amount"].Value.Replace('/', '.').Replace(',', '.');
-                        if (decimal.TryParse(amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
-                            && number == candidate)
-                            return number.ToString(CultureInfo.InvariantCulture) + " میلیارد";
-                    }
-                }
-                return (candidate * 1000m).ToString("0", CultureInfo.InvariantCulture);
-            }
-
-            private static string ExtractYear(string block)
-            {
-                var normalized = NormalizeText(block);
-                var header = GetVehicleHeader(block) ?? string.Empty;
-
-                var years = FullYearRegex.Matches(normalized)
-                    .Cast<Match>()
-                    .Select(x => x.Value)
-                    .Distinct()
-                    .ToList();
-
-                foreach (Match match in ShortYearRegex.Matches(header))
-                {
-                    var beforeYear = header.Substring(0, match.Index);
-
-                    // Never interpret the 405 in "پژو 405" as the year 1405.
-                    if (Regex.IsMatch(beforeYear, @"پژو\s*$"))
-                        continue;
-
-                    var fullYear = NormalizeManufacturingYear(match.Groups["year"].Value);
-
-                    if (!years.Contains(fullYear))
-                        years.Add(fullYear);
-                }
-
-                // Ambiguous year ranges are not silently assigned a single year.
-                if (Regex.IsMatch(header,
-                    @"(?<!\d)(?:40[0-9]|14[0-9]{2})\s*(?:تا|ت|[-/])\s*(?:40[0-9]|14[0-9]{2})(?!\d)"))
-                {
-                    return null;
-                }
-
-                return years.Count == 1 ? NormalizeManufacturingYear(years[0]) : null;
-            }
-
-            private static string CleanLine(string value)
-            {
-                var line = NormalizeText(value);
-                line = Regex.Replace(line, @"^[\s\p{P}\p{S}]+", string.Empty);
-                return Regex.Replace(line, @"\s+", " ").Trim();
-            }
-
-            // Archive-only rewriting: preserve calendar and require explicit year evidence.
-            internal static string NormalizeArchiveYears(string message, IReadOnlyCollection<string> models)
-            {
-                var text = NormalizeText(message);
-                var modelNames = models.Select(CatalogNormalize)
-                    .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray();
-                return Regex.Replace(text, @"(?<![\p{L}\d/.,-])(?:13\d{2}|14\d{2}|20\d{2}|4\d{2}|0\d)(?![\p{L}\d])", match =>
-                {
-                    var start = text.LastIndexOf('\n', match.Index) + 1;
-                    var end = text.IndexOf('\n', match.Index);
-                    if (end < 0) end = text.Length;
-                    var before = text.Substring(start, match.Index - start);
-                    var after = text.Substring(match.Index + match.Length, end - match.Index - match.Length);
-                    var line = text.Substring(start, end - start);
-                    var prefix = CatalogNormalize(before + match.Value);
-                    if (modelNames.Any(name => name == prefix || name.StartsWith(prefix + " ", StringComparison.Ordinal)))
-                        return match.Value;
-                    if (Regex.IsMatch(before, @"(?:تحویل|ثبت[ \t]*نام|پلاک|کارکرد|کیلومتر|آمپر|قیمت|مبلغ|بیعانه|اقساط|تا|یا)[ \t]*[:：]?[ \t]*$") ||
-                        Regex.IsMatch(after, @"^[ \t]*(?:کیلومتر|km\b|میلیون|میلیارد|تومان|ریال|تا\b|یا\b|[-–—][ \t]*\d|[.,]\d|/\d{3,})") ||
-                        Regex.IsMatch(before, @"\d[ \t]*[-–—/][ \t]*$") ||
-                        Regex.IsMatch(line, @"خریدار|خریداری|بازه"))
-                        return match.Value;
-
-                    var explicitYear = Regex.IsMatch(before, @"(?:سال[ \t]+ساخت|سال[ \t]+تولید|مدل|تولید)[ \t]*[:：]?[ \t]*$");
-                    var header = IsCatalogVehicleHeader(CleanLine(line), models);
-                    var following = text.Substring(match.Index + match.Length);
-                    var qualifier = Regex.IsMatch(following, @"^[ \t\r\n]+(?:روز+|رووز|برج[ \t]+(?:روز+|رووز|0?[1-9]|1[0-2]))(?=$|[ \t\r\n،؛\p{S}])");
-                    var terminal = string.IsNullOrWhiteSpace(after);
-                    var deliveryFollows = Regex.IsMatch(after, @"^[ \t]+تحویل(?:[ \t]|$)");
-                    var plausibleShort = match.Value.Length == 3 && match.Value.StartsWith("40", StringComparison.Ordinal);
-                    if (!explicitYear && !(header && plausibleShort && (qualifier || terminal || deliveryFollows)))
-                        return match.Value;
-                    if (Regex.IsMatch(before, @"تحویل|ثبت[ \t]*نام|کارکرد|قیمت|مبلغ|بیعانه|اقساط"))
-                        return match.Value;
-                    var year = NormalizeManufacturingYear(match.Value);
-                    return year ?? match.Value;
-                });
-            }
-
-            internal static string NormalizeText(string value)
-            {
-                if (string.IsNullOrEmpty(value))
-                    return string.Empty;
-
-                var builder = new StringBuilder(value.Length);
-
-                foreach (var c in value)
-                {
-                    if (c >= '۰' && c <= '۹')
-                        builder.Append((char)('0' + c - '۰'));
-                    else if (c >= '٠' && c <= '٩')
-                        builder.Append((char)('0' + c - '٠'));
-                    else
-                    {
-                        builder.Append(c switch
-                        {
-                            'ي' => 'ی',
-                            'ك' => 'ک',
-                            '\u200c' => ' ',
-                            _ => c
-                        });
-                    }
-                }
-
-                return builder.ToString().ToLowerInvariant();
-            }
-        }
-
         // =========================================================
         // PRICE CONVERSION AND REFERENCE CALCULATION
         // =========================================================
 
-        private static class CarPriceReferenceBuilder
+        internal static class CarPriceReferenceBuilder
         {
             private static readonly Regex ValidYearRegex = new Regex(
                 @"^(?:13|14|20)\d{2}$",

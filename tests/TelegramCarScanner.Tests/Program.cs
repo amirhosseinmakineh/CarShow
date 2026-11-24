@@ -10,7 +10,7 @@ void Check(bool ok, string name)
 }
 
 var scanner = typeof(TelegramScanService);
-var parser = scanner.GetNestedType("TelegramCarParser", BindingFlags.NonPublic)
+var parser = scanner.Assembly.GetType("CarShow.BackgroundServices.ParserService")
     ?? throw new Exception("Telegram parser missing");
 var parseMethod = parser.GetMethod("ParseCatalog", BindingFlags.Public | BindingFlags.Static)
     ?? throw new Exception("ParseCatalog missing");
@@ -29,6 +29,15 @@ List<TelegramScanService.CarPriceReference> Build(params TelegramScanService.Par
 TelegramScanService.ParsedCar Ad(string year, string price) =>
     new() { Name = "catalog:75354", Year = year, Price = price };
 
+var normalize = parser.GetMethod("NormalizeArchiveYears", BindingFlags.NonPublic | BindingFlags.Static)!;
+string NormalizeArchive(string message, params string[] models) =>
+    (string)normalize.Invoke(null, new object[] { message, models })!;
+Check(NormalizeArchive("لوکانو l7 سفید 405 برج روز", "لوکانو l7") == "لوکانو l7 سفید 2026 برج روز", "Short archive year");
+Check(NormalizeArchive("دنا سفید 1405/3", "دنا") == "دنا سفید 2026/3", "Full solar year with month");
+Check(NormalizeArchive("شاهین سفید 1405برج5", "شاهین") == "شاهین سفید 2026برج5", "Attached year");
+Check(NormalizeArchive("پژو 405", "پژو 405") == "پژو 405", "Numeric model preserved");
+Check(NormalizeArchive("آریزو 8 مشکی 403 تحویل 404", "آریزو 8") == "آریزو 8 مشکی 2024 تحویل 404", "Delivery year preserved");
+Check(Parse("دنا سفید مدل 1405\n3/385/000", "دنا")[0].Price == "3385", "Grouped price");
 var parsed = Parse("تیگو 8 پرو مکس مدل 1404\nقیمت 4 تومن", "تیگو");
 Check(parsed.Count == 1 && parsed[0].Year == "2025" && parsed[0].Price == "4 میلیارد",
     "Colloquial 4 toman means 4 billion in car advertisements");
