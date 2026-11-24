@@ -207,31 +207,20 @@ namespace CarShow.BackgroundServices
 
             private static string ExtractYearCatalog(string block, string header)
             {
-                // The vehicle header is authoritative. Delivery years in later lines
-                // must never override the actual manufacturing year.
-                var normalizedHeader = Regex.Split(NormalizeText(header), @"تحویل|پلاک|کارکرد|آمپر|امپر|قیمت|بیعانه|اقساط")[0];
                 var candidates = new HashSet<string>(StringComparer.Ordinal);
-                var explicitYears = Regex.Matches(normalizedHeader,
-                    @"(?<!\d)(?:13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?=\s*(?:[/.-]\s*(?:0?[1-9]|1[0-2]))?(?:\s|$|روز|برج|پلاک|،|🔷|🔶))");
-                foreach (Match match in explicitYears)
+                var first = true;
+                foreach (var line in block.Split('\n'))
                 {
-                    if (match.Value == "405" &&
-                        Regex.IsMatch(normalizedHeader[..match.Index], @"پژو\s*$"))
-                        continue;
-                    var year = NormalizeManufacturingYear(match.Value);
-                    if (year != null) candidates.Add(year);
-                }
-                // If the header is silent, accept only an explicitly labelled model year
-                // in the remaining block; never infer from delivery dates.
-                if (candidates.Count == 0)
-                {
-                    var labelled = Regex.Matches(NormalizeText(block),
-                        @"مدل\s*(?<year>13\d{2}|14\d{2}|20\d{2}|40[0-9]|0[0-9])(?=\D|$)");
-                    foreach (Match match in labelled)
+                    var text = Regex.Split(NormalizeText(line), @"تحویل|پلاک|کارکرد|آمپر|امپر|قیمت|بیعانه|اقساط")[0];
+                    var pattern = first
+                        ? @"(?<![\p{L}\d/.,-])(?:19\d{2}|20\d{2})(?!\d)(?=$|\s|[/.,]|روز|برج|ب\d)"
+                        : @"^\s*(?:مدل\s*[:.]?\s*(?:19\d{2}|20\d{2})(?!\d)|(?:19\d{2}|20\d{2})(?=\s*(?:روز|برج|ب\d|/0?[1-9](?!\d)|/1[0-2](?!\d))))";
+                    foreach (Match match in Regex.Matches(text, pattern))
                     {
-                        var year = NormalizeManufacturingYear(match.Groups["year"].Value);
-                        if (year != null) candidates.Add(year);
+                        var year = Regex.Match(match.Value, @"(?:19|20)\d{2}").Value;
+                        if (year.Length > 0) candidates.Add(year);
                     }
+                    first = false;
                 }
                 return candidates.Count == 1 ? candidates.Single() : null;
             }
@@ -279,7 +268,17 @@ namespace CarShow.BackgroundServices
                     }
                     // A bare figure must be on its own line, have a price label,
                     // or follow a price marker. Never treat a date as a price.
-                    var priceLine = Regex.Replace(normalized, @"[🔥🔷🔶✅⚡️\s]", "");
+                    var priceLine = Regex.Replace(normalized, @"[\p{S}\uFE0F\s]", "");
+                    if (Regex.IsMatch(priceLine, @"^\d{1,4}(?:[/.,]\d{3}){2,3}$|^\d{4}[/.,]\d{3}$"))
+                    {
+                        var digits = Regex.Replace(priceLine, @"\D", "");
+                        if (decimal.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var grouped))
+                        {
+                            var billion = digits.Length >= 9 ? grouped / 1_000_000_000m : grouped / 1_000_000m;
+                            if (billion >= 1m && billion < 100m) candidates.Add(billion);
+                        }
+                        continue;
+                    }
                     var bareLine = Regex.IsMatch(priceLine, @"^\d{4,5}$|^\d{1,2}[/.,]\d{3}$|^\d{1,3}(?:,\d{3}){2,3}$");
                     if (!labelled && !bareLine) continue;
                     foreach (Match match in Regex.Matches(normalized,
