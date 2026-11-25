@@ -76,7 +76,8 @@ public sealed class TelegramScanStatus
                 ReferenceCount = @references,
                 SavedCars = @saved,
                 ChannelErrors = @errors,
-                Error = @error
+                Error = @error,
+                ResultsJson = @results
             WHERE Id = @id;
             """;
         command.Parameters.AddWithValue("@id", id);
@@ -90,15 +91,8 @@ public sealed class TelegramScanStatus
         command.Parameters.AddWithValue("@saved", result?.SavedCars ?? 0);
         command.Parameters.AddWithValue("@errors", JsonSerializer.Serialize(result?.ChannelErrors ?? new Dictionary<string, string>()));
         command.Parameters.Add("@error", SqlDbType.NVarChar, -1).Value = (object?)error ?? DBNull.Value;
+        command.Parameters.Add("@results", SqlDbType.NVarChar, -1).Value = result == null ? DBNull.Value : (object)JsonSerializer.Serialize(result.Value);
         await command.ExecuteNonQueryAsync(ct);
-        if (result != null)
-        {
-            await using var save = connection.CreateCommand();
-            save.CommandText = "UPDATE dbo.TelegramScanJobs SET ResultsJson = @results WHERE Id = @id";
-            save.Parameters.AddWithValue("@id", id);
-            save.Parameters.Add("@results", SqlDbType.NVarChar, -1).Value = JsonSerializer.Serialize(result.Value);
-            await save.ExecuteNonQueryAsync(ct);
-        }
     }
 
     public async Task<object> ReadResultsAsync(CancellationToken ct)
