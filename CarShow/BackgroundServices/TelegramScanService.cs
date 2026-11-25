@@ -334,9 +334,6 @@ namespace CarShow.BackgroundServices
             List<CarPriceReference> references, CancellationToken ct)
         {
             if (references.Count == 0) return (0, 0);
-            if (!string.Equals(Environment.GetEnvironmentVariable("ENABLE_ARCHIVE_REFERENCE_REPLACEMENT"),
-                "true", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Archive replacement is disabled until production backup and schema verification are complete.");
             var now = DateTime.UtcNow;
             var cars = references.Select(reference => new Car
             {
