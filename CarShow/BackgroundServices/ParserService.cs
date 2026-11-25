@@ -149,20 +149,10 @@ namespace CarShow.BackgroundServices
             return Regex.Replace(Regex.Replace(text, @"[^\p{L}\p{N}]+", " "), @"\s+", " ").Trim().ToLowerInvariant();
         }
 
-        // Normalize only well-established spelling variants of the SAME trim feature.
-        // This is deliberately not fuzzy matching: unknown or conflicting trims remain rejected.
+        // Only structural normalization; semantic aliases belong to stored data.
         internal static string NormalizeTrimTerms(string value)
         {
-            var text = CatalogNormalize(value);
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:پانوراما|پانورامیک|پانا)(?![\p{L}\p{N}])", "پانوراما");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:اتوماتیک|اتومات)(?![\p{L}\p{N}])", "اتومات");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:دنده\s*ای|دنده)(?![\p{L}\p{N}])", "دنده");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:ارتقاء|ارتقا\s*یافته|ارتقا)(?![\p{L}\p{N}])", "ارتقا");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:تیو\s*تری|تیوتری|tu\s*3)(?![\p{L}\p{N}])", "tu3");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:آپشنال|اپشنال|ابشنال)(?![\p{L}\p{N}])", "اپشنال");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:6\s*سرعته|6\s*دنده)(?![\p{L}\p{N}])", "6 دنده");
-            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])سقف\s*فلزی?(?![\p{L}\p{N}])", "سقف فلز");
-            return Regex.Replace(text, @"\s+", " ").Trim();
+            return CatalogNormalize(value);
         }
 
         // All required trim tokens must be present, independently of word order.
@@ -173,8 +163,6 @@ namespace CarShow.BackgroundServices
             var required = NormalizeTrimTerms(trim).Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .ToHashSet(StringComparer.Ordinal);
             if (required.Count == 0 || !required.IsSubsetOf(actual)) return false;
-            // Explicitly conflicting transmission descriptions must not match.
-            if (actual.Contains("اتومات") && actual.Contains("دنده")) return false;
             return true;
         }
 
@@ -208,27 +196,12 @@ namespace CarShow.BackgroundServices
             var modelName = ResolveCatalogModel(text, catalog.Select(x => x.Model));
             if (modelName == null) return null;
             var modelTrims = catalog.Where(item => CatalogNormalize(item.Model) == modelName).ToList();
-            var actual = NormalizeTrimTerms(text).Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .ToHashSet(StringComparer.Ordinal);
-            if (actual.Contains("اتومات") && actual.Contains("دنده")) return null;
-
             var candidates = modelTrims.Where(item => TrimContains(text, item.Tip)).ToList();
             var specificTrims = candidates.Where(item => !candidates.Any(other =>
                 item.Id != other.Id && IsStrictlyMoreSpecificTrim(other.Tip, item.Tip))).ToList();
             if (specificTrims.Count != 1) return null;
 
-            // Do not accept a generic trim when another catalog trim has explicit
-            // distinguishing evidence in the ad but is not fully identified.
-            var selected = specificTrims[0];
-            var selectedTokens = NormalizeTrimTerms(selected.Tip).Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .ToHashSet(StringComparer.Ordinal);
-            foreach (var other in modelTrims.Where(item => item.Id != selected.Id))
-            {
-                var otherTokens = NormalizeTrimTerms(other.Tip).Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .ToHashSet(StringComparer.Ordinal);
-                if (otherTokens.Except(selectedTokens).Any(actual.Contains)) return null;
-            }
-            return selected.Id;
+            return specificTrims[0].Id;
         }
 
         // Canonical comparison key: 1405 / 405 / 05 => 2026.
