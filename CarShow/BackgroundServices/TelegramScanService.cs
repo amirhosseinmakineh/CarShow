@@ -278,7 +278,7 @@ namespace CarShow.BackgroundServices
                     Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : x.Reference == null ? "PriceDispersionOrInsufficientConsensus" : "ReferenceGroupApproved"
                 }),
                 RejectedReferences = comparison.Groups.Where(x => x.Reference == null).Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, x.CandidatePricesBillion, AdvertisementCount = x.CandidatePricesBillion.Count, Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : "PriceDispersionOrInsufficientConsensus" }),
-                References = approved.Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, x.Reference!.AdvertisementCount, x.Reference.ReferencePriceBillion, ComparedPricesBillion = x.CandidatePricesBillion })
+                References = approved.Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, AdvertisementCount = x.Reference!.AdvertisementCount, ReferencePriceBillion = x.Reference!.ReferencePriceBillion, ComparedPricesBillion = x.CandidatePricesBillion })
             };
         }
 
@@ -360,7 +360,7 @@ namespace CarShow.BackgroundServices
             {
                 Name = reference.Name,
                 Slug = "archive-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-                    Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[] { reference.Name, reference.Year })))).ToLowerInvariant(),
+                    Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[] { group.Model, group.Trim, group.Year })))).ToLowerInvariant(),
                 MarketPrice = reference.ReferencePriceBillion * 1_000_000_000m,
                 LastUpdated = now,
                 IsReferenceApproved = true,
