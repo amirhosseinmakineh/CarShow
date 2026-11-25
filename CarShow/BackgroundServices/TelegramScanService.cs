@@ -359,10 +359,10 @@ namespace CarShow.BackgroundServices
                 .GroupBy(x => ParserService.CatalogNormalize(x.Name))
                 .Where(x => x.Count() == 1).ToDictionary(x => x.Key, x => x.Single());
             var catalog = new List<(string Model, long? CompanyId, string CompanyName)>();
-            if (File.Exists(catalogPath))
+            if (System.IO.File.Exists(catalogPath))
             {
                 var document = new HtmlDocument();
-                document.LoadHtml(await File.ReadAllTextAsync(catalogPath, ct));
+                document.LoadHtml(await System.IO.File.ReadAllTextAsync(catalogPath, ct));
                 var rows = document.DocumentNode.SelectNodes("//tbody[@id='catalogRows']/tr");
                 if (rows != null)
                 foreach (var row in rows)
