@@ -300,7 +300,14 @@ namespace CarShow.BackgroundServices
             };
         }
 
-        public static long? MatchCatalogCar(string advertisement, IReadOnlyCollection<(long Id, string Model, string Tip)> catalog) => ParserService.MatchCatalogCar(advertisement, catalog);
+        public static long? MatchCatalogCar(string advertisement, IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            // Legacy catalog compatibility only; never used by archive comparison.
+            static string CanonicalTrim(string value) => Regex.Replace(
+                ParserService.CatalogNormalize(value), @"(?<!\p{L})اتومات(?!\p{L})", "اتوماتیک");
+            return ParserService.MatchCatalogCar(CanonicalTrim(advertisement),
+                catalog.Select(x => (x.Id, x.Model, Tip: CanonicalTrim(x.Tip))).ToList());
+        }
 
         // The database car is the unit of work. Never choose a CarId by searching
         // the entire catalog for each advertisement.
@@ -327,6 +334,9 @@ namespace CarShow.BackgroundServices
             List<CarPriceReference> references, CancellationToken ct)
         {
             if (references.Count == 0) return (0, 0);
+            if (!string.Equals(Environment.GetEnvironmentVariable("ENABLE_ARCHIVE_REFERENCE_REPLACEMENT"),
+                "true", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Archive replacement is disabled until production backup and schema verification are complete.");
             var now = DateTime.UtcNow;
             var cars = references.Select(reference => new Car
             {
