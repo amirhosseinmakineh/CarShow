@@ -255,7 +255,8 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             var models = await db.CarModels.AsNoTracking().Select(x => x.Name).ToListAsync(ct);
             var catalogRows = await db.Cars.AsNoTracking()
                 .Where(x => x.CarModelId != null && x.TipId != null)
-                .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name }).ToListAsync(ct);
+                .Select(x => new { x.Id, x.Name, Model = x.CarModel!.Name, Tip = x.Tip!.Name }).ToListAsync(ct);
+            var displayNames = catalogRows.ToDictionary(x => (long)x.Id, x => x.Name);
             var catalog = catalogRows.Select(x => (Id: (long)x.Id, x.Model, x.Tip)).ToList();
             if (models.Count == 0 || catalog.Count == 0)
                 throw new InvalidOperationException("Catalog unavailable; existing archive preserved.");
@@ -320,7 +321,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             batch.Columns.Add("Metadata", typeof(string));
             foreach (var post in posts.DistinctBy(p => (p.Username, p.MessageId)))
             {
-                var payload = ParserService.ExtractArchive(post.Text, models, catalog);
+                var payload = ParserService.ExtractArchiveWithNames(post.Text, models, catalog, displayNames);
                 if (payload.Vehicles.Count == 0) continue;
                 batch.Rows.Add(post.MessageId, post.Username,
                     (object?)post.ChannelName ?? DBNull.Value,
