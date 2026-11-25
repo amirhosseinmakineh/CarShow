@@ -15,9 +15,74 @@ namespace CarShow.BackgroundServices
 {
     internal static class ParserService
     {
+        internal sealed record ArchivedVehicle(long? CarId, string Model, string? Trim, string? Year, string? Price, bool IsSale, string Evidence);
+        internal sealed record ArchivePayload(int Version, string OriginalText, List<ArchivedVehicle> Vehicles);
+
+        internal static ArchivePayload ExtractArchive(string message, IReadOnlyCollection<string> models,
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            var vehicles = new List<ArchivedVehicle>();
+            var isSale = !Regex.IsMatch(NormalizeText(message), @"خریدار|خریداری|خواهان|حواله|پیش\s*فروش|معاوضه");
+            var ads = ParseCatalog(message, models);
+            var owners = MatchAdvertisementOwners(ads, catalog);
+            for (var index = 0; index < ads.Count; index++)
+            {
+                var ad = ads[index];
+                var matches = models.Where(model => CatalogContains(ad.Name, model)).Distinct().ToList();
+                var specific = matches.Where(model => !matches.Any(other =>
+                    CatalogNormalize(other) != CatalogNormalize(model) && CatalogContains(other, model))).ToList();
+                if (specific.Count == 0) continue;
+                long? id = owners.TryGetValue(index, out var owner) ? owner : null;
+                var car = catalog.FirstOrDefault(x => x.Id == id);
+                var modelName = id.HasValue ? car.Model : specific.Count == 1 ? specific[0] : ad.Name;
+                vehicles.Add(new ArchivedVehicle(id, modelName, id.HasValue ? car.Tip : null,
+                    ad.Year, ad.Price, isSale, ad.Name));
+            }
+            return new ArchivePayload(1, message, vehicles);
+        }
+
+        internal static string FormatArchive(ArchivePayload payload) =>
+            string.Join("\n", payload.Vehicles.Select(x =>
+                string.Join(" ", new[] { x.Model, x.Trim, x.Year }.Where(v => !string.IsNullOrWhiteSpace(v))) +
+                (x.Price == null ? "" : " | " + x.Price) + (x.IsSale ? "" : " | غیر فروش")));
+
+        internal static Dictionary<int, long> MatchAdvertisementOwners(
+            IReadOnlyList<ParsedCar> advertisements,
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            var owners = new Dictionary<int, long>();
+            var ambiguous = new HashSet<int>();
+            var uniqueCars = catalog.GroupBy(x =>
+                (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
+                .Where(g => g.Count() == 1).Select(g => g.Single()).ToList();
+
+            foreach (var car in uniqueCars)
+            {
+                for (var i = 0; i < advertisements.Count; i++)
+                {
+                    var ad = advertisements[i];
+                    if (!CatalogContains(ad.Name, car.Model) || !TrimContains(ad.Name, car.Tip))
+                        continue;
+                    if (catalog.Any(other => other.Id != car.Id &&
+                        CatalogContains(ad.Name, other.Model) &&
+                        TrimContains(ad.Name, other.Tip) &&
+                        (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
+                         (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
+                          CatalogContains(other.Model, car.Model)))))
+                        continue;
+                    if (owners.TryGetValue(i, out var previous) && previous != car.Id)
+                        ambiguous.Add(i);
+                    else
+                        owners[i] = car.Id;
+                }
+            }
+            foreach (var i in ambiguous) owners.Remove(i);
+            return owners;
+        }
+
         internal static string CatalogNormalize(string? value)
         {
-            var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا')
+            var text = NormalizeText(value).Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا')
                 .Replace('ي', 'ی').Replace('ك', 'ک').Replace('\u200c', ' ');
             text = new string(text.Select(c => c >= '۰' && c <= '۹' ? (char)('0' + c - '۰') :
                 c >= '٠' && c <= '٩' ? (char)('0' + c - '٠') : c).ToArray());
@@ -160,7 +225,8 @@ namespace CarShow.BackgroundServices
             {
                 var result = new List<ParsedCar>();
                 if (string.IsNullOrWhiteSpace(message) || models.Count == 0) return result;
-                var lines = NormalizeArchiveYears(message, models).Replace("\r", "").Split('\n');
+                var prepared = Regex.Replace(NormalizeText(message), @"(?m)^([\s\p{P}\p{S}]*)(?:فروشنده|فروش|خریدارم|خریدار|موجودی|حواله)\s*[:：]?\s+", "$1");
+                var lines = NormalizeArchiveYears(prepared, models).Replace("\r", "").Split('\n');
                 var starts = Enumerable.Range(0, lines.Length)
                     .Where(index => IsCatalogVehicleHeader(CleanLine(lines[index]), models))
                     .ToList();

@@ -146,9 +146,9 @@ namespace CarShow.BackgroundServices
 
         // Load a committed archive snapshot once. A refresh uses a single SQL transaction,
         // so this one SELECT cannot observe its intermediate delete/insert steps.
-        private async Task<Dictionary<string, List<string>>> ReadArchivedMessagesAsync(CancellationToken ct)
+        private async Task<Dictionary<string, List<ParserService.ArchivePayload>>> ReadArchivedMessagesAsync(CancellationToken ct)
         {
-            var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, List<ParserService.ArchivePayload>>(StringComparer.OrdinalIgnoreCase);
             var connectionString = _db.Database.GetConnectionString()
                 ?? throw new InvalidOperationException("CarShow database connection string is missing.");
             await using var connection = new SqlConnection(connectionString);
@@ -157,15 +157,15 @@ namespace CarShow.BackgroundServices
             command.CommandTimeout = 120;
             command.CommandText = """
                 WITH Deduplicated AS (
-                    SELECT ChannelUsername, TelegramMessageId, [Text],
+                    SELECT ChannelUsername, TelegramMessageId, Metadata,
                            ROW_NUMBER() OVER (
                                PARTITION BY ChannelUsername, TelegramMessageId
                                ORDER BY CollectedAt DESC, Id DESC
                            ) AS rn
                     FROM dbo.TelegramRawArchiveSnapshots
-                    WHERE [Text] IS NOT NULL AND LEN([Text]) > 0
+                    WHERE Metadata IS NOT NULL AND ISJSON(Metadata) = 1
                 )
-                SELECT ChannelUsername, [Text]
+                SELECT ChannelUsername, Metadata
                 FROM Deduplicated
                 WHERE rn = 1
                 ORDER BY ChannelUsername, TelegramMessageId
@@ -175,9 +175,10 @@ namespace CarShow.BackgroundServices
             while (await reader.ReadAsync(ct))
             {
                 var channel = reader.GetString(0);
-                var message = reader.GetString(1);
+                var message = JsonSerializer.Deserialize<ParserService.ArchivePayload>(reader.GetString(1));
+                if (message?.Version != 1 || message.Vehicles == null) continue;
                 if (!result.TryGetValue(channel, out var posts))
-                    result[channel] = posts = new List<string>();
+                    result[channel] = posts = new List<ParserService.ArchivePayload>();
                 posts.Add(message);
             }
             return result;
@@ -200,19 +201,14 @@ namespace CarShow.BackgroundServices
                 .Where(x => x.CarModelId != null && x.TipId != null)
                 .Select(x => new { x.Id, Name = x.Name, Company = x.Company != null ? x.Company.Name : string.Empty, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
                 .ToListAsync(cancellationToken);
-            var modelNames = catalog.Select(x => x.Model).Distinct().ToArray();
-            // Database-first: one catalog car is the unit of work. Telegram is fetched
-            // once for efficiency, then searched independently for each database car.
-            var messages = messagesByChannel.SelectMany(channel => channel.Value).ToList();
-            var parsedCars = messages
-                .SelectMany(message => ParserService.ParseCatalog(message, modelNames))
-                .ToList();
-            var catalogTuples = catalog.Select(item => (Id: (long)item.Id, Model: item.Model, Tip: item.Tip)).ToList();
-            // Resolve ownership once to prevent a Telegram advertisement from being
-            // assigned to two overlapping model/trim catalog records.
-            var owners = MatchAdvertisementOwners(parsedCars, catalogTuples);
-            var adsByCar = owners.GroupBy(pair => pair.Value)
-                .ToDictionary(group => group.Key, group => group.Select(pair => parsedCars[pair.Key]).ToList());
+            var extracted = messagesByChannel.Values.SelectMany(x => x).SelectMany(x => x.Vehicles).ToList();
+            var parsedCars = extracted.Select(x => new ParsedCar { Name = x.Model, Year = x.Year, Price = x.Price }).ToList();
+            var adsByCar = extracted.Where(x => x.IsSale && x.CarId.HasValue)
+                .GroupBy(x => x.CarId!.Value)
+                .ToDictionary(g => g.Key, g => g.Select(x => new ParsedCar
+                {
+                    Name = "catalog:" + g.Key, Year = x.Year, Price = x.Price
+                }).ToList());
             var priceReferences = new List<CarPriceReference>();
             var rejectedReferences = new List<object>();
             foreach (var databaseCar in catalog.OrderBy(x => x.Id))
@@ -505,39 +501,8 @@ namespace CarShow.BackgroundServices
         // the entire catalog for each advertisement.
         // Match by database car, but retain only advertisements with one unambiguous owner.
         // The same matcher is used by the production scan and read-only diagnostics.
-        private static Dictionary<int, long> MatchAdvertisementOwners(
-            IReadOnlyList<ParsedCar> advertisements,
-            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
-        {
-            var owners = new Dictionary<int, long>();
-            var ambiguous = new HashSet<int>();
-            var uniqueCars = catalog.GroupBy(x =>
-                (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
-                .Where(g => g.Count() == 1).Select(g => g.Single()).ToList();
-
-            foreach (var car in uniqueCars)
-            {
-                for (var i = 0; i < advertisements.Count; i++)
-                {
-                    var ad = advertisements[i];
-                    if (!CatalogContains(ad.Name, car.Model) || !TrimContains(ad.Name, car.Tip))
-                        continue;
-                    if (catalog.Any(other => other.Id != car.Id &&
-                        CatalogContains(ad.Name, other.Model) &&
-                        TrimContains(ad.Name, other.Tip) &&
-                        (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
-                         (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
-                          CatalogContains(other.Model, car.Model)))))
-                        continue;
-                    if (owners.TryGetValue(i, out var previous) && previous != car.Id)
-                        ambiguous.Add(i);
-                    else
-                        owners[i] = car.Id;
-                }
-            }
-            foreach (var i in ambiguous) owners.Remove(i);
-            return owners;
-        }
+        private static Dictionary<int, long> MatchAdvertisementOwners(IReadOnlyList<ParsedCar> advertisements, IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+            => ParserService.MatchAdvertisementOwners(advertisements, catalog);
 
         private static List<ParsedCar> MatchAdvertisementsForCatalogCars(
             IReadOnlyCollection<ParsedCar> advertisements,
