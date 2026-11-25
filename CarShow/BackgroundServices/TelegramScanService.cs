@@ -352,22 +352,41 @@ namespace CarShow.BackgroundServices
                 "DECLARE @result int; EXEC @result = sp_getapplock @Resource = 'CarShow.ArchiveReferenceRefresh', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0; IF @result < 0 THROW 51000, 'Another reference refresh is running.', 1;", ct);
 
             // Catalog is only used after comparison, to resolve a unique company by model.
-            var catalog = await _db.Cars.AsNoTracking()
-                .Where(x => !x.IsDelete && !x.IsReferenceApproved && x.CompanyId != null
-                    && x.CarModel != null && x.Company != null && x.TipId != null)
-                .Select(x => new { Model = x.CarModel!.Name, x.CompanyId, CompanyName = x.Company!.Name })
-                .Distinct().ToListAsync(ct);
-            var companiesByModel = catalog.GroupBy(x => ParserService.CatalogNormalize(x.Model))
-                .Where(x => x.Select(y => y.CompanyId).Distinct().Count() == 1)
+            var catalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "Seed",
+                "CarShow_Final_Trimmed_Cars_Catalog_1405.html");
+            var companies = await _db.Companies.AsNoTracking().ToListAsync(ct);
+            var companyIds = companies.Where(x => !x.IsDelete)
+                .GroupBy(x => ParserService.CatalogNormalize(x.Name))
+                .Where(x => x.Count() == 1).ToDictionary(x => x.Key, x => x.Single());
+            var catalog = new List<(string Model, long? CompanyId, string CompanyName)>();
+            if (File.Exists(catalogPath))
+            {
+                var document = new HtmlDocument();
+                document.LoadHtml(await File.ReadAllTextAsync(catalogPath, ct));
+                var rows = document.DocumentNode.SelectNodes("//tbody[@id='catalogRows']/tr");
+                if (rows != null)
+                foreach (var row in rows)
+                {
+                    var cells = row.SelectNodes("./td");
+                    if (cells == null || cells.Count != 7) continue;
+                    var companyName = HtmlEntity.DeEntitize(cells[1].InnerText).Trim();
+                    var model = ParserService.CatalogNormalize(HtmlEntity.DeEntitize(cells[3].InnerText));
+                    if (model.Length == 0 || companyName.Length == 0) continue;
+                    companyIds.TryGetValue(ParserService.CatalogNormalize(companyName), out var company);
+                    catalog.Add((model, company?.Id, companyName));
+                }
+            }
+            var companiesByModel = catalog.GroupBy(x => x.Model)
+                .Where(x => x.Select(y => ParserService.CatalogNormalize(y.CompanyName)).Distinct().Count() == 1)
                 .ToDictionary(x => x.Key, x => x.First());
 
             var cars = references.Select(group => { var reference = group.Reference!;
                 companiesByModel.TryGetValue(ParserService.CatalogNormalize(group.Model), out var company);
-                group.CompanyName = company?.CompanyName;
+                group.CompanyName = company.CompanyName;
                 return new Car
             {
                 Name = reference.Name,
-                CompanyId = company?.CompanyId,
+                CompanyId = company.CompanyId,
                 Slug = "archive-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
                     Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[] { group.Model, group.Trim, group.Year })))).ToLowerInvariant(),
                 MarketPrice = reference.ReferencePriceBillion * 1_000_000_000m,
@@ -390,7 +409,7 @@ namespace CarShow.BackgroundServices
                 })
             }; }).ToList();
 
-            var existing = await _db.Cars.Where(x => x.IsReferenceApproved || x.Slug.StartsWith("archive-")).ToListAsync(ct);
+            var existing = await _db.Cars.ToListAsync(ct);
             var historyCarIds = (await _db.CarPriceHistories.Select(x => x.CarId)
                 .Distinct().ToListAsync(ct)).ToHashSet();
 
