@@ -419,31 +419,66 @@ public sealed class TelegramRawMessagesController : ControllerBase
     public IActionResult GetStatus() => Ok(_worker.Status);
 
     [HttpGet("export")]
-    public async Task<IActionResult> Export(CancellationToken ct)
+    public async Task<IActionResult> Export(CancellationToken cancellationToken)
     {
-        await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
-        await connection.OpenAsync(ct);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT TelegramMessageId, ChannelUsername, ChannelName, [Text], MessageUrl, PublishedAt, CollectedAt, Metadata
-            FROM dbo.TelegramRawArchiveSnapshots ORDER BY PublishedAt DESC, Id DESC;
-            """;
-        var items = new List<object>();
-        await using var reader = await command.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(20));
+        var ct = timeout.Token;
+        try
         {
-            var metadata = reader.IsDBNull(7) ? null : System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(reader.GetString(7));
-            var version = metadata?["Version"]?.GetValue<int>();
-            items.Add(new {
-                telegramMessageId = reader.GetInt64(0), channelUsername = reader.GetString(1),
-                channelName = reader.IsDBNull(2) ? null : reader.GetString(2),
-                text = reader.GetString(3), messageUrl = reader.GetString(4),
-                publishedAt = reader.GetDateTimeOffset(5), collectedAt = reader.GetDateTimeOffset(6),
-                accepted = version == 2, metadata
-            });
+            await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
+            await connection.OpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandTimeout = 15;
+            command.CommandText = """
+                SELECT TelegramMessageId, ChannelUsername, ChannelName, [Text], MessageUrl, PublishedAt, CollectedAt, Metadata
+                FROM dbo.TelegramRawArchiveSnapshots ORDER BY PublishedAt DESC, Id DESC;
+                """;
+            using var buffer = new MemoryStream();
+            using var writer = new System.Text.Json.Utf8JsonWriter(buffer,
+                new System.Text.Json.JsonWriterOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+            writer.WriteStartObject();
+            writer.WriteString("exportedAt", DateTimeOffset.UtcNow);
+            writer.WriteStartArray("items");
+            var count = 0;
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                ct.ThrowIfCancellationRequested();
+                var rawMetadata = reader.IsDBNull(7) ? null : reader.GetString(7);
+                System.Text.Json.Nodes.JsonObject? metadata = null;
+                try
+                {
+                    if (rawMetadata != null)
+                        metadata = System.Text.Json.Nodes.JsonNode.Parse(rawMetadata) as System.Text.Json.Nodes.JsonObject;
+                }
+                catch (System.Text.Json.JsonException) { }
+                var accepted = metadata?["Version"] is System.Text.Json.Nodes.JsonValue version
+                    && version.TryGetValue<int>(out var value) && value == 2;
+                System.Text.Json.JsonSerializer.Serialize(writer, new {
+                    telegramMessageId = reader.GetInt64(0), channelUsername = reader.GetString(1),
+                    channelName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    text = reader.GetString(3), messageUrl = reader.GetString(4),
+                    publishedAt = reader.GetDateTimeOffset(5), collectedAt = reader.GetDateTimeOffset(6),
+                    accepted, metadata, invalidMetadata = metadata == null ? rawMetadata : null
+                });
+                count++;
+            }
+            writer.WriteEndArray();
+            writer.WriteNumber("totalCount", count);
+            writer.WriteEndObject();
+            writer.Flush();
+            return File(buffer.ToArray(), "application/json; charset=utf-8",
+                $"telegram-archive-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json");
         }
-        var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { exportedAt = DateTimeOffset.UtcNow, totalCount = items.Count, items });
-        return File(bytes, "application/json", $"telegram-archive-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json");
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return StatusCode(504, new { message = "Archive export timed out." });
+        }
+        catch (SqlException ex) when (ex.Number == -2)
+        {
+            return StatusCode(504, new { message = "Archive database query timed out." });
+        }
     }
 
     [HttpGet("channels")]
