@@ -132,34 +132,11 @@ namespace CarShow.BackgroundServices
             IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
         {
             var owners = new Dictionary<int, long>();
-            var ambiguous = new HashSet<int>();
-            var uniqueCars = catalog.GroupBy(x =>
-                (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
-                .Where(g => g.Count() == 1).Select(g => g.Single()).ToList();
-
-            var models = catalog.Select(x => x.Model).Distinct().ToArray();
-            var resolvedModels = advertisements.Select(ad => ResolveCatalogModel(ad.Name, models)).ToArray();
-            foreach (var car in uniqueCars)
+            for (var i = 0; i < advertisements.Count; i++)
             {
-                for (var i = 0; i < advertisements.Count; i++)
-                {
-                    var ad = advertisements[i];
-                    if (resolvedModels[i] != CatalogNormalize(car.Model) || !TrimContains(ad.Name, car.Tip))
-                        continue;
-                    if (catalog.Any(other => other.Id != car.Id &&
-                        resolvedModels[i] == CatalogNormalize(other.Model) &&
-                        TrimContains(ad.Name, other.Tip) &&
-                        (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
-                         (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
-                          CatalogContains(other.Model, car.Model)))))
-                        continue;
-                    if (owners.TryGetValue(i, out var previous) && previous != car.Id)
-                        ambiguous.Add(i);
-                    else
-                        owners[i] = car.Id;
-                }
+                var owner = MatchCatalogCar(advertisements[i].Name, catalog);
+                if (owner.HasValue) owners[i] = owner.Value;
             }
-            foreach (var i in ambiguous) owners.Remove(i);
             return owners;
         }
 
@@ -184,21 +161,21 @@ namespace CarShow.BackgroundServices
             text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:تیو\s*تری|تیوتری|tu\s*3)(?![\p{L}\p{N}])", "tu3");
             text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:آپشنال|اپشنال|ابشنال)(?![\p{L}\p{N}])", "اپشنال");
             text = Regex.Replace(text, @"(?<![\p{L}\p{N}])(?:6\s*سرعته|6\s*دنده)(?![\p{L}\p{N}])", "6 دنده");
+            text = Regex.Replace(text, @"(?<![\p{L}\p{N}])سقف\s*فلزی?(?![\p{L}\p{N}])", "سقف فلز");
             return Regex.Replace(text, @"\s+", " ").Trim();
         }
 
-        // Every catalog Tip.Name generates its own regex; the catalog vocabulary is
-        // never restricted to the hard-coded spelling aliases above.
+        // All required trim tokens must be present, independently of word order.
         internal static bool TrimContains(string advertisement, string trim)
         {
-            var value = NormalizeTrimTerms(advertisement);
-            var token = NormalizeTrimTerms(trim);
-            if (token.Length == 0) return false;
-            var words = token.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var pattern = @"(?<![\p{L}\p{N}])" +
-                string.Join(@"\s+", words.Select(Regex.Escape)) +
-                @"(?![\p{L}\p{N}])";
-            return Regex.IsMatch(value, pattern, RegexOptions.CultureInvariant);
+            var actual = NormalizeTrimTerms(advertisement).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet(StringComparer.Ordinal);
+            var required = NormalizeTrimTerms(trim).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet(StringComparer.Ordinal);
+            if (required.Count == 0 || !required.IsSubsetOf(actual)) return false;
+            // Explicitly conflicting transmission descriptions must not match.
+            if (actual.Contains("اتومات") && actual.Contains("دنده")) return false;
+            return true;
         }
 
         // Compare normalized trim feature tokens independent of word order.
@@ -230,15 +207,28 @@ namespace CarShow.BackgroundServices
 
             var modelName = ResolveCatalogModel(text, catalog.Select(x => x.Model));
             if (modelName == null) return null;
-            var candidates = catalog.Where(item =>
-                CatalogNormalize(item.Model) == modelName &&
-                TrimContains(text, item.Tip)).ToList();
+            var modelTrims = catalog.Where(item => CatalogNormalize(item.Model) == modelName).ToList();
+            var actual = NormalizeTrimTerms(text).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet(StringComparer.Ordinal);
+            if (actual.Contains("اتومات") && actual.Contains("دنده")) return null;
 
-            // More specific trim wins only if all other matching trims are its
-            // component phrases. Independent trim matches mean ambiguous ad.
+            var candidates = modelTrims.Where(item => TrimContains(text, item.Tip)).ToList();
             var specificTrims = candidates.Where(item => !candidates.Any(other =>
                 item.Id != other.Id && IsStrictlyMoreSpecificTrim(other.Tip, item.Tip))).ToList();
-            return specificTrims.Count == 1 ? specificTrims[0].Id : null;
+            if (specificTrims.Count != 1) return null;
+
+            // Do not accept a generic trim when another catalog trim has explicit
+            // distinguishing evidence in the ad but is not fully identified.
+            var selected = specificTrims[0];
+            var selectedTokens = NormalizeTrimTerms(selected.Tip).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (var other in modelTrims.Where(item => item.Id != selected.Id))
+            {
+                var otherTokens = NormalizeTrimTerms(other.Tip).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .ToHashSet(StringComparer.Ordinal);
+                if (otherTokens.Except(selectedTokens).Any(actual.Contains)) return null;
+            }
+            return selected.Id;
         }
 
         // Canonical comparison key: 1405 / 405 / 05 => 2026.
