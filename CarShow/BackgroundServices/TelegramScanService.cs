@@ -187,7 +187,10 @@ namespace CarShow.BackgroundServices
         private static readonly SemaphoreSlim FinalScanGate = new(1, 1);
 
         private sealed record ArchiveGroup(string Name, string Model, string Trim, string Year, List<decimal> CandidatePricesBillion,
-            CarPriceReference? Reference);
+            CarPriceReference? Reference)
+        {
+            public string? CompanyName { get; set; }
+        }
 
         private sealed record ArchiveComparison(int ParsedCars, int EligibleAdvertisements,
             Dictionary<string, int> RejectedByReason, List<ArchiveGroup> Groups);
@@ -266,7 +269,7 @@ namespace CarShow.BackgroundServices
                     Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : x.Reference == null ? "PriceDispersionOrInsufficientConsensus" : "ReferenceGroupApproved"
                 }),
                 RejectedReferences = comparison.Groups.Where(x => x.Reference == null).Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, x.CandidatePricesBillion, AdvertisementCount = x.CandidatePricesBillion.Count, Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : "PriceDispersionOrInsufficientConsensus" }),
-                References = approved.Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, AdvertisementCount = x.Reference!.AdvertisementCount, ReferencePriceBillion = x.Reference!.ReferencePriceBillion, ComparedPricesBillion = x.CandidatePricesBillion })
+                References = approved.Select(x => new { x.Name, x.CompanyName, ModelName = x.Model, TipName = x.Trim, x.Year, AdvertisementCount = x.Reference!.AdvertisementCount, ReferencePriceBillion = x.Reference!.ReferencePriceBillion, ComparedPricesBillion = x.CandidatePricesBillion })
             };
         }
 
@@ -344,9 +347,27 @@ namespace CarShow.BackgroundServices
         {
             if (references.Count == 0) return (0, 0);
             var now = DateTime.UtcNow;
-            var cars = references.Select(group => { var reference = group.Reference!; return new Car
+            await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                "DECLARE @result int; EXEC @result = sp_getapplock @Resource = 'CarShow.ArchiveReferenceRefresh', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0; IF @result < 0 THROW 51000, 'Another reference refresh is running.', 1;", ct);
+
+            // Catalog is only used after comparison, to resolve a unique company by model.
+            var catalog = await _db.Cars.AsNoTracking()
+                .Where(x => !x.IsDelete && !x.IsReferenceApproved && x.CompanyId != null
+                    && x.CarModel != null && x.Company != null && x.TipId != null)
+                .Select(x => new { Model = x.CarModel!.Name, x.CompanyId, CompanyName = x.Company!.Name })
+                .Distinct().ToListAsync(ct);
+            var companiesByModel = catalog.GroupBy(x => ParserService.CatalogNormalize(x.Model))
+                .Where(x => x.Select(y => y.CompanyId).Distinct().Count() == 1)
+                .ToDictionary(x => x.Key, x => x.First());
+
+            var cars = references.Select(group => { var reference = group.Reference!;
+                companiesByModel.TryGetValue(ParserService.CatalogNormalize(group.Model), out var company);
+                group.CompanyName = company?.CompanyName;
+                return new Car
             {
                 Name = reference.Name,
+                CompanyId = company?.CompanyId,
                 Slug = "archive-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
                     Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[] { group.Model, group.Trim, group.Year })))).ToLowerInvariant(),
                 MarketPrice = reference.ReferencePriceBillion * 1_000_000_000m,
@@ -369,10 +390,7 @@ namespace CarShow.BackgroundServices
                 })
             }; }).ToList();
 
-            await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-            await _db.Database.ExecuteSqlRawAsync(
-                "DECLARE @result int; EXEC @result = sp_getapplock @Resource = 'CarShow.ArchiveReferenceRefresh', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0; IF @result < 0 THROW 51000, 'Another reference refresh is running.', 1;", ct);
-            var existing = await _db.Cars.ToListAsync(ct);
+            var existing = await _db.Cars.Where(x => x.IsReferenceApproved || x.Slug.StartsWith("archive-")).ToListAsync(ct);
             var historyCarIds = (await _db.CarPriceHistories.Select(x => x.CarId)
                 .Distinct().ToListAsync(ct)).ToHashSet();
 
@@ -397,11 +415,15 @@ namespace CarShow.BackgroundServices
                     (x.Slug == car.Slug || (x.Name == car.Name && ExistingYear(x) == year))).ToList();
                 var previous = matches.Count == 1 ? matches[0] : null;
                 if (previous != null)
+                {
                     car.ImageName = previous.ImageName;
+                    car.CompanyId ??= previous.CompanyId;
+                }
                 if (previous != null && historyCarIds.Contains(previous.Id))
                 {
                     // Preserve the identity of cars referenced by price history.
                     previous.Name = car.Name;
+                    previous.CompanyId = car.CompanyId ?? previous.CompanyId;
                     previous.Slug = car.Slug;
                     previous.Description = car.Description;
                     previous.MarketPrice = car.MarketPrice;
