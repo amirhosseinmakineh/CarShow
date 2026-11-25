@@ -48,6 +48,38 @@ public sealed class TelegramManagementController : ControllerBase
         var json = System.Text.Json.JsonSerializer.SerializeToNode(payload);
         var results = json?["results"] as JsonObject;
         var references = results?["References"] as JsonArray ?? results?["references"] as JsonArray;
+        if (references is null && json is JsonObject response)
+        {
+            var rows = await _db.Cars.AsNoTracking()
+                .Where(car => car.IsReferenceApproved && !car.IsDelete)
+                .Select(car => new { car.Name, car.Description })
+                .ToListAsync(cancellationToken);
+            references = new JsonArray();
+            foreach (var row in rows)
+            {
+                if (string.IsNullOrWhiteSpace(row.Description)) continue;
+                JsonObject? metadata;
+                try { metadata = JsonNode.Parse(row.Description) as JsonObject; }
+                catch (System.Text.Json.JsonException) { continue; }
+                if (metadata?["Type"]?.ToString() != "TelegramPriceReference") continue;
+                if (metadata["CurrentYears"] is not JsonObject years) continue;
+                foreach (var year in years)
+                {
+                    if (year.Value is not JsonObject reference) continue;
+                    var item = (JsonObject)reference.DeepClone();
+                    item["Name"] = row.Name;
+                    item["Year"] = year.Key;
+                    item["ModelName"] = metadata["ModelName"]?.DeepClone();
+                    item["TipName"] = metadata["TipName"]?.DeepClone();
+                    references.Add(item);
+                }
+            }
+            results ??= new JsonObject();
+            results["References"] = references;
+            results["ReferenceCount"] = references.Count;
+            results["ReferenceSource"] = "PersistedApprovedCars";
+            if (results.Parent is null) response["results"] = results;
+        }
         if (references is not null)
         {
             var ids = references
