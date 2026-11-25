@@ -209,19 +209,7 @@ namespace CarShow.BackgroundServices
                     reasons["DuplicateAdvertisement"] = reasons.GetValueOrDefault("DuplicateAdvertisement") + 1;
                     continue;
                 }
-                var model = ParserService.CatalogNormalize(vehicle.Model);
-                var trim = ParserService.CatalogNormalize(vehicle.Trim);
-                // Legacy archive rows store the complete identity in Model.
-                // Split only explicit trim markers; never guess an unspecified trim.
-                if (trim.Length == 0)
-                {
-                    var marker = Regex.Match(model, @"(?<!\S)(?:اتوماتیک|اتومات|دنده ای|دنده|پانوراما|پانا|سقف|تیپ|توربو|اپشنال|آپشنال|پلاس|v[1-4]|gl|g|cv t|cvt|mt|at)(?!\S)");
-                    if (marker.Success && marker.Index > 0)
-                    {
-                        trim = model[marker.Index..];
-                        model = model[..marker.Index].Trim();
-                    }
-                }
+                var (model, trim) = ParserService.SplitArchiveIdentity(vehicle.Model, vehicle.Trim);
                 var name = model + " " + trim;
                 var year = NormalizeManufacturingYear(vehicle.Year);
                 var reason = !vehicle.IsSale ? "NonSale" :
