@@ -196,63 +196,13 @@ namespace CarShow.BackgroundServices
             if (messagesByChannel.Count == 0)
                 return new TelegramScanOutcome(422, new { Message = "Telegram archive is empty; no prices were changed." });
 
-            // Read the catalog before parsing; the model vocabulary is database-driven.
-            var catalog = await _db.Cars.AsNoTracking()
-                .Where(x => x.CarModelId != null && x.TipId != null)
-                .Select(x => new { x.Id, Name = x.Name, Company = x.Company != null ? x.Company.Name : string.Empty, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
-                .ToListAsync(cancellationToken);
-            var extracted = messagesByChannel.Values.SelectMany(x => x).SelectMany(x => x.Vehicles).Where(x => x.IsSale).ToList();
-            var parsedCars = extracted.Select(x => new ParsedCar { Name = x.Evidence, Year = x.Year, Price = x.Price }).ToList();
-            var catalogTuples = catalog.Select(x => (Id: (long)x.Id, x.Model, x.Tip)).ToList();
-            var owners = MatchAdvertisementOwners(parsedCars, catalogTuples);
-            var adsByCar = owners.GroupBy(x => x.Value)
-                .ToDictionary(g => g.Key, g => g.Select(x => parsedCars[x.Key]).ToList());
-            var priceReferences = new List<CarPriceReference>();
+            var parsedCars = messagesByChannel.Values.SelectMany(x => x)
+                .SelectMany(x => x.Vehicles).Where(x => x.IsSale)
+                .Select(x => new ParsedCar { Name = x.Evidence, Year = x.Year, Price = x.Price }).ToList();
+            var priceReferences = BuildArchiveReferences(parsedCars, cancellationToken);
             var rejectedReferences = new List<object>();
-            foreach (var databaseCar in catalog.OrderBy(x => x.Id))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                adsByCar.TryGetValue(databaseCar.Id, out var carAdvertisements);
-                var matched = (carAdvertisements ?? new List<ParsedCar>())
-                    .Where(ad => NormalizeManufacturingYear(ad.Year) != null &&
-                        CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out _))
-                    .Select(ad => new ParsedCar
-                    {
-                        Name = "catalog:" + databaseCar.Id,
-                        Year = NormalizeManufacturingYear(ad.Year),
-                        Price = ad.Price
-                    }).ToList();
-                if (matched.Count == 0) continue;
-                // Compare only the same catalog car and manufacturing year.
-                var built = CarPriceReferenceBuilder.Build(matched);
-                priceReferences.AddRange(built);
-                foreach (var yearGroup in matched.GroupBy(ad => ad.Year))
-                {
-                    if (built.Any(reference => reference.Year == yearGroup.Key))
-                        continue;
-                    var prices = yearGroup.Select(ad =>
-                    {
-                        decimal amount;
-                        return CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out amount)
-                            ? (decimal?)amount : null;
-                    }).Where(amount => amount.HasValue).Select(amount => amount.Value)
-                        .OrderBy(amount => amount).ToList();
-                    rejectedReferences.Add(new
-                    {
-                        CarId = databaseCar.Id,
-                        Year = yearGroup.Key,
-                        Status = "NeedsReview",
-                        Reason = "PriceDispersionOrInsufficientConsensus",
-                        CandidatePricesBillion = prices,
-                        AdvertisementCount = prices.Count
-                    });
-                }
-            }
-
-            // No successful references means no database mutation: preserve existing prices.
-            var savedCars = priceReferences.Count == 0
-                ? 0
-                : await SaveReferenceCarsAsync(priceReferences, rejectedReferences, cancellationToken);
+            var savedCars = priceReferences.Count == 0 ? 0 :
+                await ReplaceReferenceCarsAsync(priceReferences, cancellationToken);
 
             _logger.LogInformation(
                 "Telegram scan completed. Channels: {ChannelCount}, Messages: {MessageCount}, Parsed cars: {CarCount}, Reference groups: {ReferenceCount}",
@@ -304,25 +254,19 @@ namespace CarShow.BackgroundServices
                 SavedCars = savedCars,
                 ChannelErrors = channelErrors,
                 RejectedReferences = rejectedReferences,
-                References = priceReferences.Select(reference =>
+                References = priceReferences.Select(reference => new
                 {
-                    var carIdText = reference.Name.StartsWith("catalog:", StringComparison.Ordinal)
-                        ? reference.Name.Substring("catalog:".Length) : string.Empty;
-                    var car = long.TryParse(carIdText, out var carId)
-                        ? catalog.FirstOrDefault(item => item.Id == carId) : null;
-                    return new
-                    {
-                        reference.Name,
-                        CarName = car?.Name ?? reference.Name,
-                        CompanyName = car?.Company ?? string.Empty,
-                        ModelName = car?.Model ?? string.Empty,
-                        TipName = car?.Tip ?? string.Empty,
-                        reference.Year,
-                        reference.AdvertisementCount,
-                        reference.ReferencePriceBillion,
-                        reference.ComparedPricesBillion
-                    };
+                    reference.Name,
+                    CarName = reference.Name,
+                    CompanyName = string.Empty,
+                    ModelName = reference.Name,
+                    TipName = string.Empty,
+                    reference.Year,
+                    reference.AdvertisementCount,
+                    reference.ReferencePriceBillion,
+                    reference.ComparedPricesBillion
                 }).ToList()
+            }).ToList()
             })
             {
                 TotalChannels = messagesByChannel.Count,
@@ -333,6 +277,74 @@ namespace CarShow.BackgroundServices
                 SavedCars = savedCars,
                 ChannelErrors = channelErrors
             };
+        }
+
+        private static List<CarPriceReference> BuildArchiveReferences(
+            List<ParsedCar> advertisements, CancellationToken cancellationToken)
+        {
+            var references = new List<CarPriceReference>();
+            var groups = advertisements.Where(x => !string.IsNullOrWhiteSpace(x.Name)
+                && !string.IsNullOrWhiteSpace(x.Year)
+                && CarPriceReferenceBuilder.TryConvertPrice(x.Price, out _))
+                .GroupBy(x => (x.Name, x.Year));
+            foreach (var group in groups)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                // Isolate each exact archive identity from legacy model aliases.
+                var samples = group.Select(x => new ParsedCar
+                {
+                    Name = "catalog:1", Year = x.Year, Price = x.Price
+                }).ToList();
+                foreach (var reference in CarPriceReferenceBuilder.Build(samples))
+                {
+                    references.Add(new CarPriceReference
+                    {
+                        Name = group.Key.Name,
+                        Year = group.Key.Year!,
+                        AdvertisementCount = reference.AdvertisementCount,
+                        ComparedPricesBillion = reference.ComparedPricesBillion,
+                        MinPriceBillion = reference.MinPriceBillion,
+                        MaxPriceBillion = reference.MaxPriceBillion,
+                        ReferencePriceBillion = reference.ReferencePriceBillion,
+                        ReferencePriceText = reference.ReferencePriceText
+                    });
+                }
+            }
+            return references;
+        }
+
+        private async Task<int> ReplaceReferenceCarsAsync(
+            List<CarPriceReference> references, CancellationToken cancellationToken)
+        {
+            var now = DateTime.UtcNow;
+            var cars = references.Select(reference => new Car
+            {
+                Name = reference.Name,
+                Slug = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    Encoding.UTF8.GetBytes(reference.Name + "|" + reference.Year))).ToLowerInvariant(),
+                MarketPrice = reference.ReferencePriceBillion * 1_000_000_000m,
+                IsReferenceApproved = true,
+                LastUpdated = now,
+                Description = JsonSerializer.Serialize(new
+                {
+                    Type = "TelegramPriceReference",
+                    reference.Year,
+                    Years = new Dictionary<string, CarPriceReference> { [reference.Year] = reference },
+                    CurrentYears = new Dictionary<string, CarPriceReference> { [reference.Year] = reference },
+                    reference.AdvertisementCount,
+                    reference.ReferencePriceBillion,
+                    ComparisonApproved = true,
+                    PriceStatus = "Approved",
+                    ComparedAtUtc = now
+                })
+            }).ToList();
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+            var previous = await _db.Cars.ToListAsync(cancellationToken);
+            _db.Cars.RemoveRange(previous);
+            _db.Cars.AddRange(cars);
+            await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return cars.Count;
         }
 
         // Diagnostic-only classification; matching and reference-price rules remain unchanged.
