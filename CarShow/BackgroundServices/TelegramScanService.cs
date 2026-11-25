@@ -198,15 +198,35 @@ namespace CarShow.BackgroundServices
             var eligible = new List<ParsedCar>();
             var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
             var parsed = 0;
-            foreach (var vehicle in archive.Values.SelectMany(x => x).SelectMany(x => x.Vehicles))
+            var seen = new HashSet<(string Text, string Model, string? Trim, string? Year, string? Price)>();
+            foreach (var message in archive.Values.SelectMany(x => x))
+            foreach (var vehicle in message.Vehicles)
             {
                 ct.ThrowIfCancellationRequested();
                 parsed++;
-                var name = string.IsNullOrWhiteSpace(vehicle.Trim) ? vehicle.Model :
-                    vehicle.Model + " " + vehicle.Trim;
+                if (!seen.Add((ParserService.CatalogNormalize(message.OriginalText), vehicle.Model, vehicle.Trim, vehicle.Year, vehicle.Price)))
+                {
+                    reasons["DuplicateAdvertisement"] = reasons.GetValueOrDefault("DuplicateAdvertisement") + 1;
+                    continue;
+                }
+                var model = ParserService.CatalogNormalize(vehicle.Model);
+                var trim = ParserService.CatalogNormalize(vehicle.Trim);
+                // Legacy archive rows store the complete identity in Model.
+                // Split only explicit trim markers; never guess an unspecified trim.
+                if (trim.Length == 0)
+                {
+                    var marker = Regex.Match(model, @"(?<!\S)(?:اتوماتیک|اتومات|دنده ای|دنده|پانوراما|پانا|سقف|تیپ|توربو|اپشنال|آپشنال|پلاس|v[1-4]|gl|g|cv t|cvt|mt|at)(?!\S)");
+                    if (marker.Success && marker.Index > 0)
+                    {
+                        trim = model[marker.Index..];
+                        model = model[..marker.Index].Trim();
+                    }
+                }
+                var name = model + " " + trim;
                 var year = NormalizeManufacturingYear(vehicle.Year);
                 var reason = !vehicle.IsSale ? "NonSale" :
                     string.IsNullOrWhiteSpace(vehicle.Model) ? "EmptyVehicleName" :
+                    model.Length == 0 || trim.Length == 0 ? "MissingOrInvalidTrim" :
                     year == null ? "MissingOrInvalidYear" :
                     !CarPriceReferenceBuilder.TryConvertPrice(vehicle.Price, out _) ? "MissingOrInvalidPrice" : null;
                 if (reason != null)
@@ -226,7 +246,7 @@ namespace CarShow.BackgroundServices
                     CarPriceReferenceBuilder.TryConvertPrice(x.Price, out var price);
                     return price;
                 }).OrderBy(x => x).ToList();
-                var reference = CarPriceReferenceBuilder.BuildExact(group).SingleOrDefault();
+                var reference = prices.Count >= 2 ? CarPriceReferenceBuilder.BuildExact(group).SingleOrDefault() : null;
                 groups.Add(new ArchiveGroup(group.Key.Name, group.Key.Year, prices, reference));
             }
             return new ArchiveComparison(parsed, eligible.Count, reasons, groups);
@@ -255,7 +275,7 @@ namespace CarShow.BackgroundServices
                     x.Name, x.Year, x.CandidatePricesBillion,
                     AdvertisementCount = x.CandidatePricesBillion.Count,
                     FinalReferencePrice = x.Reference?.ReferencePriceBillion,
-                    Reason = x.Reference == null ? "PriceDispersionOrInsufficientConsensus" : "ReferenceGroupApproved"
+                    Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : x.Reference == null ? "PriceDispersionOrInsufficientConsensus" : "ReferenceGroupApproved"
                 }),
                 References = approved.Select(x => x.Reference)
             };
