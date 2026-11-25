@@ -186,7 +186,7 @@ namespace CarShow.BackgroundServices
 
         private static readonly SemaphoreSlim FinalScanGate = new(1, 1);
 
-        private sealed record ArchiveGroup(string Name, string Year, List<decimal> CandidatePricesBillion,
+        private sealed record ArchiveGroup(string Name, string Model, string Trim, string Year, List<decimal> CandidatePricesBillion,
             CarPriceReference? Reference);
 
         private sealed record ArchiveComparison(int ParsedCars, int EligibleAdvertisements,
@@ -195,7 +195,7 @@ namespace CarShow.BackgroundServices
         private static ArchiveComparison CompareArchive(
             Dictionary<string, List<ParserService.ArchivePayload>> archive, CancellationToken ct)
         {
-            var eligible = new List<ParsedCar>();
+            var eligible = new List<(string Model, string Trim, ParsedCar Car)>();
             var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
             var parsed = 0;
             var seen = new HashSet<(string Text, string Model, string? Trim, string? Year, string? Price)>();
@@ -234,20 +234,20 @@ namespace CarShow.BackgroundServices
                     reasons[reason] = reasons.GetValueOrDefault(reason) + 1;
                     continue;
                 }
-                eligible.Add(new ParsedCar { Name = name, Year = year!, Price = vehicle.Price! });
+                eligible.Add((model, trim, new ParsedCar { Name = name, Year = year!, Price = vehicle.Price! }));
             }
             var groups = new List<ArchiveGroup>();
-            foreach (var group in eligible.GroupBy(x => (x.Name, x.Year))
-                .OrderBy(x => x.Key.Name, StringComparer.Ordinal).ThenBy(x => x.Key.Year, StringComparer.Ordinal))
+            foreach (var group in eligible.GroupBy(x => (x.Model, x.Trim, x.Car.Year))
+                .OrderBy(x => x.Key.Model, StringComparer.Ordinal).ThenBy(x => x.Key.Trim, StringComparer.Ordinal).ThenBy(x => x.Key.Year, StringComparer.Ordinal))
             {
                 ct.ThrowIfCancellationRequested();
                 var prices = group.Select(x =>
                 {
-                    CarPriceReferenceBuilder.TryConvertPrice(x.Price, out var price);
+                    CarPriceReferenceBuilder.TryConvertPrice(x.Car.Price, out var price);
                     return price;
                 }).OrderBy(x => x).ToList();
-                var reference = prices.Count >= 2 ? CarPriceReferenceBuilder.BuildExact(group).SingleOrDefault() : null;
-                groups.Add(new ArchiveGroup(group.Key.Name, group.Key.Year, prices, reference));
+                var reference = prices.Count >= 2 ? CarPriceReferenceBuilder.BuildExact(group.Select(x => x.Car)).SingleOrDefault() : null;
+                groups.Add(new ArchiveGroup(group.Key.Model + " " + group.Key.Trim, group.Key.Model, group.Key.Trim, group.Key.Year, prices, reference));
             }
             return new ArchiveComparison(parsed, eligible.Count, reasons, groups);
         }
@@ -277,7 +277,8 @@ namespace CarShow.BackgroundServices
                     FinalReferencePrice = x.Reference?.ReferencePriceBillion,
                     Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : x.Reference == null ? "PriceDispersionOrInsufficientConsensus" : "ReferenceGroupApproved"
                 }),
-                References = approved.Select(x => x.Reference)
+                RejectedReferences = comparison.Groups.Where(x => x.Reference == null).Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, x.CandidatePricesBillion, AdvertisementCount = x.CandidatePricesBillion.Count, Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : "PriceDispersionOrInsufficientConsensus" }),
+                References = approved.Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, x.Reference!.AdvertisementCount, x.Reference.ReferencePriceBillion, ComparedPricesBillion = x.CandidatePricesBillion })
             };
         }
 
@@ -293,7 +294,7 @@ namespace CarShow.BackgroundServices
                 var references = comparison.Groups.Where(x => x.Reference != null)
                     .Select(x => x.Reference!).ToList();
                 var counts = references.Count == 0 ? (Deleted: 0, Inserted: 0) :
-                    await SaveReferenceCarsAsync(references, cancellationToken);
+                    await SaveReferenceCarsAsync(comparison.Groups.Where(x => x.Reference != null).ToList(), cancellationToken);
                 return new TelegramScanOutcome(200,
                     ComparisonReport(archive, comparison, counts.Deleted, counts.Inserted))
                 {
@@ -351,11 +352,11 @@ namespace CarShow.BackgroundServices
         }
 
         private async Task<(int Deleted, int Inserted)> SaveReferenceCarsAsync(
-            List<CarPriceReference> references, CancellationToken ct)
+            List<ArchiveGroup> references, CancellationToken ct)
         {
             if (references.Count == 0) return (0, 0);
             var now = DateTime.UtcNow;
-            var cars = references.Select(reference => new Car
+            var cars = references.Select(group => { var reference = group.Reference!; return new Car
             {
                 Name = reference.Name,
                 Slug = "archive-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
@@ -367,6 +368,8 @@ namespace CarShow.BackgroundServices
                 Description = JsonSerializer.Serialize(new
                 {
                     Type = "TelegramPriceReference",
+                    ModelName = group.Model,
+                    TipName = group.Trim,
                     reference.Year,
                     Years = new Dictionary<string, CarPriceReference> { [reference.Year] = reference },
                     CurrentYears = new Dictionary<string, CarPriceReference> { [reference.Year] = reference },
@@ -376,7 +379,7 @@ namespace CarShow.BackgroundServices
                     PriceStatus = "Approved",
                     ComparedAtUtc = now
                 })
-            }).ToList();
+            }; }).ToList();
 
             await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             await _db.Database.ExecuteSqlRawAsync(
