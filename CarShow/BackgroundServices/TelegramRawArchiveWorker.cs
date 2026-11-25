@@ -419,7 +419,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
     public IActionResult GetStatus() => Ok(_worker.Status);
 
     [HttpGet("export")]
-    public async Task<IActionResult> Export(CancellationToken cancellationToken)
+    public async Task<IActionResult> Export(CancellationToken cancellationToken, [FromQuery] long afterId = 0, [FromQuery] long? snapshotId = null, [FromQuery] int pageSize = 50)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(20));
@@ -431,9 +431,21 @@ public sealed class TelegramRawMessagesController : ControllerBase
             await using var command = connection.CreateCommand();
             command.CommandTimeout = 15;
             command.CommandText = """
-                SELECT TelegramMessageId, ChannelUsername, ChannelName, [Text], MessageUrl, PublishedAt, CollectedAt, Metadata
-                FROM dbo.TelegramRawArchiveSnapshots ORDER BY PublishedAt DESC, Id DESC;
+                SELECT TOP (@take) TelegramMessageId, ChannelUsername, ChannelName, [Text], MessageUrl, PublishedAt, CollectedAt, Metadata, Id
+                FROM dbo.TelegramRawArchiveSnapshots WHERE Id > @after AND Id <= @snapshot ORDER BY Id;
                 """;
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            if (!snapshotId.HasValue)
+            {
+                await using var boundary = connection.CreateCommand();
+                boundary.CommandTimeout = 15;
+                boundary.CommandText = "SELECT COALESCE(MAX(Id), CONVERT(bigint, 0)) FROM dbo.TelegramRawArchiveSnapshots;";
+                snapshotId = Convert.ToInt64(await boundary.ExecuteScalarAsync(ct));
+            }
+            command.Parameters.Add("@take", SqlDbType.Int).Value = pageSize;
+            command.Parameters.Add("@after", SqlDbType.BigInt).Value = afterId;
+            command.Parameters.Add("@snapshot", SqlDbType.BigInt).Value = snapshotId.Value;
+            var lastId = afterId;
             using var buffer = new MemoryStream();
             using var writer = new System.Text.Json.Utf8JsonWriter(buffer,
                 new System.Text.Json.JsonWriterOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
@@ -462,9 +474,13 @@ public sealed class TelegramRawMessagesController : ControllerBase
                     publishedAt = reader.GetDateTimeOffset(5), collectedAt = reader.GetDateTimeOffset(6),
                     accepted, metadata, invalidMetadata = metadata == null ? rawMetadata : null
                 });
+                lastId = reader.GetInt64(8);
                 count++;
             }
             writer.WriteEndArray();
+            writer.WriteNumber("snapshotId", snapshotId.Value);
+            writer.WriteNumber("nextAfterId", lastId);
+            writer.WriteBoolean("hasMore", count == pageSize && lastId < snapshotId.Value);
             writer.WriteNumber("totalCount", count);
             writer.WriteEndObject();
             writer.Flush();
