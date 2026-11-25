@@ -14,7 +14,7 @@ public sealed class AdminCatalogController : ControllerBase
 
     public AdminCatalogController(CarShowContext db) => _db = db;
 
-    // Show only currently approved reference cars in the admin listing.
+    // Show all non-deleted cars in the admin catalog.
     [HttpGet]
     public async Task<IActionResult> GetCatalog(
         [FromQuery] string? search,
@@ -25,9 +25,8 @@ public sealed class AdminCatalogController : ControllerBase
         pageNumber = Math.Max(0, pageNumber);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
-        // Counts and pagination must reflect the approved Cars records, not all catalog rows.
-        // The separate model-image management endpoint still exposes all model/trim options.
-        var all = _db.Cars.AsNoTracking().Where(x => !x.IsDelete && x.IsReferenceApproved);
+        // Counts and pagination include all non-deleted cars, regardless of reference approval.
+        var all = _db.Cars.AsNoTracking().Where(x => !x.IsDelete);
         var totalCars = await all.CountAsync(cancellationToken);
         var eligibleCars = await all.CountAsync(x =>
             x.CarModelId != null && x.TipId != null, cancellationToken);
