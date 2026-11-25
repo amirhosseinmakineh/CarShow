@@ -15,11 +15,15 @@ namespace CarShow.BackgroundServices
 {
     internal static class ParserService
     {
-        internal sealed record ArchivedVehicle(long? CarId, string Model, string? Trim, string? Year, string? Price, bool IsSale, string Evidence);
+        internal sealed record ArchivedVehicle(long? CarId, string Model, string? Trim, string? Year, string? Price, bool IsSale, string Evidence, string? DisplayName = null);
         internal sealed record ArchivePayload(int Version, string OriginalText, List<ArchivedVehicle> Vehicles);
 
         internal static ArchivePayload ExtractArchive(string message, IReadOnlyCollection<string> models,
-            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog) => ExtractArchiveWithNames(message, models, catalog, null);
+
+        internal static ArchivePayload ExtractArchiveWithNames(string message, IReadOnlyCollection<string> models,
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog,
+            IReadOnlyDictionary<long, string>? displayNames = null)
         {
             var vehicles = new List<ArchivedVehicle>();
             var isSale = !Regex.IsMatch(NormalizeText(message), @"خریدار|خریداری|خواهان|حواله|پیش\s*فروش|معاوضه");
@@ -36,14 +40,16 @@ namespace CarShow.BackgroundServices
                 var car = catalog.FirstOrDefault(x => x.Id == id);
                 var modelName = id.HasValue ? car.Model : specific.Count == 1 ? specific[0] : ad.Name;
                 vehicles.Add(new ArchivedVehicle(id, modelName, id.HasValue ? car.Tip : null,
-                    ad.Year, ad.Price, isSale, ad.Name));
+                    ad.Year, ad.Price, isSale, ad.Name,
+                    id.HasValue && displayNames != null && displayNames.TryGetValue(id.Value, out var displayName)
+                        ? displayName : null));
             }
             return new ArchivePayload(1, message, vehicles);
         }
 
         internal static string FormatArchive(ArchivePayload payload) =>
             string.Join("\n", payload.Vehicles.Select(x =>
-                string.Join(" ", new[] { x.Model, x.Trim, x.Year }.Where(v => !string.IsNullOrWhiteSpace(v))) +
+                string.Join(" ", new[] { string.IsNullOrWhiteSpace(x.DisplayName) ? string.Join(" ", new[] { x.Model, x.Trim }.Where(v => !string.IsNullOrWhiteSpace(v))) : x.DisplayName, x.Year }.Where(v => !string.IsNullOrWhiteSpace(v))) +
                 (x.Price == null ? "" : " | " + x.Price) + (x.IsSale ? "" : " | غیر فروش")));
 
         internal static Dictionary<int, long> MatchAdvertisementOwners(
