@@ -104,6 +104,29 @@ namespace CarShow.BackgroundServices
         private static string PersianDigits(string value) =>
             new string(value.Select(c => c >= '0' && c <= '9' ? (char)('۰' + c - '0') : c).ToArray());
 
+        // Resolve the model before checking any trim. A partial name is accepted
+        // only when its complete token identifies one catalog model unambiguously.
+        internal static string? ResolveCatalogModel(string advertisement, IEnumerable<string> catalogModels)
+        {
+            var models = catalogModels.Select(CatalogNormalize)
+                .Where(model => model.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+            var text = CatalogNormalize(advertisement);
+            var fullMatches = models.Where(model => CatalogContains(text, model)).ToList();
+            var specific = fullMatches.Where(model => !fullMatches.Any(other =>
+                other != model && CatalogContains(other, model))).ToList();
+            if (specific.Count > 1) return null;
+
+            var tokens = text.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
+            var partialMatches = models.Where(model => model.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Any(token => token.Length > 1 && tokens.Contains(token) &&
+                    models.Count(other => CatalogContains(other, token)) == 1)).ToList();
+            if (specific.Count == 1)
+                return partialMatches.Any(model => model != specific[0] &&
+                    !CatalogContains(specific[0], model)) ? null : specific[0];
+
+            return partialMatches.Count == 1 ? partialMatches[0] : null;
+        }
+
         internal static Dictionary<int, long> MatchAdvertisementOwners(
             IReadOnlyList<ParsedCar> advertisements,
             IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
@@ -114,15 +137,17 @@ namespace CarShow.BackgroundServices
                 (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
                 .Where(g => g.Count() == 1).Select(g => g.Single()).ToList();
 
+            var models = catalog.Select(x => x.Model).Distinct().ToArray();
+            var resolvedModels = advertisements.Select(ad => ResolveCatalogModel(ad.Name, models)).ToArray();
             foreach (var car in uniqueCars)
             {
                 for (var i = 0; i < advertisements.Count; i++)
                 {
                     var ad = advertisements[i];
-                    if (!CatalogContains(ad.Name, car.Model) || !TrimContains(ad.Name, car.Tip))
+                    if (resolvedModels[i] != CatalogNormalize(car.Model) || !TrimContains(ad.Name, car.Tip))
                         continue;
                     if (catalog.Any(other => other.Id != car.Id &&
-                        CatalogContains(ad.Name, other.Model) &&
+                        resolvedModels[i] == CatalogNormalize(other.Model) &&
                         TrimContains(ad.Name, other.Tip) &&
                         (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
                          (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
@@ -203,21 +228,10 @@ namespace CarShow.BackgroundServices
             var text = CatalogNormalize(advertisement);
             if (text.Length == 0) return null;
 
-            var models = catalog.Select(x => x.Model).Distinct(StringComparer.OrdinalIgnoreCase)
-                .Where(model => CatalogContains(text, model))
-                .OrderByDescending(model => CatalogNormalize(model).Length).ToList();
-            if (models.Count == 0) return null;
-
-            // A longer model may include a shorter model name (e.g. "207" vs "207 sd").
-            // Only discard shorter names when they are fully contained in the longer one.
-            var specificModels = models.Where(model => !models.Any(other =>
-                !string.Equals(model, other, StringComparison.OrdinalIgnoreCase) &&
-                CatalogContains(other, model))).ToList();
-            if (specificModels.Count != 1) return null;
-
-            var modelName = specificModels[0];
+            var modelName = ResolveCatalogModel(text, catalog.Select(x => x.Model));
+            if (modelName == null) return null;
             var candidates = catalog.Where(item =>
-                string.Equals(item.Model, modelName, StringComparison.OrdinalIgnoreCase) &&
+                CatalogNormalize(item.Model) == modelName &&
                 TrimContains(text, item.Tip)).ToList();
 
             // More specific trim wins only if all other matching trims are its
