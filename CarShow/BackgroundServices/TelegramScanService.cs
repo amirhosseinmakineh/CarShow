@@ -373,124 +373,79 @@ namespace CarShow.BackgroundServices
         // but never calls SaveReferenceCarsAsync and never modifies database records.
         public async Task<TelegramScanOutcome> DiagnoseRejectionsAsync(CancellationToken cancellationToken)
         {
-            var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var messagesByChannel = await GetLast100MessagesAsync(
-                Channels, cancellationToken, channelErrors, null);
+            var archive = await ReadArchivedMessagesAsync(cancellationToken);
             var catalog = await _db.Cars.AsNoTracking()
                 .Where(x => x.CarModelId != null && x.TipId != null)
-                .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
+                .Select(x => new { x.Id, x.Name, Model = x.CarModel!.Name, Tip = x.Tip!.Name, x.IsReferenceApproved, x.IsDelete })
                 .ToListAsync(cancellationToken);
-            var models = catalog.Select(x => x.Model).Distinct().ToArray();
-            var catalogTuples = catalog.Select(x => (Id: (long)x.Id, Model: x.Model, Tip: x.Tip)).ToList();
-            var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
-            var samples = new Dictionary<string, List<object>>(StringComparer.Ordinal);
-            var accepted = new List<ParsedCar>();
-            var parsedCount = 0;
-            var messages = messagesByChannel.Where(x => !channelErrors.ContainsKey(x.Key))
-                .SelectMany(x => x.Value).Distinct(StringComparer.Ordinal).ToList();
-            var noVehicleMessages = 0;
-
-            void Reject(string reason, ParsedCar car, string detail = "", string? matchedModel = null, int candidateCount = 0)
-            {
-                reasons[reason] = reasons.TryGetValue(reason, out var count) ? count + 1 : 1;
-                if (!samples.TryGetValue(reason, out var examples))
-                    samples[reason] = examples = new List<object>();
-                if (examples.Count < 5)
-                    examples.Add(new { car.Name, Year = NormalizeManufacturingYear(car.Year), car.Price, Reason = reason, Detail = detail, MatchedModel = matchedModel, CandidateCount = candidateCount });
-            }
-
-            var parsedAdvertisements = new List<ParsedCar>();
-            foreach (var message in messages)
-            {
-                var cars = ParserService.ParseCatalog(message, models);
-                if (cars.Count == 0) noVehicleMessages++;
-                parsedAdvertisements.AddRange(cars);
-            }
-            parsedCount = parsedAdvertisements.Count;
-            var owners = MatchAdvertisementOwners(parsedAdvertisements, catalogTuples);
-            for (var i = 0; i < parsedAdvertisements.Count; i++)
-            {
-                var car = parsedAdvertisements[i];
-                if (!owners.TryGetValue(i, out var id))
+            var tuples = catalog.Select(x => (Id: (long)x.Id, x.Model, x.Tip)).ToList();
+            var entries = archive.SelectMany(channel => channel.Value.SelectMany((message, index) =>
+                message.Vehicles.Where(vehicle => vehicle.IsSale).Select(vehicle => new
                 {
-                    var diagnosis = ExplainCatalogRejection(car.Name, catalogTuples);
-                    Reject(diagnosis.Reason == "UnclassifiedMatchFailure" ? "AmbiguousCatalogMatch" : diagnosis.Reason,
-                        car, diagnosis.Detail, diagnosis.Model, diagnosis.CandidateCount);
-                    continue;
-                }
-                var year = NormalizeManufacturingYear(car.Year);
-                if (year == null)
-                {
-                    Reject("MissingOrInvalidYear", car, "Manufacturing year was not extracted or unsupported.");
-                    continue;
-                }
-                if (!CarPriceReferenceBuilder.TryConvertPrice(car.Price, out _))
-                {
-                    Reject("MissingOrInvalidPrice", car, "Sale price missing or invalid.");
-                    continue;
-                }
-                accepted.Add(new ParsedCar { Name = "catalog:" + id, Year = year, Price = car.Price });
+                    Channel = channel.Key, MessageIndex = index, Vehicle = vehicle
+                }))).ToList();
+            var parsed = entries.Select(x => new ParsedCar
+            {
+                Name = x.Vehicle.Evidence, Year = x.Vehicle.Year, Price = x.Vehicle.Price
+            }).ToList();
+            var owners = MatchAdvertisementOwners(parsed, tuples);
+            var eligible = new List<ParsedCar>();
+            foreach (var pair in owners)
+            {
+                var ad = parsed[pair.Key];
+                var year = NormalizeManufacturingYear(ad.Year);
+                if (year != null && CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out _))
+                    eligible.Add(new ParsedCar { Name = "catalog:" + pair.Value, Year = year, Price = ad.Price });
             }
-
-            var groups = accepted.GroupBy(x => new { x.Name, x.Year }).ToList();
-            var references = CarPriceReferenceBuilder.Build(accepted);
+            var references = eligible.GroupBy(x => x.Name)
+                .SelectMany(group => CarPriceReferenceBuilder.Build(group.ToList())).ToList();
             var referenceKeys = references.Select(x => (x.Name, x.Year)).ToHashSet();
-            var rejectedGroups = groups.Where(x => !referenceKeys.Contains((x.Key.Name, x.Key.Year)))
-                .Select(x => new { x.Key.Name, x.Key.Year, Advertisements = x.Count() })
-                .ToList();
+            var rows = new List<object>();
+            var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var index = 0; index < parsed.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var ad = parsed[index];
+                var model = ParserService.ResolveCatalogModel(ad.Name, tuples.Select(x => x.Model));
+                var modelCandidates = tuples.Where(x => ParserService.CatalogNormalize(x.Model) == model).ToList();
+                var trimCandidates = modelCandidates.Where(x => ParserService.TrimContains(ad.Name, x.Tip)).ToList();
+                var matched = owners.TryGetValue(index, out var id);
+                var year = NormalizeManufacturingYear(ad.Year);
+                var validPrice = CarPriceReferenceBuilder.TryConvertPrice(ad.Price, out var price);
+                var reason = model == null ? "ModelNotResolved" :
+                    !matched ? (trimCandidates.Count == 0 ? "TrimNotFound" : "AmbiguousTrim") :
+                    year == null ? "MissingOrInvalidYear" :
+                    !validPrice ? "MissingOrInvalidPrice" :
+                    !referenceKeys.Contains(("catalog:" + id, year)) ? "PriceDispersionOrInsufficientConsensus" :
+                    "ReferenceGroupApproved";
+                reasons[reason] = reasons.TryGetValue(reason, out var count) ? count + 1 : 1;
+                rows.Add(new
+                {
+                    entries[index].Channel, entries[index].MessageIndex, ad.Name, ad.Year, ad.Price,
+                    NormalizedYear = year, PriceBillion = validPrice ? (decimal?)price : null,
+                    MatchedModel = modelCandidates.FirstOrDefault().Model,
+                    ModelCandidates = modelCandidates,
+                    TrimCandidates = trimCandidates,
+                    CarId = matched ? (long?)id : null,
+                    YearValid = year != null, PriceValid = validPrice, Reason = reason
+                });
+            }
             return new TelegramScanOutcome(200, new
             {
-                Note = "Read-only live fetch; counts can differ from a previous scan. No database writes.",
-                // Investigation mode: return every fetched Telegram message verbatim.
-                // No model, trim, year or price filters are applied to this dataset.
-                // RawMessage is intentionally not passed through NormalizeText.
-                RawTelegramMessages = messagesByChannel
-                    .SelectMany(channel => channel.Value.Select((message, index) => new
-                    {
-                        Channel = channel.Key,
-                        Index = index,
-                        RawMessage = message
-                    })).ToList(),
-                // Shadow token observations: no catalog matching, no price acceptance,
-                // and no changes to production reference-price calculations.
-                ShadowTokenObservations = messagesByChannel
-                    .SelectMany(channel => channel.Value.Select((message, index) => new
-                    {
-                        Channel = channel.Key,
-                        Index = index,
-                        Tokens = TelegramShadowExtractor.Inspect(message)
-                    })).ToList(),
-                // Parsed values are observational only; no catalog-match requirement.
-                ParsedAdvertisements = parsedAdvertisements.Select(car => new
-                {
-                    car.Name,
-                    car.Year,
-                    car.Price
-                }).ToList(),
-                TotalChannels = messagesByChannel.Count,
-                FailedChannels = channelErrors.Count,
-                MessagesProcessed = messages.Count,
-                MessagesWithoutRecognizedCar = noVehicleMessages,
-                ParsedCars = parsedCount,
+                Note = "Read-only archived comparison; group approval does not imply every sample survived price filtering.",
+                TotalChannels = archive.Count,
+                MessagesProcessed = archive.Values.Sum(x => x.Count),
+                ParsedCars = parsed.Count,
                 CatalogCars = catalog.Count,
-                RejectedByReason = reasons,
-                RejectedExamples = samples,
-                MatchedWithValidYearAndPrice = accepted.Count,
-                EligibleGroups = groups.Count,
+                MatchedWithValidYearAndPrice = eligible.Count,
                 ReferenceCount = references.Count,
-                SingleAdvertisementReferences = references.Count(x => x.AdvertisementCount == 1),
-                RejectedPriceConsensusGroups = rejectedGroups.Count,
-                RejectedPriceConsensusExamples = rejectedGroups.Take(10).ToList(),
-                ChannelErrors = channelErrors
-            })
-            {
-                TotalChannels = messagesByChannel.Count,
-                FailedChannels = channelErrors.Count,
-                MessagesProcessed = messages.Count,
-                ParsedCars = parsedCount,
-                ReferenceCount = references.Count,
-                ChannelErrors = channelErrors
-            };
+                ReferenceCarCount = references.Select(x => x.Name).Distinct().Count(),
+                RejectedByReason = reasons.Where(x => x.Key != "ReferenceGroupApproved").ToDictionary(x => x.Key, x => x.Value),
+                ResultsByReason = reasons,
+                Advertisements = rows,
+                Catalog = catalog,
+                References = references
+            });
         }
 
         public static long? MatchCatalogCar(string advertisement, IReadOnlyCollection<(long Id, string Model, string Tip)> catalog) => ParserService.MatchCatalogCar(advertisement, catalog);
