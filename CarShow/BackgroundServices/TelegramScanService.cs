@@ -274,7 +274,7 @@ namespace CarShow.BackgroundServices
                     .Select(x => x.Reference!).ToList();
                 var counts = references.Count == 0 ? (Deleted: 0, Inserted: 0) :
                     await SaveReferenceCarsAsync(references, cancellationToken);
-                return new TelegramScanOutcome(references.Count == 0 ? 422 : 200,
+                return new TelegramScanOutcome(200,
                     ComparisonReport(archive, comparison, counts.Deleted, counts.Inserted))
                 {
                     TotalChannels = archive.Count,
@@ -361,83 +361,68 @@ namespace CarShow.BackgroundServices
             await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             await _db.Database.ExecuteSqlRawAsync(
                 "DECLARE @result int; EXEC @result = sp_getapplock @Resource = 'CarShow.ArchiveReferenceRefresh', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0; IF @result < 0 THROW 51000, 'Another reference refresh is running.', 1;", ct);
-            // Fail closed for unexpected incoming foreign keys or existing price history.
-            await _db.Database.ExecuteSqlRawAsync(
-                "IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE referenced_object_id = OBJECT_ID(N'dbo.Cars') AND parent_object_id <> OBJECT_ID(N'dbo.CarPriceHistories')) THROW 51001, 'Unexpected Cars foreign key; replacement blocked.', 1;", ct);
-            if (await _db.CarPriceHistories.AnyAsync(ct))
-                throw new InvalidOperationException("Existing car price history must be preserved before replacing Cars.");
             var existing = await _db.Cars.ToListAsync(ct);
-            var images = existing.Where(x => !string.IsNullOrWhiteSpace(x.ImageName))
-                .GroupBy(x => x.Slug, StringComparer.Ordinal)
-                .ToDictionary(x => x.Key, x => x.First().ImageName, StringComparer.Ordinal);
+            var historyCarIds = (await _db.CarPriceHistories.Select(x => x.CarId)
+                .Distinct().ToListAsync(ct)).ToHashSet();
+
+            static string? ExistingYear(Car car)
+            {
+                try
+                {
+                    using var document = JsonDocument.Parse(car.Description);
+                    return document.RootElement.TryGetProperty("Year", out var year)
+                        && year.ValueKind == JsonValueKind.String
+                        ? NormalizeManufacturingYear(year.GetString()) : null;
+                }
+                catch (JsonException) { return null; }
+            }
+
+            var retainedIds = new HashSet<long>();
+            var newCars = new List<Car>();
             foreach (var car in cars)
-                if (images.TryGetValue(car.Slug, out var image)) car.ImageName = image;
-            _db.Cars.RemoveRange(existing);
+            {
+                var year = ExistingYear(car);
+                var matches = existing.Where(x => !retainedIds.Contains(x.Id) &&
+                    (x.Slug == car.Slug || (x.Name == car.Name && ExistingYear(x) == year))).ToList();
+                var previous = matches.Count == 1 ? matches[0] : null;
+                if (previous != null)
+                    car.ImageName = previous.ImageName;
+                if (previous != null && historyCarIds.Contains(previous.Id))
+                {
+                    // Preserve the identity of cars referenced by price history.
+                    previous.Name = car.Name;
+                    previous.Slug = car.Slug;
+                    previous.Description = car.Description;
+                    previous.MarketPrice = car.MarketPrice;
+                    previous.LastUpdated = car.LastUpdated;
+                    previous.IsReferenceApproved = true;
+                    previous.IsDelete = false;
+                    retainedIds.Add(previous.Id);
+                }
+                else newCars.Add(car);
+            }
+
+            var removable = existing.Where(x => !retainedIds.Contains(x.Id) &&
+                !historyCarIds.Contains(x.Id)).ToList();
+            foreach (var old in existing.Where(x => !retainedIds.Contains(x.Id) &&
+                historyCarIds.Contains(x.Id)))
+            {
+                old.IsReferenceApproved = false;
+                old.IsDelete = true;
+            }
+            _db.Cars.RemoveRange(removable);
             await _db.SaveChangesAsync(ct);
-            _db.Cars.AddRange(cars);
+            _db.Cars.AddRange(newCars);
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            return (existing.Count, cars.Count);
+            return (removable.Count, cars.Count);
         }
 
         // Troubleshooting only: GET /api/telegram-cars/diagnostics
         // This does not change the production GET response shape.
-        public async Task<TelegramScanOutcome> GetDiagnostics(CancellationToken cancellationToken)
-        {
-            var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var channels = await GetLast100MessagesAsync(
-                Channels, cancellationToken, channelErrors);
-            var models = await _db.CarModels.AsNoTracking().Select(x => x.Name).ToListAsync(cancellationToken);
-            var cars = channels
-                .Where(channel => !channelErrors.ContainsKey(channel.Key))
-                .SelectMany(channel => channel.Value)
-                .SelectMany(message => ParserService.ParseCatalog(message, models))
-                .ToList();
+        public Task<TelegramScanOutcome> GetDiagnostics(CancellationToken cancellationToken)
+            => DiagnoseRejectionsAsync(cancellationToken);
 
-            var totalMessages = channels.Values.Sum(messages => messages.Count);
-            var nonemptyMessages = channels.Values.Sum(messages =>
-                messages.Count(message => !string.IsNullOrWhiteSpace(message)));
-
-            var stats = CarPriceReferenceBuilder.Diagnose(cars);
-            var references = CarPriceReferenceBuilder.Build(cars);
-
-            if (channels.Keys.All(channelErrors.ContainsKey))
-                return new TelegramScanOutcome(502, new { Message = "Telegram retrieval failed.", ChannelErrors = channelErrors });
-
-            return new TelegramScanOutcome(channelErrors.Count > 0 ? 207 : 200, new
-            {
-                Status = channelErrors.Count > 0 ? "PartialSuccess" : "Completed",
-                Channels = channels.Select(channel => new
-                {
-                    Name = channel.Key,
-                    Messages = channel.Value.Count,
-                    NonemptyMessages = channel.Value.Count(message =>
-                        !string.IsNullOrWhiteSpace(message))
-                }).ToList(),
-                TotalMessages = totalMessages,
-                NonemptyMessages = nonemptyMessages,
-                ParsedCars = cars.Count,
-                CarsWithPrice = cars.Count(car => !string.IsNullOrWhiteSpace(car.Price)),
-                CarsWithYear = cars.Count(car => !string.IsNullOrWhiteSpace(car.Year)),
-                ValidCars = stats.ValidCars,
-                GroupsBeforeMinimumCount = stats.GroupsBeforeMinimumCount,
-                GroupsWithTwoOrMoreAds = stats.GroupsWithTwoOrMoreAds,
-                ReferenceCount = references.Count,
-                ChannelErrors = channelErrors,
-                ValidExamples = cars
-                    .Where(car => !string.IsNullOrWhiteSpace(car.Price) &&
-                                  !string.IsNullOrWhiteSpace(car.Year))
-                    .Take(12)
-                    .Select(car => new { car.Name, Year = FormatDiagnosticYear(car.Year), car.Price })
-                    .ToList(),
-                Examples = cars.Take(12).Select(car => new
-                {
-                    car.Name,
-                    Year = FormatDiagnosticYear(car.Year),
-                    car.Price
-                }).ToList()
-            });
-        }
 
         // Diagnostic entrypoint to verify grouping using already-parsed data.
         // Does not require access to Telegram.
