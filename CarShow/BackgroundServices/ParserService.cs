@@ -18,33 +18,67 @@ namespace CarShow.BackgroundServices
         internal sealed record ArchivedVehicle(long? CarId, string Model, string? Trim, string? Year, string? Price, bool IsSale, string Evidence, string? DisplayName = null);
         internal sealed record ArchivePayload(int Version, string OriginalText, List<ArchivedVehicle> Vehicles);
 
-        internal static ArchivePayload ExtractArchive(string message, IReadOnlyCollection<string> models,
-            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog) => ExtractArchiveWithNames(message, models, catalog, null);
-
-        internal static ArchivePayload ExtractArchiveWithNames(string message, IReadOnlyCollection<string> models,
-            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog,
-            IReadOnlyDictionary<long, string>? displayNames = null)
+        // Extraction uses only message evidence; catalog ownership is resolved by the scan.
+        internal static ArchivePayload ExtractArchive(string message)
         {
             var vehicles = new List<ArchivedVehicle>();
-            var isSale = !Regex.IsMatch(NormalizeText(message), @"خریدار|خریداری|خواهان|حواله|پیش\s*فروش|معاوضه");
-            var ads = ParseCatalog(message, models);
-            var owners = MatchAdvertisementOwners(ads, catalog);
-            for (var index = 0; index < ads.Count; index++)
+            var lines = NormalizeText(message).Replace("\r", "").Split('\n')
+                .Select(CleanLine).Where(x => x.Length > 0).ToList();
+            var starts = Enumerable.Range(0, lines.Count).Where(index => IsArchiveHeader(lines[index])).ToList();
+            for (var index = 0; index < starts.Count; index++)
             {
-                var ad = ads[index];
-                var matches = models.Where(model => CatalogContains(ad.Name, model)).Distinct().ToList();
-                var specific = matches.Where(model => !matches.Any(other =>
-                    CatalogNormalize(other) != CatalogNormalize(model) && CatalogContains(other, model))).ToList();
-                if (specific.Count == 0) continue;
-                long? id = owners.TryGetValue(index, out var owner) ? owner : null;
-                var car = catalog.FirstOrDefault(x => x.Id == id);
-                var modelName = id.HasValue ? car.Model : specific.Count == 1 ? specific[0] : ad.Name;
-                vehicles.Add(new ArchivedVehicle(id, modelName, id.HasValue ? car.Tip : null,
-                    ad.Year, ad.Price, isSale, ad.Name,
-                    id.HasValue && displayNames != null && displayNames.TryGetValue(id.Value, out var displayName)
-                        ? displayName : null));
+                var start = starts[index];
+                var end = index + 1 < starts.Count ? starts[index + 1] : lines.Count;
+                var block = string.Join("\n", lines.Skip(start).Take(end - start));
+                if (Regex.IsMatch(block, @"خریدار|خریداری|خواهان|معاوضه|پیش\s*پرداخت|اقساط")) continue;
+                var header = lines[start];
+                var year = FindArchiveYear(header, true);
+                if (year == null)
+                {
+                    var years = lines.Skip(start + 1).Take(end - start - 1)
+                        .Select(line => FindArchiveYear(line, false)).Where(x => x != null).Distinct().ToList();
+                    if (years.Count == 1) year = years[0];
+                }
+                var price = ExtractPrice(block);
+                if (year == null || !CarPriceReferenceBuilder.TryConvertPrice(price, out _)) continue;
+                var name = Regex.Split(header, @"(?:\s|^)(?:مدل|سال ساخت|سال تولید|تولید|قیمت|تحویل|پلاک|کارکرد|آمپر|امپر)(?:\s|$)")[0];
+                name = Regex.Replace(name, @"(?<![\p{L}\d])(?:13\d{2}|14\d{2}|20\d{2}|39\d|40\d)(?!\d)(?:\s*(?:برج|ب)\s*\d{1,2}|/\d{1,2})?", m =>
+                    FindArchiveYear(m.Value, false) == year ? " " : m.Value);
+                name = ExtractName(name);
+                name = Regex.Replace(name, @"^(?:فروش|موجودی)\s+|\s+(?:روز|موجود|برج|فردا|صفر)\s*$", "").Trim();
+                if (!Regex.IsMatch(name, @"\p{L}") || name.Length < 2) continue;
+                vehicles.Add(new ArchivedVehicle(null, name, null, year, price, true, name));
             }
-            return new ArchivePayload(1, message, vehicles);
+            return new ArchivePayload(2, message, vehicles);
+        }
+
+        private static bool IsArchiveHeader(string line)
+        {
+            if (!Regex.IsMatch(line, @"^[\p{L}\d]") || !Regex.IsMatch(line, @"\p{L}")) return false;
+            if (Regex.IsMatch(line, @"^(?:قیمت|مبلغ|مدل|سال|تولید|تحویل|پلاک|کارکرد|آمپر|امپر|برج|روز|با\s|بدون\s|مدارک|سند|گارانتی|تماس|شماره|آدرس|تبریک|تسلیت|سلام|خریدار|معاوضه|تومان|میلیون|میلیارد|سفید|مشکی|خاکستری|طوسی|قرمز|آبی)(?:\s|$)")) return false;
+            if (Regex.IsMatch(line, @"^\d+(?:[/.,]\d+)*\s*(?:تومان|تومن|میلیون|میلیارد|روز|برج|آمپر|کیلومتر|هزار|تا|عدد|ب\d)")) return false;
+            return Regex.IsMatch(line, @"^(?:فروش\s+)?[\p{L}\d]+(?:[\s-]+[\p{L}\d]+){0,14}(?:\s*[/.,]\d+)?(?:\s|$)")
+                && !Regex.IsMatch(line, @"https?://|@|عضویت|کانال|تخفیف|مبارک|تسلیت");
+        }
+
+        private static string? FindArchiveYear(string line, bool header)
+        {
+            var text = Regex.Split(line, @"تحویل|پلاک|کارکرد|آمپر|امپر|قیمت|مبلغ|بیعانه|اقساط")[0];
+            var years = new HashSet<string>();
+            foreach (Match match in Regex.Matches(text, @"(?<![\p{L}\d/.,-])(?:13\d{2}|14\d{2}|20\d{2}|39\d|40\d|0\d)(?!\d)(?=$|\s|[/.,]|روز|برج|ب\d)"))
+            {
+                var before = text[..match.Index].Trim();
+                var after = text[(match.Index + match.Length)..].Trim();
+                var labelled = Regex.IsMatch(before, @"(?:مدل|سال ساخت|سال تولید|تولید)\s*[:：]?$");
+                if (Regex.IsMatch(after, @"^(?:[/.,]\d{3,}|میلیون|میلیارد|تومان|تومن|هزار|کیلومتر|تا\b|یا\b|[-–]\s*\d)")) continue;
+                if (!header && before.Length > 0 && !labelled) continue;
+                if (header && !labelled && Regex.IsMatch(before, @"^(?:فروش\s+)?\p{L}+$") && match.Value.Length <= 3 && !Regex.IsMatch(after, @"^(?:روز|برج|ب\d|/\d{1,2})")) continue;
+                if (match.Value.Length == 2 && !labelled) continue;
+                var raw = match.Value.StartsWith("39") ? "1" + match.Value : match.Value;
+                var year = NormalizeManufacturingYear(raw);
+                if (year != null && int.TryParse(year, out var y) && y >= 1980 && y <= DateTime.UtcNow.Year + 1) years.Add(year);
+            }
+            return years.Count == 1 ? years.Single() : null;
         }
 
         internal static string FormatArchive(ArchivePayload payload) =>
