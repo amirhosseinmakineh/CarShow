@@ -49,9 +49,27 @@ namespace CarShow.BackgroundServices
                 name = ExtractName(name);
                 name = Regex.Replace(name, @"^(?:فروش|موجودی)\s+|\s+(?:روز|موجود|برج|فردا|صفر)\s*$", "").Trim();
                 if (!Regex.IsMatch(name, @"\p{L}") || name.Length < 2) continue;
-                vehicles.Add(new ArchivedVehicle(null, name, null, year, price, true, name));
+                var identity = SplitArchiveIdentity(name, null);
+                vehicles.Add(new ArchivedVehicle(null, identity.Model, identity.Trim, year, price, true, name, name));
             }
             return new ArchivePayload(2, message, vehicles);
+        }
+
+        internal static (string Model, string Trim) SplitArchiveIdentity(string? name, string? explicitTrim)
+        {
+            var model = CatalogNormalize(name);
+            var trim = CatalogNormalize(explicitTrim);
+            if (trim.Length == 0)
+            {
+                var match = Regex.Match(model, @"(?<!\S)(?:اتوماتیک|اتومات|دنده ای|دنده|پانوراما|پانا|سقف|تیپ|توربو|اپشنال|پلاس|v[1-4]|gl|g|cvt|mt|at|ef7|tu5p?|xu7p?|دوال|دوگانه)(?!\S)");
+                if (match.Success && match.Index > 0)
+                {
+                    trim = model[match.Index..];
+                    model = model[..match.Index].Trim();
+                }
+            }
+            trim = Regex.Replace(trim, @"(?<!\S)اتومات(?!\S)", "اتوماتیک");
+            return (model, trim);
         }
 
         private static bool IsArchiveHeader(string line)
