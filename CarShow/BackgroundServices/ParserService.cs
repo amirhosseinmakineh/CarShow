@@ -23,13 +23,16 @@ namespace CarShow.BackgroundServices
         {
             var vehicles = new List<ArchivedVehicle>();
             var isSale = !Regex.IsMatch(NormalizeText(message), @"خریدار|خریداری|خواهان|حواله|پیش\s*فروش|معاوضه");
-            foreach (var ad in ParseCatalog(message, models))
+            var ads = ParseCatalog(message, models);
+            var owners = MatchAdvertisementOwners(ads, catalog);
+            for (var index = 0; index < ads.Count; index++)
             {
+                var ad = ads[index];
                 var matches = models.Where(model => CatalogContains(ad.Name, model)).Distinct().ToList();
                 var specific = matches.Where(model => !matches.Any(other =>
                     CatalogNormalize(other) != CatalogNormalize(model) && CatalogContains(other, model))).ToList();
                 if (specific.Count == 0) continue;
-                var id = MatchCatalogCar(ad.Name, catalog);
+                long? id = owners.TryGetValue(index, out var owner) ? owner : null;
                 var car = catalog.FirstOrDefault(x => x.Id == id);
                 var modelName = id.HasValue ? car.Model : specific.Count == 1 ? specific[0] : ad.Name;
                 vehicles.Add(new ArchivedVehicle(id, modelName, id.HasValue ? car.Tip : null,
@@ -42,6 +45,40 @@ namespace CarShow.BackgroundServices
             string.Join("\n", payload.Vehicles.Select(x =>
                 string.Join(" ", new[] { x.Model, x.Trim, x.Year }.Where(v => !string.IsNullOrWhiteSpace(v))) +
                 (x.Price == null ? "" : " | " + x.Price) + (x.IsSale ? "" : " | غیر فروش")));
+
+        internal static Dictionary<int, long> MatchAdvertisementOwners(
+            IReadOnlyList<ParsedCar> advertisements,
+            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
+        {
+            var owners = new Dictionary<int, long>();
+            var ambiguous = new HashSet<int>();
+            var uniqueCars = catalog.GroupBy(x =>
+                (Model: CatalogNormalize(x.Model), Tip: NormalizeTrimTerms(x.Tip)))
+                .Where(g => g.Count() == 1).Select(g => g.Single()).ToList();
+
+            foreach (var car in uniqueCars)
+            {
+                for (var i = 0; i < advertisements.Count; i++)
+                {
+                    var ad = advertisements[i];
+                    if (!CatalogContains(ad.Name, car.Model) || !TrimContains(ad.Name, car.Tip))
+                        continue;
+                    if (catalog.Any(other => other.Id != car.Id &&
+                        CatalogContains(ad.Name, other.Model) &&
+                        TrimContains(ad.Name, other.Tip) &&
+                        (IsStrictlyMoreSpecificTrim(other.Tip, car.Tip) ||
+                         (CatalogNormalize(other.Model) != CatalogNormalize(car.Model) &&
+                          CatalogContains(other.Model, car.Model)))))
+                        continue;
+                    if (owners.TryGetValue(i, out var previous) && previous != car.Id)
+                        ambiguous.Add(i);
+                    else
+                        owners[i] = car.Id;
+                }
+            }
+            foreach (var i in ambiguous) owners.Remove(i);
+            return owners;
+        }
 
         internal static string CatalogNormalize(string? value)
         {
