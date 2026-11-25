@@ -312,12 +312,13 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             foreach (var post in posts.DistinctBy(p => (p.Username, p.MessageId)))
             {
                 var payload = ParserService.ExtractArchive(post.Text);
-                if (payload.Vehicles.Count == 0) continue;
+                var accepted = payload.Vehicles.Count > 0;
                 batch.Rows.Add(post.MessageId, post.Username,
                     (object?)post.ChannelName ?? DBNull.Value,
                     (object?)post.SenderName ?? DBNull.Value,
-                    ParserService.FormatArchive(payload), post.Url, post.PublishedAt, now,
-                    System.Text.Json.JsonSerializer.Serialize(payload));
+                    accepted ? ParserService.FormatArchive(payload) : post.Text, post.Url, post.PublishedAt, now,
+                    accepted ? System.Text.Json.JsonSerializer.Serialize(payload)
+                        : System.Text.Json.JsonSerializer.Serialize(new { Version = 0, OriginalText = post.Text, Vehicles = Array.Empty<object>() }));
             }
             using (var bulk = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
             {
@@ -346,7 +347,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                 await swap.ExecuteNonQueryAsync(ct);
             }
             await transaction.CommitAsync(ct);
-            _savedMessages = batch.Rows.Count;
+            _savedMessages = batch.AsEnumerable().Count(row => ((string)row["Metadata"]).Contains("\"Version\":2"));
             _logger.LogInformation("Telegram raw snapshot refreshed: {Count} messages from {Channels} channels.", posts.Count, successfulChannels.Count);
         }
         finally { _refreshLock.Release(); }
@@ -416,6 +417,34 @@ public sealed class TelegramRawMessagesController : ControllerBase
     }
     [HttpGet("status")]
     public IActionResult GetStatus() => Ok(_worker.Status);
+
+    [HttpGet("export")]
+    public async Task<IActionResult> Export(CancellationToken ct)
+    {
+        await using var connection = new SqlConnection(_config.GetConnectionString("CarShow"));
+        await connection.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT TelegramMessageId, ChannelUsername, ChannelName, [Text], MessageUrl, PublishedAt, CollectedAt, Metadata
+            FROM dbo.TelegramRawArchiveSnapshots ORDER BY PublishedAt DESC, Id DESC;
+            """;
+        var items = new List<object>();
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var metadata = reader.IsDBNull(7) ? null : System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(reader.GetString(7));
+            var version = metadata?["Version"]?.GetValue<int>();
+            items.Add(new {
+                telegramMessageId = reader.GetInt64(0), channelUsername = reader.GetString(1),
+                channelName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                text = reader.GetString(3), messageUrl = reader.GetString(4),
+                publishedAt = reader.GetDateTimeOffset(5), collectedAt = reader.GetDateTimeOffset(6),
+                accepted = version == 2, metadata
+            });
+        }
+        var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { exportedAt = DateTimeOffset.UtcNow, totalCount = items.Count, items });
+        return File(bytes, "application/json", $"telegram-archive-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json");
+    }
 
     [HttpGet("channels")]
     public async Task<IActionResult> GetChannels(CancellationToken cancellationToken)
