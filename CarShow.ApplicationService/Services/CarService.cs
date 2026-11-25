@@ -164,8 +164,7 @@ namespace CarShow.ApplicationService.Services
             // in Description are audit-only and must never reactivate stale prices.
             var approvedCars = await carRepository.GetAll()
                 .AsNoTracking()
-                .Where(c => c.CarModelId != null && c.TipId != null
-                    && c.IsReferenceApproved && c.Description != null)
+                .Where(c => !c.IsDelete && c.IsReferenceApproved && c.Description != null)
                 .Select(c => new
                 {
                     c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice,
@@ -175,8 +174,8 @@ namespace CarShow.ApplicationService.Services
 
             var companyIds = approvedCars.Where(c => c.CompanyId.HasValue)
                 .Select(c => c.CompanyId!.Value).Distinct().ToArray();
-            var modelIds = approvedCars.Select(c => c.CarModelId!.Value).Distinct().ToArray();
-            var tipIds = approvedCars.Select(c => c.TipId!.Value).Distinct().ToArray();
+            var modelIds = approvedCars.Where(c => c.CarModelId.HasValue).Select(c => c.CarModelId!.Value).Distinct().ToArray();
+            var tipIds = approvedCars.Where(c => c.TipId.HasValue).Select(c => c.TipId!.Value).Distinct().ToArray();
             var companies = await companyRepository.GetAll()
                 .Where(c => companyIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name);
             var models = await carModelRepository.GetAll()
@@ -228,8 +227,8 @@ namespace CarShow.ApplicationService.Services
                     {
                         Id = car.Id,
                         Name = car.Name,
-                        carModeName = models.GetValueOrDefault(car.CarModelId!.Value, string.Empty),
-                        tipName = tips.GetValueOrDefault(car.TipId!.Value, string.Empty),
+                        carModeName = root.TryGetProperty("ModelName", out var modelName) ? modelName.GetString() ?? string.Empty : car.CarModelId.HasValue ? models.GetValueOrDefault(car.CarModelId.Value, string.Empty) : string.Empty,
+                        tipName = root.TryGetProperty("TipName", out var tipName) ? tipName.GetString() ?? string.Empty : car.TipId.HasValue ? tips.GetValueOrDefault(car.TipId.Value, string.Empty) : string.Empty,
                         CompanyName = car.CompanyId.HasValue
                             ? companies.GetValueOrDefault(car.CompanyId.Value, string.Empty) : string.Empty,
                         StartDate = reference.Year,
