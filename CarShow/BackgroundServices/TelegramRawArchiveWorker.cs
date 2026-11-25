@@ -253,6 +253,12 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
             var models = await db.CarModels.AsNoTracking().Select(x => x.Name).ToListAsync(ct);
+            var catalogRows = await db.Cars.AsNoTracking()
+                .Where(x => x.CarModelId != null && x.TipId != null)
+                .Select(x => new { x.Id, Model = x.CarModel!.Name, Tip = x.Tip!.Name }).ToListAsync(ct);
+            var catalog = catalogRows.Select(x => (Id: (long)x.Id, x.Model, x.Tip)).ToList();
+            if (models.Count == 0 || catalog.Count == 0)
+                throw new InvalidOperationException("Catalog unavailable; existing archive preserved.");
             var posts = new List<RawPost>();
             var successfulChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -296,7 +302,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                         TelegramMessageId bigint NOT NULL, ChannelUsername nvarchar(128) NOT NULL,
                         ChannelName nvarchar(256) NULL, SenderName nvarchar(256) NULL,
                         [Text] nvarchar(max) NOT NULL, MessageUrl nvarchar(512) NOT NULL,
-                        PublishedAt datetimeoffset NOT NULL, CollectedAt datetimeoffset NOT NULL
+                        PublishedAt datetimeoffset NOT NULL, CollectedAt datetimeoffset NOT NULL, Metadata nvarchar(max) NOT NULL
                     );
                     """;
                 await create.ExecuteNonQueryAsync(ct);
@@ -311,11 +317,17 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             batch.Columns.Add("MessageUrl", typeof(string));
             batch.Columns.Add("PublishedAt", typeof(DateTimeOffset));
             batch.Columns.Add("CollectedAt", typeof(DateTimeOffset));
+            batch.Columns.Add("Metadata", typeof(string));
             foreach (var post in posts.DistinctBy(p => (p.Username, p.MessageId)))
+            {
+                var payload = ParserService.ExtractArchive(post.Text, models, catalog);
+                if (payload.Vehicles.Count == 0) continue;
                 batch.Rows.Add(post.MessageId, post.Username,
                     (object?)post.ChannelName ?? DBNull.Value,
                     (object?)post.SenderName ?? DBNull.Value,
-                    ParserService.NormalizeArchiveYears(post.Text, models), post.Url, post.PublishedAt, now);
+                    ParserService.FormatArchive(payload), post.Url, post.PublishedAt, now,
+                    System.Text.Json.JsonSerializer.Serialize(payload));
+            }
             using (var bulk = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
             {
                 DestinationTableName = "#Incoming", BatchSize = 1000, BulkCopyTimeout = 120
@@ -333,9 +345,9 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     WHERE ChannelUsername IN (SELECT ChannelUsername FROM #Incoming)
                        OR ChannelUsername IN (SELECT value FROM STRING_SPLIT(@successful, ','));
                     INSERT INTO dbo.TelegramRawArchiveSnapshots
-                        (TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt)
-                    SELECT TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt FROM #Incoming;
-                    DELETE FROM dbo.TelegramRawArchiveSnapshots WHERE PublishedAt < @cutoff;
+                        (TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt,Metadata)
+                    SELECT TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt,Metadata FROM #Incoming;
+                    DELETE FROM dbo.TelegramRawArchiveSnapshots WHERE PublishedAt < @cutoff OR Metadata IS NULL;
                     """;
                 swap.CommandTimeout = 120;
                 swap.Parameters.AddWithValue("@successful", string.Join(",", successfulChannels));
