@@ -82,7 +82,7 @@ namespace CarShow.BackgroundServices
 
         internal static string CatalogNormalize(string? value)
         {
-            var text = (value ?? "").Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا')
+            var text = NormalizeText(value).Replace('آ', 'ا').Replace('أ', 'ا').Replace('إ', 'ا')
                 .Replace('ي', 'ی').Replace('ك', 'ک').Replace('\u200c', ' ');
             text = new string(text.Select(c => c >= '۰' && c <= '۹' ? (char)('0' + c - '۰') :
                 c >= '٠' && c <= '٩' ? (char)('0' + c - '٠') : c).ToArray());
@@ -225,7 +225,8 @@ namespace CarShow.BackgroundServices
             {
                 var result = new List<ParsedCar>();
                 if (string.IsNullOrWhiteSpace(message) || models.Count == 0) return result;
-                var lines = NormalizeArchiveYears(message, models).Replace("\r", "").Split('\n');
+                var prepared = Regex.Replace(NormalizeText(message), @"(?m)^([\s\p{P}\p{S}]*)(?:فروشنده|فروش|خریدارم|خریدار|موجودی|حواله)\s*[:：]?\s+", "$1");
+                var lines = NormalizeArchiveYears(prepared, models).Replace("\r", "").Split('\n');
                 var starts = Enumerable.Range(0, lines.Length)
                     .Where(index => IsCatalogVehicleHeader(CleanLine(lines[index]), models))
                     .ToList();
