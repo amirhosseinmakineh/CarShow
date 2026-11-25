@@ -24,7 +24,9 @@ namespace CarShow.BackgroundServices
             var vehicles = new List<ArchivedVehicle>();
             var lines = NormalizeText(message).Replace("\r", "").Split('\n')
                 .Select(CleanLine).Where(x => x.Length > 0).ToList();
-            var starts = Enumerable.Range(0, lines.Count).Where(index => IsArchiveHeader(lines[index])).ToList();
+            var starts = Enumerable.Range(0, lines.Count).Where(index => IsArchiveHeader(lines[index]) &&
+                (FindArchiveYear(lines[index], true) != null ||
+                 (index + 1 < lines.Count && FindArchiveYear(lines[index + 1], false) != null))).ToList();
             for (var index = 0; index < starts.Count; index++)
             {
                 var start = starts[index];
@@ -72,7 +74,7 @@ namespace CarShow.BackgroundServices
                 var labelled = Regex.IsMatch(before, @"(?:مدل|سال ساخت|سال تولید|تولید)\s*[:：]?$");
                 if (Regex.IsMatch(after, @"^(?:[/.,]\d{3,}|میلیون|میلیارد|تومان|تومن|هزار|کیلومتر|تا\b|یا\b|[-–]\s*\d)")) continue;
                 if (!header && before.Length > 0 && !labelled) continue;
-                if (header && !labelled && Regex.IsMatch(before, @"^(?:فروش\s+)?\p{L}+$") && match.Value.Length <= 3 && !Regex.IsMatch(after, @"^(?:روز|برج|ب\d|/\d{1,2})")) continue;
+                if (header && !labelled && Regex.IsMatch(before, @"^(?:فروش\s+)?\p{L}+$") && match.Value.Length <= 3 && after.Length == 0) continue;
                 if (match.Value.Length == 2 && !labelled) continue;
                 var raw = match.Value.StartsWith("39") ? "1" + match.Value : match.Value;
                 var year = NormalizeManufacturingYear(raw);
