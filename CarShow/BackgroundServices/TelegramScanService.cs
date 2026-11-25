@@ -176,7 +176,7 @@ namespace CarShow.BackgroundServices
             {
                 var channel = reader.GetString(0);
                 var message = JsonSerializer.Deserialize<ParserService.ArchivePayload>(reader.GetString(1));
-                if (message?.Version != 1 || message.Vehicles == null) continue;
+                if (message?.Version != 2 || message.Vehicles == null) continue;
                 if (!result.TryGetValue(channel, out var posts))
                     result[channel] = posts = new List<ParserService.ArchivePayload>();
                 posts.Add(message);
@@ -201,14 +201,12 @@ namespace CarShow.BackgroundServices
                 .Where(x => x.CarModelId != null && x.TipId != null)
                 .Select(x => new { x.Id, Name = x.Name, Company = x.Company != null ? x.Company.Name : string.Empty, Model = x.CarModel!.Name, Tip = x.Tip!.Name })
                 .ToListAsync(cancellationToken);
-            var extracted = messagesByChannel.Values.SelectMany(x => x).SelectMany(x => x.Vehicles).ToList();
-            var parsedCars = extracted.Select(x => new ParsedCar { Name = x.Model, Year = x.Year, Price = x.Price }).ToList();
-            var adsByCar = extracted.Where(x => x.IsSale && x.CarId.HasValue)
-                .GroupBy(x => x.CarId!.Value)
-                .ToDictionary(g => g.Key, g => g.Select(x => new ParsedCar
-                {
-                    Name = "catalog:" + g.Key, Year = x.Year, Price = x.Price
-                }).ToList());
+            var extracted = messagesByChannel.Values.SelectMany(x => x).SelectMany(x => x.Vehicles).Where(x => x.IsSale).ToList();
+            var parsedCars = extracted.Select(x => new ParsedCar { Name = x.Evidence, Year = x.Year, Price = x.Price }).ToList();
+            var catalogTuples = catalog.Select(x => (Id: (long)x.Id, x.Model, x.Tip)).ToList();
+            var owners = MatchAdvertisementOwners(parsedCars, catalogTuples);
+            var adsByCar = owners.GroupBy(x => x.Value)
+                .ToDictionary(g => g.Key, g => g.Select(x => parsedCars[x.Key]).ToList());
             var priceReferences = new List<CarPriceReference>();
             var rejectedReferences = new List<object>();
             foreach (var databaseCar in catalog.OrderBy(x => x.Id))

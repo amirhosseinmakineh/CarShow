@@ -39,17 +39,17 @@ Check(NormalizeArchive("پژو 405", "پژو 405") == "پژو 405", "Numeric mod
 Check(NormalizeArchive("آریزو 8 مشکی 403 تحویل 404", "آریزو 8") == "آریزو 8 مشکی 2024 تحویل 404", "Delivery year preserved");
 Check(Parse("دنا سفید مدل 1405\n3/385/000", "دنا")[0].Price == "3385", "Grouped price");
 var extractArchive = parser.GetMethod("ExtractArchive", BindingFlags.NonPublic | BindingFlags.Static)!;
-var archiveCatalog = new (long Id, string Model, string Tip)[] { (123, "دنا پلاس", "توربو") };
 System.Text.Json.JsonElement ExtractArchive(string message)
 {
-    var payload = extractArchive.Invoke(null, new object[] { message, new[] { "دنا پلاس" }, archiveCatalog });
+    var payload = extractArchive.Invoke(null, new object[] { message });
     return System.Text.Json.JsonSerializer.SerializeToElement(payload);
 }
 Check(ExtractArchive("تسلیت و تشکر").GetProperty("Vehicles").GetArrayLength() == 0, "Unrelated archive message ignored");
 var extractedVehicle = ExtractArchive("دنا پلاس توربو سفید 405 برج 7\n4380").GetProperty("Vehicles")[0];
-Check(extractedVehicle.GetProperty("CarId").GetInt64() == 123 && extractedVehicle.GetProperty("Year").GetString() == "2026", "Archive vehicle has canonical owner and year");
-Check(!ExtractArchive("خریدار دنا پلاس توربو سفید 405 برج 7\n4380").GetProperty("Vehicles")[0].GetProperty("IsSale").GetBoolean(), "Buyer excluded from sale comparison");
-Check(ExtractArchive("دنا پلاس سفید").GetProperty("Vehicles")[0].GetProperty("CarId").ValueKind == System.Text.Json.JsonValueKind.Null, "Incomplete vehicle retained without owner");
+Check(extractedVehicle.GetProperty("CarId").ValueKind == System.Text.Json.JsonValueKind.Null && extractedVehicle.GetProperty("Year").GetString() == "2026", "Archive independent of catalog");
+Check(ExtractArchive("خریدار دنا پلاس توربو سفید 405 برج 7\n4380").GetProperty("Vehicles").GetArrayLength() == 0, "Buyer ignored");
+Check(ExtractArchive("دنا پلاس سفید").GetProperty("Vehicles").GetArrayLength() == 0, "Incomplete vehicle ignored");
+Check(ExtractArchive("شاهین سفید 1405\n1850").GetProperty("Vehicles").GetArrayLength() == 1, "Trim optional");
 var parsed = Parse("تیگو 8 پرو مکس مدل 1404\nقیمت 4 تومن", "تیگو");
 Check(parsed.Count == 1 && parsed[0].Year == "2025" && parsed[0].Price == "4 میلیارد",
     "Colloquial 4 toman means 4 billion in car advertisements");

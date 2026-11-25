@@ -250,16 +250,6 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
         try
         {
             var cutoff = DateTimeOffset.UtcNow.AddHours(-24);
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
-            var models = await db.CarModels.AsNoTracking().Select(x => x.Name).ToListAsync(ct);
-            var catalogRows = await db.Cars.AsNoTracking()
-                .Where(x => x.CarModelId != null && x.TipId != null)
-                .Select(x => new { x.Id, x.Name, Model = x.CarModel!.Name, Tip = x.Tip!.Name }).ToListAsync(ct);
-            var displayNames = catalogRows.ToDictionary(x => (long)x.Id, x => x.Name);
-            var catalog = catalogRows.Select(x => (Id: (long)x.Id, x.Model, x.Tip)).ToList();
-            if (models.Count == 0 || catalog.Count == 0)
-                throw new InvalidOperationException("Catalog unavailable; existing archive preserved.");
             var posts = new List<RawPost>();
             var successfulChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var channelErrors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -321,7 +311,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
             batch.Columns.Add("Metadata", typeof(string));
             foreach (var post in posts.DistinctBy(p => (p.Username, p.MessageId)))
             {
-                var payload = ParserService.ExtractArchiveWithNames(post.Text, models, catalog, displayNames);
+                var payload = ParserService.ExtractArchive(post.Text);
                 if (payload.Vehicles.Count == 0) continue;
                 batch.Rows.Add(post.MessageId, post.Username,
                     (object?)post.ChannelName ?? DBNull.Value,
@@ -438,7 +428,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
         command.CommandText = """
             SELECT ChannelUsername, MAX(ChannelName) AS ChannelName, COUNT_BIG(*) AS MessageCount
             FROM dbo.TelegramRawArchiveSnapshots
-            WHERE ISJSON(Metadata) = 1 AND JSON_VALUE(CASE WHEN ISJSON(Metadata) = 1 THEN Metadata ELSE N'{}' END, '$.Version') = '1'
+            WHERE ISJSON(Metadata) = 1 AND JSON_VALUE(CASE WHEN ISJSON(Metadata) = 1 THEN Metadata ELSE N'{}' END, '$.Version') = '2'
             GROUP BY ChannelUsername
             ORDER BY ChannelUsername;
             """;
@@ -470,7 +460,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
         await connection.OpenAsync(ct);
         var sql = """
             FROM dbo.TelegramRawArchiveSnapshots
-            WHERE ISJSON(Metadata) = 1 AND JSON_VALUE(CASE WHEN ISJSON(Metadata) = 1 THEN Metadata ELSE N'{}' END, '$.Version') = '1'
+            WHERE ISJSON(Metadata) = 1 AND JSON_VALUE(CASE WHEN ISJSON(Metadata) = 1 THEN Metadata ELSE N'{}' END, '$.Version') = '2'
               AND (@search IS NULL OR [Text] LIKE N'%' + @search + N'%' OR CONVERT(nvarchar(30),TelegramMessageId) LIKE N'%' + @search + N'%')
               AND (@channel IS NULL OR ChannelUsername LIKE N'%' + @channel + N'%' OR ChannelName LIKE N'%' + @channel + N'%')
               AND (@channelUsername IS NULL OR ChannelUsername = @channelUsername)
