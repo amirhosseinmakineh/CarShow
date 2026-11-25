@@ -347,7 +347,7 @@ public sealed class TelegramRawArchiveWorker : BackgroundService
                     INSERT INTO dbo.TelegramRawArchiveSnapshots
                         (TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt,Metadata)
                     SELECT TelegramMessageId,ChannelUsername,ChannelName,SenderName,[Text],MessageUrl,PublishedAt,CollectedAt,Metadata FROM #Incoming;
-                    DELETE FROM dbo.TelegramRawArchiveSnapshots WHERE PublishedAt < @cutoff OR Metadata IS NULL;
+                    DELETE FROM dbo.TelegramRawArchiveSnapshots WHERE PublishedAt < @cutoff;
                     """;
                 swap.CommandTimeout = 120;
                 swap.Parameters.AddWithValue("@successful", string.Join(",", successfulChannels));
@@ -437,6 +437,7 @@ public sealed class TelegramRawMessagesController : ControllerBase
         command.CommandText = """
             SELECT ChannelUsername, MAX(ChannelName) AS ChannelName, COUNT_BIG(*) AS MessageCount
             FROM dbo.TelegramRawArchiveSnapshots
+            WHERE ISJSON(Metadata) = 1 AND JSON_VALUE(CASE WHEN ISJSON(Metadata) = 1 THEN Metadata ELSE N'{}' END, '$.Version') = '1'
             GROUP BY ChannelUsername
             ORDER BY ChannelUsername;
             """;
@@ -468,7 +469,8 @@ public sealed class TelegramRawMessagesController : ControllerBase
         await connection.OpenAsync(ct);
         var sql = """
             FROM dbo.TelegramRawArchiveSnapshots
-            WHERE (@search IS NULL OR [Text] LIKE N'%' + @search + N'%' OR CONVERT(nvarchar(30),TelegramMessageId) LIKE N'%' + @search + N'%')
+            WHERE ISJSON(Metadata) = 1 AND JSON_VALUE(CASE WHEN ISJSON(Metadata) = 1 THEN Metadata ELSE N'{}' END, '$.Version') = '1'
+              AND (@search IS NULL OR [Text] LIKE N'%' + @search + N'%' OR CONVERT(nvarchar(30),TelegramMessageId) LIKE N'%' + @search + N'%')
               AND (@channel IS NULL OR ChannelUsername LIKE N'%' + @channel + N'%' OR ChannelName LIKE N'%' + @channel + N'%')
               AND (@channelUsername IS NULL OR ChannelUsername = @channelUsername)
               AND (@fromDate IS NULL OR PublishedAt >= @fromDate)
