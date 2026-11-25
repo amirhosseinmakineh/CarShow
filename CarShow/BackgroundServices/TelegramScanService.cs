@@ -226,7 +226,7 @@ namespace CarShow.BackgroundServices
                     CarPriceReferenceBuilder.TryConvertPrice(x.Price, out var price);
                     return price;
                 }).OrderBy(x => x).ToList();
-                var reference = CarPriceReferenceBuilder.Build(group, exactIdentity: true).SingleOrDefault();
+                var reference = CarPriceReferenceBuilder.BuildExact(group).SingleOrDefault();
                 groups.Add(new ArchiveGroup(group.Key.Name, group.Key.Year, prices, reference));
             }
             return new ArchiveComparison(parsed, eligible.Count, reasons, groups);
@@ -766,8 +766,12 @@ namespace CarShow.BackgroundServices
                 @"^(?<amount>\d+(?:[.,/]\d{1,3})?)\s*(?<unit>میلیارد|میلیون)$",
                 RegexOptions.Compiled);
 
-            public static List<CarPriceReference> Build(
-                IEnumerable<ParsedCar> cars, bool exactIdentity = false)
+            public static List<CarPriceReference> Build(IEnumerable<ParsedCar> cars) => BuildCore(cars, false);
+
+            public static List<CarPriceReference> BuildExact(IEnumerable<ParsedCar> cars) => BuildCore(cars, true);
+
+            private static List<CarPriceReference> BuildCore(
+                IEnumerable<ParsedCar> cars, bool exactIdentity)
             {
                 if (cars == null)
                     return new List<CarPriceReference>();
