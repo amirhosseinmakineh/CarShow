@@ -43,19 +43,20 @@ public sealed partial class TelegramScanService
         {
             results.Add(new ArchiveComparisonResult
             {
-                Model = reader.GetString(0),
-                Trim = reader.GetString(1),
-                Year = reader.GetInt32(2),
-                PersianYear = reader.GetInt32(3),
-                TotalCount = reader.GetInt32(4),
-                ValidCount = reader.GetInt32(5),
-                RemovedCount = reader.GetInt32(6),
-                MedianPriceBillion = reader.GetDecimal(7),
-                MinPriceBillion = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
-                MaxPriceBillion = reader.IsDBNull(9) ? null : reader.GetDecimal(9),
-                ReferencePriceBillion = reader.IsDBNull(10) ? null : reader.GetDecimal(10),
-                ReferencePriceToman = reader.IsDBNull(11) ? null : reader.GetInt64(11),
-                Status = reader.GetString(12)
+                CompanyName = reader.IsDBNull(0) ? null : reader.GetString(0),
+                Model = reader.GetString(1),
+                Trim = reader.GetString(2),
+                Year = reader.GetInt32(3),
+                PersianYear = reader.GetInt32(4),
+                TotalCount = reader.GetInt32(5),
+                ValidCount = reader.GetInt32(6),
+                RemovedCount = reader.GetInt32(7),
+                MedianPriceBillion = reader.GetDecimal(8),
+                MinPriceBillion = reader.IsDBNull(9) ? null : reader.GetDecimal(9),
+                MaxPriceBillion = reader.IsDBNull(10) ? null : reader.GetDecimal(10),
+                ReferencePriceBillion = reader.IsDBNull(11) ? null : reader.GetDecimal(11),
+                ReferencePriceToman = reader.IsDBNull(12) ? null : reader.GetInt64(12),
+                Status = reader.GetString(13)
             });
         }
         return results;
@@ -130,6 +131,7 @@ public sealed partial class TelegramScanService
             References = approved.Select(x => new
             {
                 Name = x.Model + " " + x.Trim,
+                x.CompanyName,
                 ModelName = x.Model,
                 TipName = x.Trim,
                 Year = x.Year.ToString(CultureInfo.InvariantCulture),
@@ -158,8 +160,18 @@ public sealed partial class TelegramScanService
         IReadOnlyList<ArchiveComparisonResult> approved, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var cars = approved.Select(row => CreateReferenceCar(row, now))
-            .ToDictionary(car => car.Slug, StringComparer.Ordinal);
+        var cars = new Dictionary<string, Car>(StringComparer.Ordinal);
+        foreach (var row in approved.OrderBy(x => x.Model, StringComparer.Ordinal)
+                     .ThenBy(x => x.Trim, StringComparer.Ordinal).ThenBy(x => x.Year)
+                     .ThenBy(x => x.TotalCount).ThenBy(x => x.ReferencePriceToman)
+                     .ThenBy(x => x.MinPriceBillion).ThenBy(x => x.MaxPriceBillion))
+        {
+            var car = CreateReferenceCar(row, now);
+            var baseSlug = car.Slug;
+            for (var suffix = 2; cars.ContainsKey(car.Slug); suffix++)
+                car.Slug = baseSlug + "-" + suffix.ToString(CultureInfo.InvariantCulture);
+            cars.Add(car.Slug, car);
+        }
 
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         try
@@ -277,6 +289,7 @@ public sealed partial class TelegramScanService
         Description = JsonSerializer.Serialize(new
         {
             Type = "TelegramPriceReference",
+            row.CompanyName,
             ModelName = row.Model,
             TipName = row.Trim,
             Year = row.Year.ToString(CultureInfo.InvariantCulture),

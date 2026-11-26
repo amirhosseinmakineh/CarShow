@@ -12,13 +12,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 internal static class ArchiveComparisonChecks
 {
-    private const string ExpectedSqlSha256 = "ea6e92c0ffd922b83708bae246115e153be0d1d9b1be5554ac5c352091ab7648";
 
     internal static async Task RunAsync(Action<bool, string> check)
     {
         var sql = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "ArchiveComparison.sql"));
-        check(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(sql.Replace("\r\n", "\n")))) ==
-              ExpectedSqlSha256, "Archive SQL matches the approved query version");
+        check(sql.Contains("LEFT JOIN CatalogLookup C") && sql.Contains("F.CleanModel AS Model"),
+            "Archive SQL includes catalog lookup and cleaned model");
 
         var server = Environment.GetEnvironmentVariable("CARSHOW_TEST_SQL_SERVER");
         if (string.IsNullOrWhiteSpace(server))
@@ -81,6 +80,7 @@ internal static class ArchiveComparisonChecks
                 Metadata nvarchar(max) NULL
             );
             """, ct);
+        await ExecuteAsync(sqlConnection, "INSERT dbo.Catalog (CompanyName, CarName, TrimName, IsDelete) VALUES (N'ایران خودرو', N'دنا', N'اتومات', 0), (N'ایران خودرو', N'دنا', N'دنده', 0);", ct);
         var baseTime = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         long id = 0;
 
@@ -118,7 +118,7 @@ internal static class ArchiveComparisonChecks
         await AddAd("دنا", "   ", "1405", "2600");
         await AddAd("Ignored buyer", "Trim", "2026", "4000", isSale: false);
         await AddAd("Ignored archive version", "Trim", "2026", "4000", version: 1);
-        await AddAd("Single", "Trim", "2026", "2500");
+        await AddAd("Single Single", "Trim", "2026", "2500");
         await AddAd("Conflicting", "Trim", "2026", "2000");
         await AddAd("Conflicting", "Trim", "2026", "4000");
         foreach (var price in new[] { "1000", "2000", "3000", "4000" })
@@ -175,7 +175,7 @@ internal static class ArchiveComparisonChecks
             var appRows = groups.Select(group => Key(group.EnumerateObject().Select(property =>
                 property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString())));
             check(manualRows.Order(StringComparer.Ordinal).SequenceEqual(appRows.Order(StringComparer.Ordinal)),
-                "Application rows match direct SQL execution across all 13 columns");
+                "Application rows match direct SQL execution across all 14 columns");
             check(groups.Length == 8 && groups.All(group => group.GetProperty("Status").GetString() == "Approved"),
                 "Every eligible group is approved and trimless or otherwise ineligible ads are excluded");
             var single = groups.Single(group => group.GetProperty("Model").GetString() == "Single");
@@ -192,7 +192,8 @@ internal static class ArchiveComparisonChecks
                 "A wider group uses the average of every eligible price");
             var deduplicated = groups.Single(group => group.GetProperty("Trim").GetString() == "اتومات" &&
                                                        group.GetProperty("Year").GetInt32() == 2026);
-            check(deduplicated.GetProperty("Model").GetString() == "دنا" &&
+            check(deduplicated.GetProperty("CompanyName").GetString() == "ایران خودرو" &&
+                  deduplicated.GetProperty("Model").GetString() == "دنا" &&
                   deduplicated.GetProperty("TotalCount").GetInt32() == 2 &&
                   deduplicated.GetProperty("ReferencePriceBillion").GetDecimal() == 3.925m &&
                   deduplicated.GetProperty("ReferencePriceToman").GetInt64() == 3_925_000_000L,

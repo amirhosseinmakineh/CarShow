@@ -179,26 +179,58 @@ FinalResult AS
         *,
         'Approved' AS Status
     FROM PriceStatistics
+),
+CleanedModels AS
+(
+    SELECT *,
+        CASE
+            WHEN LEN(Model) % 2 = 1
+                AND LEFT(Model, LEN(Model) / 2) = RIGHT(Model, LEN(Model) / 2)
+                AND SUBSTRING(Model, LEN(Model) / 2 + 1, 1) = N' '
+            THEN TRIM(LEFT(Model, LEN(Model) / 2))
+            ELSE TRIM(Model)
+        END AS CleanModel
+    FROM FinalResult
+),
+CatalogCompanies AS
+(
+    SELECT DISTINCT
+        TRANSLATE(REPLACE(REPLACE(TRIM(CarName), N'ي', N'ی'), N'ك', N'ک'),
+            N'۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', N'01234567890123456789') AS CarName,
+        TRIM(CompanyName) AS CompanyName
+    FROM dbo.Catalog
+    WHERE IsDelete = 0
+      AND ISNULL(TRIM(CarName), N'') <> N''
+      AND ISNULL(TRIM(CompanyName), N'') <> N''
+),
+CatalogLookup AS
+(
+    SELECT CarName,
+        STRING_AGG(CAST(CompanyName AS NVARCHAR(MAX)), N'، ') AS CompanyName
+    FROM CatalogCompanies
+    GROUP BY CarName
 )
 SELECT
-    Model,
-    Trim,
-    Year,
-    Year - 621 AS PersianYear,
-    TotalCount,
-    TotalCount AS ValidCount,
+    C.CompanyName,
+    F.CleanModel AS Model,
+    F.Trim,
+    F.Year,
+    F.Year - 621 AS PersianYear,
+    F.TotalCount,
+    F.TotalCount AS ValidCount,
     0 AS RemovedCount,
-    CAST(MedianPrice AS DECIMAL(19,3)) AS MedianPriceBillion,
-    CAST(MinPrice AS DECIMAL(19,3)) AS MinPriceBillion,
-    CAST(MaxPrice AS DECIMAL(19,3)) AS MaxPriceBillion,
-    CASE
-        WHEN Status = 'Approved'
-        THEN CAST(ROUND(AveragePrice, 3) AS DECIMAL(19,3))
+    CAST(F.MedianPrice AS DECIMAL(19,3)) AS MedianPriceBillion,
+    CAST(F.MinPrice AS DECIMAL(19,3)) AS MinPriceBillion,
+    CAST(F.MaxPrice AS DECIMAL(19,3)) AS MaxPriceBillion,
+    CASE WHEN F.Status = 'Approved'
+        THEN CAST(ROUND(F.AveragePrice, 3) AS DECIMAL(19,3))
     END AS ReferencePriceBillion,
-    CASE
-        WHEN Status = 'Approved'
-        THEN CAST(ROUND(AveragePrice, 3) * 1000000000 AS BIGINT)
+    CASE WHEN F.Status = 'Approved'
+        THEN CAST(ROUND(F.AveragePrice, 3) * 1000000000 AS BIGINT)
     END AS ReferencePriceToman,
-    Status
-FROM FinalResult
-ORDER BY TotalCount DESC;
+    F.Status
+FROM CleanedModels F
+LEFT JOIN CatalogLookup C
+    ON TRANSLATE(REPLACE(REPLACE(F.CleanModel, N'ي', N'ی'), N'ك', N'ک'),
+        N'۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', N'01234567890123456789') = C.CarName
+ORDER BY F.TotalCount DESC;
