@@ -50,32 +50,6 @@ Check(extractedVehicle.GetProperty("CarId").ValueKind == System.Text.Json.JsonVa
 Check(ExtractArchive("خریدار دنا پلاس توربو سفید 405 برج 7\n4380").GetProperty("Vehicles").GetArrayLength() == 0, "Buyer ignored");
 Check(ExtractArchive("دنا پلاس سفید").GetProperty("Vehicles").GetArrayLength() == 0, "Incomplete vehicle ignored");
 Check(ExtractArchive("شاهین سفید 1405\n1850").GetProperty("Vehicles").GetArrayLength() == 1, "Trim optional");
-var compareArchive = scanner.GetMethod("CompareArchive", BindingFlags.NonPublic | BindingFlags.Static)!;
-var archiveType = compareArchive.GetParameters()[0].ParameterType;
-var archive = (System.Collections.IDictionary)Activator.CreateInstance(archiveType)!;
-var messages = (System.Collections.IList)Activator.CreateInstance(archiveType.GetGenericArguments()[1])!;
-foreach (var message in new[]
-{
-    "دنا اپشنال اتومات 1405\nقیمت: 4,355,000,000 تومان",
-    "دنا اپشنال اتوماتیک 1405\nقیمت: 4,360,000,000 تومان",
-    "دنا اپشنال دنده 1405\nقیمت: 4,350,000,000 تومان",
-    "دنا اپشنال اتوماتیک 1404\nقیمت: 4,345,000,000 تومان"
-})
-{
-    messages.Add(extractArchive.Invoke(null, new object[] { message }));
-}
-archive.Add("archive-regression", messages);
-var comparison = System.Text.Json.JsonSerializer.SerializeToElement(
-    compareArchive.Invoke(null, new object[] { archive, CancellationToken.None }));
-var archiveGroups = comparison.GetProperty("Groups").EnumerateArray().ToArray();
-Check(archiveGroups.Length == 3, "Archive comparison keeps different trims and years separate");
-var approvedGroup = archiveGroups.Single(group => group.GetProperty("Reference").ValueKind != System.Text.Json.JsonValueKind.Null);
-Check(approvedGroup.GetProperty("Trim").GetString() == "اپشنال اتوماتیک"
-    && approvedGroup.GetProperty("Year").GetString() == "2026"
-    && approvedGroup.GetProperty("CandidatePricesBillion").EnumerateArray()
-        .Select(price => price.GetDecimal()).SequenceEqual(new[] { 4.355m, 4.360m }),
-    "Archive comparison retains both advertisements after normalizing اتومات to اتوماتیک");
-
 var parsed = Parse("تیگو 8 پرو مکس مدل 1404\nقیمت 4 تومن", "تیگو");
 Check(parsed.Count == 1 && parsed[0].Year == "2025" && parsed[0].Price == "4 میلیارد",
     "Colloquial 4 toman means 4 billion in car advertisements");
@@ -140,3 +114,5 @@ Check(Parse("پژو 207 اتوماتیک مدل 1404\nقیمت 4 میلیارد\
 
 Console.WriteLine($"PASS: {count} scanner regression checks");
 await CatalogUploadChecks.RunAsync(Check);
+
+await ArchiveComparisonChecks.RunAsync(Check);

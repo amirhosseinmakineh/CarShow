@@ -167,7 +167,7 @@ namespace CarShow.ApplicationService.Services
                 .Where(c => !c.IsDelete && c.IsReferenceApproved && c.Description != null)
                 .Select(c => new
                 {
-                    c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice,
+                    c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice, c.MarketPrice,
                     c.SourceUrl, c.LastUpdated, c.CompanyId, c.CarModelId, c.TipId
                 })
                 .ToListAsync();
@@ -195,7 +195,12 @@ namespace CarShow.ApplicationService.Services
                 using var doc = JsonDocument.Parse(car.Description);
                 var root = doc.RootElement;
                 var references = new List<(string Year, decimal Price)>();
-                if (root.TryGetProperty("CurrentYears", out var currentYears)
+                if (root.TryGetProperty("ReferencePriceToman", out _) &&
+                    root.TryGetProperty("Year", out var sqlYear))
+                {
+                    references.Add((sqlYear.ToString(), car.MarketPrice));
+                }
+                else if (root.TryGetProperty("CurrentYears", out var currentYears)
                     && currentYears.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var year in currentYears.EnumerateObject())
@@ -381,15 +386,19 @@ namespace CarShow.ApplicationService.Services
             }
         }
 
-        private static string ReadReferenceYear(string description)
+        private static string ReadReferenceField(string description, string field)
         {
             try
             {
                 using var document = JsonDocument.Parse(description);
-                if (document.RootElement.TryGetProperty("Type", out var type) &&
+                var root = document.RootElement;
+                if (root.ValueKind == JsonValueKind.Object &&
+                    root.TryGetProperty("Type", out var type) &&
+                    type.ValueKind == JsonValueKind.String &&
                     type.GetString() == "TelegramPriceReference" &&
-                    document.RootElement.TryGetProperty("Year", out var year))
-                    return year.GetString() ?? string.Empty;
+                    root.TryGetProperty(field, out var value) &&
+                    value.ValueKind is JsonValueKind.String or JsonValueKind.Number)
+                    return value.ToString();
             }
             catch (JsonException) { }
             return string.Empty;
@@ -401,10 +410,7 @@ namespace CarShow.ApplicationService.Services
                 .Include(x => x.Tip)
                 .Include(x => x.Company)
                 .Include(x => x.CarModel)
-                .FirstOrDefaultAsync(x => x.Id == carId && x.CompanyId != null &&
-                    x.CarModelId != null && x.TipId != null && x.MarketPrice > 0 &&
-                    x.Description.Contains("TelegramPriceReference") &&
-                    x.Description.Contains("\"ComparisonApproved\":true"));
+                .FirstOrDefaultAsync(x => x.Id == carId && !x.IsDelete && x.IsReferenceApproved);
 
             if (car is null)
                 return Result<CarDto>.Failure("اتومبیلی یافت نشد");
@@ -425,7 +431,7 @@ namespace CarShow.ApplicationService.Services
             var result = new CarDto
             {
                 Id = car.Id,
-                carModeName = car.CarModel?.Name ?? string.Empty,
+                carModeName = car.CarModel?.Name ?? ReadReferenceField(car.Description, "ModelName"),
                 CompanyName = car.Company?.Name ?? string.Empty,
                 Description = details?.Description ?? car.Description,
                 Details = details,
@@ -436,8 +442,8 @@ namespace CarShow.ApplicationService.Services
                 FactoryPrice = car.FactoryPrice,
                 SourceUrl = car.SourceUrl,
                 LastUpdated = car.LastUpdated,
-                tipName = car.Tip?.Name ?? string.Empty,
-                StartDate = ReadReferenceYear(car.Description)
+                tipName = car.Tip?.Name ?? ReadReferenceField(car.Description, "TipName"),
+                StartDate = ReadReferenceField(car.Description, "Year")
             };
 
             return Result<CarDto>.Success(result);

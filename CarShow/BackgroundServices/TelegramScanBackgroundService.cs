@@ -16,6 +16,9 @@ public sealed class TelegramScanStatus
 
     public SqlConnection CreateConnection() => new(_connectionString);
 
+    public SqlConnection CreateLockConnection()
+        => new(new SqlConnectionStringBuilder(_connectionString) { Pooling = false }.ConnectionString);
+
     // Additive, guarded schema change; no Cars or existing tables are altered.
     public async Task EnsureSchemaAsync(CancellationToken ct)
     {
@@ -173,8 +176,7 @@ public sealed class TelegramScanBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Scans are operator-triggered only. Keep the worker for the manual queue.
-        // The legacy scheduling configuration is intentionally ignored.
+        var schedule = _enableScheduled ? ScheduleAsync(stoppingToken) : Task.CompletedTask;
 
         try
         {
@@ -187,12 +189,12 @@ public sealed class TelegramScanBackgroundService : BackgroundService
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
+        finally { await schedule; }
     }
 
     private async Task ScheduleAsync(CancellationToken ct)
     {
-        TryQueueManualScan();
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(5));
+        using var timer = new PeriodicTimer(Interval);
         try
         {
             while (await timer.WaitForNextTickAsync(ct))
@@ -206,7 +208,7 @@ public sealed class TelegramScanBackgroundService : BackgroundService
         await _status.EnsureSchemaAsync(ct);
         // Keep this dedicated SQL session open throughout the scan. SQL Server releases
         // the exclusive application lock when the connection closes, including on crashes.
-        await using var lockConnection = _status.CreateConnection();
+        await using var lockConnection = _status.CreateLockConnection();
         await lockConnection.OpenAsync(ct);
         await using var acquire = lockConnection.CreateCommand();
         acquire.CommandText = """
@@ -243,16 +245,10 @@ public sealed class TelegramScanBackgroundService : BackgroundService
             jobId = await _status.StartAsync(lockConnection, ct);
             using var scope = _scopes.CreateScope();
             var service = scope.ServiceProvider.GetRequiredService<TelegramScanService>();
-            int completed = 0;
-            int total = 0;
-            var result = await service.ScanAsync(ct, (done, count) =>
-            {
-                Volatile.Write(ref completed, done);
-                Volatile.Write(ref total, count);
-            });
+            var result = await service.ScanAsync(ct);
             var finalStatus = result.StatusCode == 200 ? "Completed"
                 : result.StatusCode == 207 ? "PartialSuccess" : "Failed";
-            await _status.UpdateAsync(jobId, finalStatus, completed, result, null, ct);
+            await _status.UpdateAsync(jobId, finalStatus, 0, result, null, ct);
             _logger.LogInformation("Telegram scan {JobId}: {Status}, {SavedCars} reference cars saved.",
                 jobId, finalStatus, result.SavedCars);
             return result;
@@ -265,18 +261,6 @@ public sealed class TelegramScanBackgroundService : BackgroundService
                 catch (Exception updateError) { _logger.LogError(updateError, "Could not persist scan failure."); }
             }
             throw;
-        }
-        finally
-        {
-            try
-            {
-                await using var release = lockConnection.CreateCommand();
-                release.CommandText = """
-                    EXEC sys.sp_releaseapplock @Resource = N'CarShow.TelegramScan', @LockOwner = 'Session';
-                    """;
-                await release.ExecuteNonQueryAsync(CancellationToken.None);
-            }
-            catch (Exception ex) { _logger.LogWarning(ex, "SQL session lock release failed; closing session."); }
         }
     }
 }

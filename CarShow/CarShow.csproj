@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\images\cars\" />
+    <EmbeddedResource Include="BackgroundServices/ArchiveComparison.sql" LogicalName="CarShow.ArchiveComparison.sql" />
     <Content Include="Data/Seed/*.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
