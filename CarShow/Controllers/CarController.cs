@@ -17,11 +17,14 @@ namespace CarShow.Controllers
             this.servicce = servicce;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAllCars(float? minPrice,float? maxPrice,string? company,int pageSize = 10,int pageNumber = 0)
+        public async Task<IActionResult> GetAllCars(float? minPrice,float? maxPrice,string? company,int pageSize = 10,int pageNumber = 0, long? companyId = null, long? modelId = null)
         {
-            var result = await servicce.GetAllCars(minPrice,maxPrice,company,pageSize,pageNumber);
+            var result = await servicce.GetAllCars(minPrice,maxPrice,company,pageSize,pageNumber,companyId,modelId);
             return Ok(result);
         }
+
+        [HttpGet("filters")]
+        public async Task<IActionResult> GetFilters() => Ok(await servicce.GetReferenceFilters());
 
         [HttpGet("references")]
         public async Task<IActionResult> GetReferenceCars(
@@ -29,7 +32,7 @@ namespace CarShow.Controllers
             [FromQuery] string? company, [FromQuery] int pageSize = 10,
             [FromQuery] int pageNumber = 0)
         {
-            var result = await servicce.GetPagedReferenceCars(minPrice, maxPrice, company, pageSize, pageNumber);
+            var result = await servicce.GetPagedReferenceCars(minPrice, maxPrice, company, pageSize, pageNumber, companyId, modelId);
             return Ok(result);
         }
 
