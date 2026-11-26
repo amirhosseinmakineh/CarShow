@@ -31,13 +31,13 @@ public sealed class TelegramManagementController : ControllerBase
             return BadRequest("Invalid pagination.");
 
         var totalCount = await _db.Database.SqlQueryRaw<int>(
-            "SELECT COUNT(*) AS [Value] FROM dbo.TelegramRawMessages")
+            "SELECT COUNT(*) AS [Value] FROM dbo.TelegramRawArchiveSnapshots")
             .SingleAsync(cancellationToken);
 
         const string sql = """
             SELECT CAST(Id AS bigint) AS Id,
-                TRIM(REPLACE(LEFT(MessageText, CHARINDEX(CHAR(10), MessageText + CHAR(10)) - 1), CHAR(13), '')) AS CarName
-            FROM dbo.TelegramRawMessages
+                TRIM(REPLACE(LEFT([Text], CHARINDEX(CHAR(10), [Text] + CHAR(10)) - 1), CHAR(13), '')) AS CarName
+            FROM dbo.TelegramRawArchiveSnapshots
             """;
         var query = _db.Database.SqlQueryRaw<ScanLabRow>(sql)
             .OrderBy(row => row.Id)
