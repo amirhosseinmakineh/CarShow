@@ -34,17 +34,19 @@ public sealed class TelegramManagementController : ControllerBase
             "SELECT COUNT(*) AS [Value] FROM dbo.TelegramRawMessages")
             .SingleAsync(cancellationToken);
 
-        var items = await _db.Database.SqlQueryRaw<ScanLabRow>("""
+        const string sql = """
             SELECT CAST(Id AS bigint) AS Id,
                 TRIM(REPLACE(LEFT(MessageText, CHARINDEX(CHAR(10), MessageText + CHAR(10)) - 1), CHAR(13), '')) AS CarName
             FROM dbo.TelegramRawMessages
-            """)
+            """;
+        var query = _db.Database.SqlQueryRaw<ScanLabRow>(sql)
             .OrderBy(row => row.Id)
             .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
+            .Take(pageSize);
+        var executedSql = query.ToQueryString();
+        var items = await query.ToListAsync(cancellationToken);
 
-        return Ok(new { items, totalCount, page, pageSize });
+        return Ok(new { items, totalCount, page, pageSize, sql, executedSql });
     }
 
     public sealed class ScanLabRow
