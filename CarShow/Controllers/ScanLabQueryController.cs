@@ -29,7 +29,7 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
             return BadRequest(new { message = "Only one SELECT statement is allowed." });
         var validator = new ArchiveQueryValidator();
         fragment.Accept(validator);
-        if (!validator.Valid)
+        if (!validator.Valid || !validator.HasArchive)
             return BadRequest(new { message = "Only read-only archive queries are allowed." });
         var generator = new Sql160ScriptGenerator();
         generator.GenerateScript(fragment, out var validatedSql);
@@ -80,6 +80,7 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
     private sealed class ArchiveQueryValidator : TSqlFragmentVisitor
     {
         public bool Valid { get; private set; } = true;
+        public bool HasArchive { get; private set; }
         private static readonly HashSet<string> Functions = new(StringComparer.OrdinalIgnoreCase)
         {
             "TRIM", "LTRIM", "RTRIM", "LEFT", "RIGHT", "CHARINDEX", "PATINDEX",
@@ -95,6 +96,7 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
                 node is not QueryDerivedTable && node is not QualifiedJoin &&
                 node is not UnqualifiedJoin && node is not JoinParenthesisTableReference)
                 Valid = false;
+            if (node is NamedTableReference) HasArchive = true;
             if (node is NamedTableReference table &&
                 (table.SchemaObject.Identifiers.Count != 2 ||
                  !string.Equals(table.SchemaObject.Identifiers[0].Value, "dbo", StringComparison.OrdinalIgnoreCase) ||
