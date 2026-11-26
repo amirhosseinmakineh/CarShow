@@ -22,6 +22,19 @@ namespace CarShow.Infrastracture.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CarShow.Domain.Models.Catalog", b =>
+                {
+                    b.Property<long>("Id").ValueGeneratedOnAdd().HasColumnType("bigint");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    b.Property<bool>("IsDelete").HasColumnType("bit");
+                    b.Property<string>("CompanyName").IsRequired().HasMaxLength(250).HasColumnType("nvarchar(250)");
+                    b.Property<string>("CarName").IsRequired().HasMaxLength(250).HasColumnType("nvarchar(250)");
+                    b.Property<string>("TrimName").IsRequired().HasMaxLength(250).HasColumnType("nvarchar(250)");
+                    b.HasKey("Id");
+                    b.HasIndex("CompanyName", "CarName", "TrimName").IsUnique();
+                    b.ToTable("Catalog");
+                });
+
             modelBuilder.Entity("CarShow.Domain.Models.Car", b =>
                 {
                     b.Property<long>("Id")
