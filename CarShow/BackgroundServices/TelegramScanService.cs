@@ -2,8 +2,6 @@ using CarShow.Domain.Models;
 using CarShow.Infrastracture.Context;
 using HtmlAgilityPack;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
-using System.Data;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -11,7 +9,6 @@ using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +29,7 @@ namespace CarShow.BackgroundServices
         public Dictionary<string, string> ChannelErrors { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
-    public sealed class TelegramScanService
+    public sealed partial class TelegramScanService
     {
         private static readonly string[] Channels =
         {
@@ -144,189 +141,6 @@ namespace CarShow.BackgroundServices
             TelegramClient = telegramClient;
         }
 
-        // Load a committed archive snapshot once. A refresh uses a single SQL transaction,
-        // so this one SELECT cannot observe its intermediate delete/insert steps.
-        private async Task<Dictionary<string, List<ParserService.ArchivePayload>>> ReadArchivedMessagesAsync(CancellationToken ct)
-        {
-            var result = new Dictionary<string, List<ParserService.ArchivePayload>>(StringComparer.OrdinalIgnoreCase);
-            var connectionString = _db.Database.GetConnectionString()
-                ?? throw new InvalidOperationException("CarShow database connection string is missing.");
-            await using var connection = new SqlConnection(connectionString);
-            await connection.OpenAsync(ct);
-            await using var command = connection.CreateCommand();
-            command.CommandTimeout = 120;
-            command.CommandText = """
-                WITH Deduplicated AS (
-                    SELECT ChannelUsername, TelegramMessageId, Metadata,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY ChannelUsername, TelegramMessageId
-                               ORDER BY CollectedAt DESC, Id DESC
-                           ) AS rn
-                    FROM dbo.TelegramRawArchiveSnapshots
-                    WHERE Metadata IS NOT NULL AND ISJSON(Metadata) = 1
-                )
-                SELECT ChannelUsername, Metadata
-                FROM Deduplicated
-                WHERE rn = 1
-                ORDER BY ChannelUsername, TelegramMessageId
-                """;
-            await using var reader = await command.ExecuteReaderAsync(
-                CommandBehavior.SequentialAccess, ct);
-            while (await reader.ReadAsync(ct))
-            {
-                var channel = reader.GetString(0);
-                var message = JsonSerializer.Deserialize<ParserService.ArchivePayload>(reader.GetString(1));
-                if (message?.Version != 2 || message.Vehicles == null) continue;
-                if (!result.TryGetValue(channel, out var posts))
-                    result[channel] = posts = new List<ParserService.ArchivePayload>();
-                posts.Add(message);
-            }
-            return result;
-        }
-
-        private static readonly SemaphoreSlim FinalScanGate = new(1, 1);
-
-        private sealed record ArchiveGroup(string Name, string Model, string Trim, string Year, List<decimal> CandidatePricesBillion,
-            CarPriceReference? Reference)
-        {
-            public string? CompanyName { get; set; }
-        }
-
-        private sealed record ArchiveComparison(int ParsedCars, int EligibleAdvertisements,
-            Dictionary<string, int> RejectedByReason, List<ArchiveGroup> Groups);
-
-        private static ArchiveComparison CompareArchive(
-            Dictionary<string, List<ParserService.ArchivePayload>> archive, CancellationToken ct)
-        {
-            var eligible = new List<(string Model, string Trim, ParsedCar Car)>();
-            var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
-            var parsed = 0;
-            var seen = new HashSet<(string Text, string Model, string? Trim, string? Year, string? Price)>();
-            foreach (var message in archive.Values.SelectMany(x => x))
-            foreach (var vehicle in message.Vehicles)
-            {
-                ct.ThrowIfCancellationRequested();
-                parsed++;
-                if (!seen.Add((ParserService.CatalogNormalize(message.OriginalText), vehicle.Model, vehicle.Trim, vehicle.Year, vehicle.Price)))
-                {
-                    reasons["DuplicateAdvertisement"] = reasons.GetValueOrDefault("DuplicateAdvertisement") + 1;
-                    continue;
-                }
-                var (model, trim) = ParserService.SplitArchiveIdentity(vehicle.Model, vehicle.Trim);
-                var name = model + " " + trim;
-                var year = NormalizeManufacturingYear(vehicle.Year);
-                var reason = !vehicle.IsSale ? "NonSale" :
-                    string.IsNullOrWhiteSpace(vehicle.Model) ? "EmptyVehicleName" :
-                    model.Length == 0 || trim.Length == 0 ? "MissingOrInvalidTrim" :
-                    year == null ? "MissingOrInvalidYear" :
-                    !CarPriceReferenceBuilder.TryConvertPrice(vehicle.Price, out _) ? "MissingOrInvalidPrice" : null;
-                if (reason != null)
-                {
-                    reasons[reason] = reasons.GetValueOrDefault(reason) + 1;
-                    continue;
-                }
-                eligible.Add((model, trim, new ParsedCar { Name = name, Year = year!, Price = vehicle.Price! }));
-            }
-            var groups = new List<ArchiveGroup>();
-            var processed = new HashSet<(string Model, string Trim, string Year)>();
-            foreach (var first in eligible)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (!processed.Add((first.Model, first.Trim, first.Car.Year)))
-                    continue;
-
-                var name = first.Car.Name;
-                var matches = new List<ParsedCar>();
-                foreach (var candidate in eligible)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    if (candidate.Car.Year != first.Car.Year ||
-                        candidate.Model != first.Model || candidate.Trim != first.Trim)
-                        continue;
-
-                    matches.Add(candidate.Car);
-                }
-
-                var prices = matches.Select(x =>
-                {
-                    CarPriceReferenceBuilder.TryConvertPrice(x.Price, out var price);
-                    return price;
-                }).OrderBy(x => x).ToList();
-                var reference = prices.Count >= 2 ? CarPriceReferenceBuilder.BuildExact(matches).SingleOrDefault() : null;
-                groups.Add(new ArchiveGroup(name, first.Model, first.Trim, first.Car.Year, prices, reference));
-            }
-            return new ArchiveComparison(parsed, eligible.Count, reasons, groups);
-        }
-
-        private static object ComparisonReport(Dictionary<string, List<ParserService.ArchivePayload>> archive,
-            ArchiveComparison comparison, int deleted = 0, int inserted = 0)
-        {
-            var approved = comparison.Groups.Where(x => x.Reference != null).ToList();
-            return new
-            {
-                TotalChannels = archive.Count,
-                MessagesProcessed = archive.Values.Sum(x => x.Count),
-                comparison.ParsedCars,
-                comparison.EligibleAdvertisements,
-                EligibleGroups = comparison.Groups.Count,
-                SingleAdvertisementGroups = comparison.Groups.Count(x => x.CandidatePricesBillion.Count == 1),
-                MultipleAdvertisementGroups = comparison.Groups.Count(x => x.CandidatePricesBillion.Count > 1),
-                ReferenceCount = approved.Count,
-                RejectedGroupCount = comparison.Groups.Count - approved.Count,
-                comparison.RejectedByReason,
-                DeletedCars = deleted,
-                SavedCars = inserted,
-                Groups = comparison.Groups.Select(x => new
-                {
-                    x.Name, x.Year, x.CandidatePricesBillion,
-                    AdvertisementCount = x.CandidatePricesBillion.Count,
-                    FinalReferencePrice = x.Reference?.ReferencePriceBillion,
-                    Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : x.Reference == null ? "PriceDispersionOrInsufficientConsensus" : "ReferenceGroupApproved"
-                }),
-                RejectedReferences = comparison.Groups.Where(x => x.Reference == null).Select(x => new { x.Name, ModelName = x.Model, TipName = x.Trim, x.Year, x.CandidatePricesBillion, AdvertisementCount = x.CandidatePricesBillion.Count, Reason = x.CandidatePricesBillion.Count < 2 ? "InsufficientAdvertisements" : "PriceDispersionOrInsufficientConsensus" }),
-                References = approved.Select(x => new { x.Name, x.CompanyName, ModelName = x.Model, TipName = x.Trim, x.Year, AdvertisementCount = x.Reference!.AdvertisementCount, ReferencePriceBillion = x.Reference!.ReferencePriceBillion, ComparedPricesBillion = x.CandidatePricesBillion })
-            };
-        }
-
-        public async Task<TelegramScanOutcome> ScanAsync(
-            CancellationToken cancellationToken, Action<int, int>? progress = null)
-        {
-            await FinalScanGate.WaitAsync(cancellationToken);
-            try
-            {
-                var archive = await ReadArchivedMessagesAsync(cancellationToken);
-                progress?.Invoke(archive.Count, archive.Count);
-                var comparison = CompareArchive(archive, cancellationToken);
-                var references = comparison.Groups.Where(x => x.Reference != null)
-                    .Select(x => x.Reference!).ToList();
-                var counts = references.Count == 0 ? (Deleted: 0, Inserted: 0) :
-                    await SaveReferenceCarsAsync(comparison.Groups.Where(x => x.Reference != null).ToList(), cancellationToken);
-                return new TelegramScanOutcome(200,
-                    ComparisonReport(archive, comparison, counts.Deleted, counts.Inserted))
-                {
-                    TotalChannels = archive.Count,
-                    MessagesProcessed = archive.Values.Sum(x => x.Count),
-                    ParsedCars = comparison.ParsedCars,
-                    ReferenceCount = references.Count,
-                    SavedCars = counts.Inserted
-                };
-            }
-            finally { FinalScanGate.Release(); }
-        }
-
-        public async Task<TelegramScanOutcome> DiagnoseRejectionsAsync(CancellationToken cancellationToken)
-        {
-            var archive = await ReadArchivedMessagesAsync(cancellationToken);
-            var comparison = CompareArchive(archive, cancellationToken);
-            return new TelegramScanOutcome(200, ComparisonReport(archive, comparison))
-            {
-                TotalChannels = archive.Count,
-                MessagesProcessed = archive.Values.Sum(x => x.Count),
-                ParsedCars = comparison.ParsedCars,
-                ReferenceCount = comparison.Groups.Count(x => x.Reference != null)
-            };
-        }
-
         public static long? MatchCatalogCar(string advertisement, IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
         {
             // Legacy catalog compatibility only; never used by archive comparison.
@@ -334,168 +148,6 @@ namespace CarShow.BackgroundServices
                 ParserService.CatalogNormalize(value), @"(?<!\p{L})اتومات(?!\p{L})", "اتوماتیک");
             return ParserService.MatchCatalogCar(CanonicalTrim(advertisement),
                 catalog.Select(x => (x.Id, x.Model, Tip: CanonicalTrim(x.Tip))).ToList());
-        }
-
-        // The database car is the unit of work. Never choose a CarId by searching
-        // the entire catalog for each advertisement.
-        // Match by database car, but retain only advertisements with one unambiguous owner.
-        // The same matcher is used by the production scan and read-only diagnostics.
-        private static Dictionary<int, long> MatchAdvertisementOwners(IReadOnlyList<ParsedCar> advertisements, IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
-            => ParserService.MatchAdvertisementOwners(advertisements, catalog);
-
-        private static List<ParsedCar> MatchAdvertisementsForCatalogCars(
-            IReadOnlyCollection<ParsedCar> advertisements,
-            IReadOnlyCollection<(long Id, string Model, string Tip)> catalog)
-        {
-            var ads = advertisements.ToList();
-            return MatchAdvertisementOwners(ads, catalog)
-                .Select(pair => new ParsedCar
-                {
-                    Name = "catalog:" + pair.Value,
-                    Year = NormalizeManufacturingYear(ads[pair.Key].Year),
-                    Price = ads[pair.Key].Price
-                }).ToList();
-        }
-
-        private async Task<(int Deleted, int Inserted)> SaveReferenceCarsAsync(
-            List<ArchiveGroup> references, CancellationToken ct)
-        {
-            if (references.Count == 0) return (0, 0);
-            var now = DateTime.UtcNow;
-            await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-            await _db.Database.ExecuteSqlRawAsync(
-                "DECLARE @result int; EXEC @result = sp_getapplock @Resource = 'CarShow.ArchiveReferenceRefresh', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0; IF @result < 0 THROW 51000, 'Another reference refresh is running.', 1;", ct);
-
-            // Catalog is only used after comparison, to resolve a unique company by model.
-            var catalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "Seed",
-                "CarShow_Final_Trimmed_Cars_Catalog_1405.html");
-            var companies = await _db.Companies.AsNoTracking().ToListAsync(ct);
-            var companyIds = companies.Where(x => !x.IsDelete)
-                .GroupBy(x => ParserService.CatalogNormalize(x.Name))
-                .Where(x => x.Count() == 1).ToDictionary(x => x.Key, x => x.Single());
-            var catalog = new List<(string Model, long? CompanyId, string CompanyName)>();
-            if (System.IO.File.Exists(catalogPath))
-            {
-                var document = new HtmlDocument();
-                document.LoadHtml(await System.IO.File.ReadAllTextAsync(catalogPath, ct));
-                var rows = document.DocumentNode.SelectNodes("//tbody[@id='catalogRows']/tr");
-                if (rows != null)
-                foreach (var row in rows)
-                {
-                    var cells = row.SelectNodes("./td");
-                    if (cells == null || cells.Count != 7) continue;
-                    var companyName = HtmlEntity.DeEntitize(cells[1].InnerText).Trim();
-                    var model = ParserService.CatalogNormalize(HtmlEntity.DeEntitize(cells[3].InnerText));
-                    if (model.Length == 0 || companyName.Length == 0) continue;
-                    companyIds.TryGetValue(ParserService.CatalogNormalize(companyName), out var company);
-                    catalog.Add((model, company?.Id, companyName));
-                }
-            }
-            var companiesByModel = catalog.GroupBy(x => x.Model)
-                .Where(x => x.Select(y => ParserService.CatalogNormalize(y.CompanyName)).Distinct().Count() == 1)
-                .ToDictionary(x => x.Key, x => x.First());
-
-            var cars = references.Select(group => { var reference = group.Reference!;
-                var model = ParserService.CatalogNormalize(group.Model);
-                // Company ownership is model-only. A trim suffix left in the
-                // extracted model must not prevent matching the catalog model.
-                if (!companiesByModel.TryGetValue(model, out var company))
-                {
-                    var matches = catalog.Where(x => ParserService.CatalogContains(model, x.Model))
-                        .ToList();
-                    var specific = matches.Where(x => !matches.Any(y =>
-                        y.Model != x.Model && ParserService.CatalogContains(y.Model, x.Model)))
-                        .ToList();
-                    if (specific.Count > 0 && specific.Select(x =>
-                        ParserService.CatalogNormalize(x.CompanyName)).Distinct().Count() == 1)
-                        company = specific.First();
-                }
-                group.CompanyName = company.CompanyName;
-                return new Car
-            {
-                Name = reference.Name,
-                CompanyId = company.CompanyId,
-                Slug = "archive-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-                    Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[] { group.Model, group.Trim, group.Year })))).ToLowerInvariant(),
-                MarketPrice = reference.ReferencePriceBillion * 1_000_000_000m,
-                LastUpdated = now,
-                IsReferenceApproved = true,
-                IsDelete = false,
-                Description = JsonSerializer.Serialize(new
-                {
-                    Type = "TelegramPriceReference",
-                    ModelName = group.Model,
-                    TipName = group.Trim,
-                    reference.Year,
-                    Years = new Dictionary<string, CarPriceReference> { [reference.Year] = reference },
-                    CurrentYears = new Dictionary<string, CarPriceReference> { [reference.Year] = reference },
-                    reference.AdvertisementCount,
-                    reference.ReferencePriceBillion,
-                    ComparisonApproved = true,
-                    PriceStatus = "Approved",
-                    ComparedAtUtc = now
-                })
-            }; }).ToList();
-
-            var existing = await _db.Cars.ToListAsync(ct);
-            var historyCarIds = (await _db.CarPriceHistories.Select(x => x.CarId)
-                .Distinct().ToListAsync(ct)).ToHashSet();
-
-            static string? ExistingYear(Car car)
-            {
-                try
-                {
-                    using var document = JsonDocument.Parse(car.Description);
-                    return document.RootElement.TryGetProperty("Year", out var year)
-                        && year.ValueKind == JsonValueKind.String
-                        ? NormalizeManufacturingYear(year.GetString()) : null;
-                }
-                catch (JsonException) { return null; }
-            }
-
-            var retainedIds = new HashSet<long>();
-            var newCars = new List<Car>();
-            foreach (var car in cars)
-            {
-                var year = ExistingYear(car);
-                var matches = existing.Where(x => !retainedIds.Contains(x.Id) &&
-                    (x.Slug == car.Slug || (x.Name == car.Name && ExistingYear(x) == year))).ToList();
-                var previous = matches.Count == 1 ? matches[0] : null;
-                if (previous != null)
-                {
-                    car.ImageName = previous.ImageName;
-                    car.CompanyId ??= previous.CompanyId;
-                }
-                if (previous != null && historyCarIds.Contains(previous.Id))
-                {
-                    // Preserve the identity of cars referenced by price history.
-                    previous.Name = car.Name;
-                    previous.CompanyId = car.CompanyId ?? previous.CompanyId;
-                    previous.Slug = car.Slug;
-                    previous.Description = car.Description;
-                    previous.MarketPrice = car.MarketPrice;
-                    previous.LastUpdated = car.LastUpdated;
-                    previous.IsReferenceApproved = true;
-                    previous.IsDelete = false;
-                    retainedIds.Add(previous.Id);
-                }
-                else newCars.Add(car);
-            }
-
-            var removable = existing.Where(x => !retainedIds.Contains(x.Id) &&
-                !historyCarIds.Contains(x.Id)).ToList();
-            foreach (var old in existing.Where(x => !retainedIds.Contains(x.Id) &&
-                historyCarIds.Contains(x.Id)))
-            {
-                old.IsReferenceApproved = false;
-                old.IsDelete = true;
-            }
-            _db.Cars.RemoveRange(removable);
-            await _db.SaveChangesAsync(ct);
-            _db.Cars.AddRange(newCars);
-            await _db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-            return (removable.Count, cars.Count);
         }
 
         // Troubleshooting only: GET /api/telegram-cars/diagnostics
@@ -838,12 +490,7 @@ namespace CarShow.BackgroundServices
                 @"^(?<amount>\d+(?:[.,/]\d{1,3})?)\s*(?<unit>میلیارد|میلیون)$",
                 RegexOptions.Compiled);
 
-            public static List<CarPriceReference> Build(IEnumerable<ParsedCar> cars) => BuildCore(cars, false);
-
-            public static List<CarPriceReference> BuildExact(IEnumerable<ParsedCar> cars) => BuildCore(cars, true);
-
-            private static List<CarPriceReference> BuildCore(
-                IEnumerable<ParsedCar> cars, bool exactIdentity)
+            public static List<CarPriceReference> Build(IEnumerable<ParsedCar> cars)
             {
                 if (cars == null)
                     return new List<CarPriceReference>();
@@ -852,7 +499,7 @@ namespace CarShow.BackgroundServices
                     .Where(car => car != null)
                     .Select(car =>
                     {
-                        var name = exactIdentity ? car.Name : NormalizeCarName(car.Name);
+                        var name = NormalizeCarName(car.Name);
                         var year = NormalizeYear(car.Year);
 
                         decimal priceBillion;
@@ -863,7 +510,7 @@ namespace CarShow.BackgroundServices
                         return new
                         {
                             Name = name,
-                            ModelKey = exactIdentity ? name : GetModelKey(name),
+                            ModelKey = GetModelKey(name),
                             Year = year,
                             HasPrice = hasPrice,
                             PriceBillion = priceBillion

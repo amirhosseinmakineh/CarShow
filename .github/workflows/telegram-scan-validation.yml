@@ -4,11 +4,21 @@ on:
     paths:
       - 'CarShow/**'
       - 'CarShow.ApplicationService/**'
+      - 'tests/TelegramCarScanner.Tests/**'
       - '.github/workflows/telegram-scan-validation.yml'
   workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: 'CarShow-CI-Archive-Tests!2026'
+        ports:
+          - 1433:1433
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -18,3 +28,7 @@ jobs:
         run: dotnet restore CarShow/CarShow.csproj
       - name: Build
         run: dotnet build CarShow/CarShow.csproj --no-restore --configuration Release
+      - name: Run scanner and SQL Server integration checks
+        env:
+          CARSHOW_TEST_SQL_SERVER: 'Server=127.0.0.1,1433;User ID=sa;Password=CarShow-CI-Archive-Tests!2026;Encrypt=True;TrustServerCertificate=True'
+        run: dotnet run --project tests/TelegramCarScanner.Tests --configuration Release
