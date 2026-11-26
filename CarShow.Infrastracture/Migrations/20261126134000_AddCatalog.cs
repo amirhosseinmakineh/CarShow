@@ -16,6 +16,7 @@ public class AddCatalog : Migration
             {
                 Id = table.Column<long>(nullable: false)
                     .Annotation("SqlServer:Identity", "1, 1"),
+                IsDelete = table.Column<bool>(nullable: false),
                 CompanyName = table.Column<string>(maxLength: 250, nullable: false),
                 CarName = table.Column<string>(maxLength: 250, nullable: false),
                 TrimName = table.Column<string>(maxLength: 250, nullable: false)
