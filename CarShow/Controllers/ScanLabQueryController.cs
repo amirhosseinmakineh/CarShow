@@ -100,7 +100,7 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
             if (node is NamedTableReference table &&
                 (table.SchemaObject.Identifiers.Count != 2 ||
                  !string.Equals(table.SchemaObject.Identifiers[0].Value, "dbo", StringComparison.OrdinalIgnoreCase) ||
-                 !string.Equals(table.SchemaObject.Identifiers[1].Value, "TelegramRawMessages", StringComparison.OrdinalIgnoreCase) ||
+                 !string.Equals(table.SchemaObject.Identifiers[1].Value, "TelegramRawArchiveSnapshots", StringComparison.OrdinalIgnoreCase) ||
                  table.TableHints.Count != 0))
                 Valid = false;
             if (node is FunctionCall function &&
