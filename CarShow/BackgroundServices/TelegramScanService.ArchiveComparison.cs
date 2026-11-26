@@ -161,6 +161,7 @@ public sealed partial class TelegramScanService
     {
         var now = DateTime.UtcNow;
         var cars = new Dictionary<string, Car>(StringComparer.Ordinal);
+        var identities = new Dictionary<string, ArchiveComparisonResult>(StringComparer.Ordinal);
         foreach (var row in approved.OrderBy(x => x.Model, StringComparer.Ordinal)
                      .ThenBy(x => x.Trim, StringComparer.Ordinal).ThenBy(x => x.Year)
                      .ThenBy(x => x.TotalCount).ThenBy(x => x.ReferencePriceToman)
@@ -171,6 +172,7 @@ public sealed partial class TelegramScanService
             for (var suffix = 2; cars.ContainsKey(car.Slug); suffix++)
                 car.Slug = baseSlug + "-" + suffix.ToString(CultureInfo.InvariantCulture);
             cars.Add(car.Slug, car);
+            identities.Add(car.Slug, row);
         }
 
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
@@ -183,6 +185,42 @@ public sealed partial class TelegramScanService
                     @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0;
                 IF @result < 0 THROW 51000, 'Another reference refresh is running.', 1;
                 """, ct);
+
+            var companyLookup = (await _db.Companies.OrderBy(x => x.IsDelete).ThenBy(x => x.Id).ToListAsync(ct))
+                .GroupBy(x => LookupKey(x.Name)).ToDictionary(x => x.Key, x => x.First());
+            var modelLookup = (await _db.CarModels.OrderBy(x => x.IsDelete).ThenBy(x => x.Id).ToListAsync(ct))
+                .GroupBy(x => LookupKey(x.Name)).ToDictionary(x => x.Key, x => x.First());
+            foreach (var (slug, car) in cars)
+            {
+                var row = identities[slug];
+                var modelKey = LookupKey(row.Model);
+                if (!modelLookup.TryGetValue(modelKey, out var model))
+                {
+                    model = new CarModel { Name = row.Model };
+                    _db.CarModels.Add(model);
+                    modelLookup.Add(modelKey, model);
+                }
+                model.IsDelete = false;
+                car.CarModel = model;
+                if (!string.IsNullOrWhiteSpace(row.CompanyName) && !row.CompanyName.Contains('،'))
+                {
+                    var key = LookupKey(row.CompanyName);
+                    if (!companyLookup.TryGetValue(key, out var company))
+                    {
+                        company = new Company { Name = row.CompanyName };
+                        _db.Companies.Add(company);
+                        companyLookup.Add(key, company);
+                    }
+                    company.IsDelete = false;
+                    car.Company = company;
+                }
+            }
+            await _db.SaveChangesAsync(ct);
+            foreach (var car in cars.Values)
+            {
+                car.CarModelId = car.CarModel!.Id;
+                car.CompanyId = car.Company?.Id;
+            }
 
             var existing = await _db.Cars
                 .Select(car => new
@@ -211,7 +249,7 @@ public sealed partial class TelegramScanService
                 {
                     if (!string.IsNullOrWhiteSpace(old.Car.ImageName) && images.Add(slug))
                         replacement.ImageName = old.Car.ImageName;
-                    if (old.Car.CompanyId is not null && companies.Add(slug))
+                    if (replacement.CompanyId is null && old.Car.CompanyId is not null && companies.Add(slug))
                         replacement.CompanyId = old.Car.CompanyId;
 
                     // Keep the ID of an exact match with dependent history or orders.
@@ -241,6 +279,7 @@ public sealed partial class TelegramScanService
                 previous.Description = replacement.Description;
                 previous.ImageName = replacement.ImageName;
                 previous.CompanyId = replacement.CompanyId;
+                previous.CarModelId = replacement.CarModelId;
             }
 
             var newCars = cars.Where(x => !reused.ContainsKey(x.Key)).Select(x => x.Value).ToList();
@@ -305,6 +344,9 @@ public sealed partial class TelegramScanService
             ComparedAtUtc = now
         })
     };
+
+    private static string LookupKey(string name) => name.Trim().Replace('ي', 'ی').Replace('ك', 'ک')
+        .ToUpperInvariant();
 
     private static string ReferenceSlug(string model, string trim, string year)
     {

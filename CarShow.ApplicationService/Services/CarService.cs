@@ -158,13 +158,15 @@ namespace CarShow.ApplicationService.Services
         // The public list is derived from the exact approved references of the latest
         // completed Telegram scan, rather than from stale Cars.MarketPrice flags.
         private async Task<(List<CarDto> Rows, int ReferenceCount, int MissingCars)> LoadReferenceCars(
-            float? minPrice, float? maxPrice, string? company)
+            float? minPrice, float? maxPrice, string? company, long? companyId, long? modelId)
         {
             // Cars is the source of truth for public visibility. Historical years
             // in Description are audit-only and must never reactivate stale prices.
             var approvedCars = await carRepository.GetAll()
                 .AsNoTracking()
-                .Where(c => !c.IsDelete && c.IsReferenceApproved && c.Description != null)
+                .Where(c => !c.IsDelete && c.IsReferenceApproved && c.Description != null
+                    && (!companyId.HasValue || c.CompanyId == companyId)
+                    && (!modelId.HasValue || c.CarModelId == modelId))
                 .Select(c => new
                 {
                     c.Id, c.Name, c.Description, c.ImageName, c.FactoryPrice, c.MarketPrice,
@@ -253,17 +255,17 @@ namespace CarShow.ApplicationService.Services
         }
 
         // Retain the original array response for existing clients.
-        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0)
+        public async Task<List<CarDto>> GetAllCars(float? minPrice, float? maxPrice, string? company, int? pageSize = 10, int? pageNumber = 0, long? companyId = null, long? modelId = null)
         {
-            var (rows, _, _) = await LoadReferenceCars(minPrice, maxPrice, company);
+            var (rows, _, _) = await LoadReferenceCars(minPrice, maxPrice, company, companyId, modelId);
             var page = Math.Max(0, pageNumber.GetValueOrDefault());
             var size = Math.Clamp(pageSize.GetValueOrDefault(10), 1, 100);
             return rows.Skip((long)page * size > int.MaxValue ? int.MaxValue : page * size).Take(size).ToList();
         }
 
-        public async Task<object> GetPagedReferenceCars(float? minPrice, float? maxPrice, string? company, int pageSize = 10, int pageNumber = 0)
+        public async Task<object> GetPagedReferenceCars(float? minPrice, float? maxPrice, string? company, int pageSize = 10, int pageNumber = 0, long? companyId = null, long? modelId = null)
         {
-            var (rows, referenceCount, missingCars) = await LoadReferenceCars(minPrice, maxPrice, company);
+            var (rows, referenceCount, missingCars) = await LoadReferenceCars(minPrice, maxPrice, company, companyId, modelId);
             var page = Math.Max(0, pageNumber);
             var size = Math.Clamp(pageSize, 1, 100);
             var offset = (long)page * size;
@@ -277,6 +279,16 @@ namespace CarShow.ApplicationService.Services
                 ApprovedReferenceCount = referenceCount,
                 MissingCatalogMatches = missingCars
             };
+        }
+
+        public async Task<object> GetReferenceFilters()
+        {
+            var cars = carRepository.GetAll().Where(c => !c.IsDelete && c.IsReferenceApproved);
+            var companies = await companyRepository.GetAll().Where(c => !c.IsDelete && cars.Any(x => x.CompanyId == c.Id))
+                .OrderBy(c => c.Name).Select(c => new { c.Id, c.Name }).ToListAsync();
+            var models = await carModelRepository.GetAll().Where(c => !c.IsDelete && cars.Any(x => x.CarModelId == c.Id))
+                .OrderBy(c => c.Name).Select(c => new { c.Id, c.Name }).ToListAsync();
+            return new { Companies = companies, Models = models };
         }
 
         public async Task<GetCarForCreateDto> GetCarInfoForCreate()
