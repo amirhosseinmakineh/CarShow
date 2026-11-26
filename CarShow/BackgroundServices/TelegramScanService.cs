@@ -198,7 +198,7 @@ namespace CarShow.BackgroundServices
         private static ArchiveComparison CompareArchive(
             Dictionary<string, List<ParserService.ArchivePayload>> archive, CancellationToken ct)
         {
-            var eligible = new List<(string Model, string Trim, ParsedCar Car, string MessageText)>();
+            var eligible = new List<(string Model, string Trim, ParsedCar Car)>();
             var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
             var parsed = 0;
             var seen = new HashSet<(string Text, string Model, string? Trim, string? Year, string? Price)>();
@@ -225,7 +225,7 @@ namespace CarShow.BackgroundServices
                     reasons[reason] = reasons.GetValueOrDefault(reason) + 1;
                     continue;
                 }
-                eligible.Add((model, trim, new ParsedCar { Name = name, Year = year!, Price = vehicle.Price! }, ParserService.CatalogNormalize(message.OriginalText)));
+                eligible.Add((model, trim, new ParsedCar { Name = name, Year = year!, Price = vehicle.Price! }));
             }
             var groups = new List<ArchiveGroup>();
             var processed = new HashSet<(string Model, string Trim, string Year)>();
@@ -236,13 +236,11 @@ namespace CarShow.BackgroundServices
                     continue;
 
                 var name = first.Car.Name;
-                var normalizedName = ParserService.CatalogNormalize(name);
                 var matches = new List<ParsedCar>();
                 foreach (var candidate in eligible)
                 {
                     ct.ThrowIfCancellationRequested();
                     if (candidate.Car.Year != first.Car.Year ||
-                        !candidate.MessageText.Contains(normalizedName, StringComparison.Ordinal) ||
                         candidate.Model != first.Model || candidate.Trim != first.Trim)
                         continue;
 
