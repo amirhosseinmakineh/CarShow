@@ -21,8 +21,11 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
             return BadRequest(new { message = "SQL must contain 1–16000 characters." });
 
         var connectionString = configuration.GetConnectionString("ScanLabReadOnly");
+        var useLocalPrincipal = string.IsNullOrWhiteSpace(connectionString);
+        if (useLocalPrincipal)
+            connectionString = configuration.GetConnectionString("CarShow");
         if (string.IsNullOrWhiteSpace(connectionString))
-            return StatusCode(503, new { message = "ScanLabReadOnly connection is not configured. No query was executed." });
+            return StatusCode(503, new { message = "Database connection is not configured. No query was executed." });
 
         if (!await Gate.WaitAsync(0, cancellationToken))
             return StatusCode(429, new { message = "Another query is running." });
@@ -33,16 +36,37 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
             deadline.CancelAfter(TimeSpan.FromSeconds(15));
             var token = deadline.Token;
             var watch = Stopwatch.StartNew();
-            await using var connection = new SqlConnection(connectionString);
+            var builder = new SqlConnectionStringBuilder(connectionString) { Pooling = false };
+            await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(token);
 
-            // Fail closed: never use the application's privileged connection.
+            // Provision a database-only principal, then irreversibly drop privileges
+            // for this physical session before accepting any user SQL.
+            if (useLocalPrincipal)
+            {
+                await using var setup = connection.CreateCommand();
+                setup.CommandTimeout = 5;
+                setup.CommandText = """
+                    IF DATABASE_PRINCIPAL_ID(N'ScanLabSessionReader') IS NULL
+                    BEGIN
+                        CREATE USER [ScanLabSessionReader] WITHOUT LOGIN;
+                        GRANT SELECT ON OBJECT::dbo.TelegramRawMessages TO [ScanLabSessionReader];
+                        DENY INSERT, UPDATE, DELETE, EXECUTE TO [ScanLabSessionReader];
+                    END;
+                    EXECUTE AS USER = 'ScanLabSessionReader' WITH NO REVERT;
+                    """;
+                await setup.ExecuteNonQueryAsync(token);
+            }
+
+            // Fail closed if the effective database principal is not restricted.
             await using var check = connection.CreateCommand();
             check.CommandText = """
-                SELECT CASE WHEN USER_NAME() = N'ScanLabReader'
-                  AND IS_SRVROLEMEMBER('sysadmin') = 0
+                SELECT CASE WHEN USER_NAME() IN (N'ScanLabReader', N'ScanLabSessionReader')
+                  AND (USER_NAME() = N'ScanLabSessionReader' OR IS_SRVROLEMEMBER('sysadmin') = 0)
                   AND IS_ROLEMEMBER('db_owner') = 0
                   AND IS_ROLEMEMBER('db_datawriter') = 0
+                  AND IS_ROLEMEMBER('db_securityadmin') = 0
+                  AND IS_ROLEMEMBER('db_ddladmin') = 0
                   AND HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'CONTROL') = 0
                   AND HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'ALTER') = 0
                   AND HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'SELECT') = 0
@@ -51,7 +75,7 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
                 """;
             check.CommandTimeout = 5;
             if (Convert.ToInt32(await check.ExecuteScalarAsync(token)) != 1)
-                return StatusCode(503, new { message = "Dedicated restricted ScanLabReader principal required." });
+                return StatusCode(503, new { message = "Restricted scan lab database principal required." });
 
             await using var command = connection.CreateCommand();
             command.CommandText = request.Sql;
