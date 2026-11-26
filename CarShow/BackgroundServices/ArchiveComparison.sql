@@ -176,15 +176,16 @@ Ranked AS
         ) AS PriceRank
     FROM Eligible
 ),
-Medians AS
+PriceStatistics AS
 (
     SELECT
         Model,
         Trim,
         Year,
         MAX(TotalCount) AS TotalCount,
-        MIN(PriceBillion) AS OriginalMin,
-        MAX(PriceBillion) AS OriginalMax,
+        MIN(PriceBillion) AS MinPrice,
+        MAX(PriceBillion) AS MaxPrice,
+        AVG(PriceBillion) AS AveragePrice,
         AVG(
             CASE
                 WHEN PriceRank IN
@@ -198,56 +199,6 @@ Medians AS
     FROM Ranked
     GROUP BY Model, Trim, Year
 ),
-Compared AS
-(
-    SELECT
-        E.Model,
-        E.Trim,
-        E.Year,
-        E.PriceBillion,
-        M.TotalCount,
-        M.MedianPrice,
-        M.OriginalMin,
-        M.OriginalMax,
-        CASE
-            WHEN ABS(
-                E.PriceBillion - M.MedianPrice
-            ) <= M.MedianPrice * 0.15
-                THEN 1
-            ELSE 0
-        END AS IsConsistent
-    FROM Eligible E
-    INNER JOIN Medians M
-        ON E.Model = M.Model
-        AND E.Trim = M.Trim
-        AND E.Year = M.Year
-),
-Consensus AS
-(
-    SELECT
-        Model,
-        Trim,
-        Year,
-        MAX(TotalCount) AS TotalCount,
-        SUM(IsConsistent) AS ValidCount,
-        MAX(MedianPrice) AS MedianPrice,
-        MAX(OriginalMin) AS OriginalMin,
-        MAX(OriginalMax) AS OriginalMax,
-        MIN(
-            CASE WHEN IsConsistent = 1
-                THEN PriceBillion END
-        ) AS MinPrice,
-        MAX(
-            CASE WHEN IsConsistent = 1
-                THEN PriceBillion END
-        ) AS MaxPrice,
-        AVG(
-            CASE WHEN IsConsistent = 1
-                THEN PriceBillion END
-        ) AS AveragePrice
-    FROM Compared
-    GROUP BY Model, Trim, Year
-),
 FinalResult AS
 (
     SELECT
@@ -255,19 +206,13 @@ FinalResult AS
         CASE
             WHEN TotalCount < 2
                 THEN 'InsufficientAdvertisements'
-            WHEN TotalCount = 2
-                AND OriginalMax - OriginalMin
-                    > MedianPrice * 0.15
-                THEN 'TwoPricesTooDifferent'
-            WHEN ValidCount * 2 <= TotalCount
-                THEN 'InsufficientConsensus'
-            WHEN ValidCount >= 3
+            WHEN TotalCount >= 3
                 AND MaxPrice - MinPrice
                     > MedianPrice * 0.12
                 THEN 'PriceDispersion'
             ELSE 'Approved'
         END AS Status
-    FROM Consensus
+    FROM PriceStatistics
 )
 SELECT
     Model,
@@ -275,8 +220,8 @@ SELECT
     Year,
     Year - 621 AS PersianYear,
     TotalCount,
-    ValidCount,
-    TotalCount - ValidCount AS RemovedCount,
+    TotalCount AS ValidCount,
+    0 AS RemovedCount,
     CAST(MedianPrice AS DECIMAL(19,3))
         AS MedianPriceBillion,
     CAST(MinPrice AS DECIMAL(19,3))

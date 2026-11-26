@@ -12,13 +12,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 internal static class ArchiveComparisonChecks
 {
-    private const string ExpectedSqlSha256 = "d3d5164e90b4b6cea4c223e7a5960ff47a38ef4c1affc0360b13911504051281";
+    private const string ExpectedSqlSha256 = "1bbc1eaf3a86e029a754ca01a7b9c78af23fd7b1b92a1d031d731b9dcf2444ff";
 
     internal static async Task RunAsync(Action<bool, string> check)
     {
         var sql = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "ArchiveComparison.sql"));
         check(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(sql.Replace("\r\n", "\n")))) ==
-              ExpectedSqlSha256, "Archive SQL matches the supplied query verbatim");
+              ExpectedSqlSha256, "Archive SQL matches the approved query version");
 
         var server = Environment.GetEnvironmentVariable("CARSHOW_TEST_SQL_SERVER");
         if (string.IsNullOrWhiteSpace(server))
@@ -125,6 +125,8 @@ internal static class ArchiveComparisonChecks
             await AddAd("No consensus", "Trim", "2026", price);
         foreach (var price in new[] { "2800", "3000", "3200" })
             await AddAd("Dispersion", "Trim", "2026", price);
+        foreach (var price in new[] { "3000", "3050", "3100", "5500" })
+            await AddAd("Outlier", "Trim", "2026", price);
 
         var oldYear = new Car
         {
@@ -174,9 +176,18 @@ internal static class ArchiveComparisonChecks
                 property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString())));
             check(manualRows.Order(StringComparer.Ordinal).SequenceEqual(appRows.Order(StringComparer.Ordinal)),
                 "Application rows match direct SQL execution across all 13 columns");
-            check(groups.Length == 7 && groups.Count(group => group.GetProperty("Status").GetString() == "Approved") == 3 &&
-                  groups.Select(group => group.GetProperty("Status").GetString()).Distinct().Count() == 5,
-                "Trimless and ineligible ads are excluded and all five SQL statuses are preserved");
+            check(groups.Length == 8 && groups.Count(group => group.GetProperty("Status").GetString() == "Approved") == 4 &&
+                  groups.Select(group => group.GetProperty("Status").GetString()).Distinct().Count() == 3,
+                "Trimless and ineligible ads are excluded and the remaining SQL statuses are preserved");
+            var pair = groups.Single(group => group.GetProperty("Model").GetString() == "Conflicting");
+            check(pair.GetProperty("Status").GetString() == "Approved" &&
+                  pair.GetProperty("ReferencePriceToman").GetInt64() == 3_000_000_000L,
+                "Two eligible prices beyond the old 15% limit are averaged and approved");
+            var outlier = groups.Single(group => group.GetProperty("Model").GetString() == "Outlier");
+            check(outlier.GetProperty("Status").GetString() == "PriceDispersion" &&
+                  outlier.GetProperty("ValidCount").GetInt32() == 4 &&
+                  outlier.GetProperty("RemovedCount").GetInt32() == 0,
+                "The 12% dispersion check includes prices beyond the old 15% band");
             var deduplicated = groups.Single(group => group.GetProperty("Trim").GetString() == "اتومات" &&
                                                        group.GetProperty("Year").GetInt32() == 2026);
             check(deduplicated.GetProperty("Model").GetString() == "دنا" &&
@@ -220,17 +231,21 @@ internal static class ArchiveComparisonChecks
         }
         check(concurrent.StatusCode == 409, "Overlapping final scans are prevented");
         var result = JsonSerializer.SerializeToElement((await scan).Value);
-        check(result.GetProperty("activeReferenceCars").GetInt32() == 3 &&
+        var rejections = result.GetProperty("RejectedByReason");
+        check(result.GetProperty("activeReferenceCars").GetInt32() == 4 &&
               result.GetProperty("deletedCars").GetInt32() == 2 &&
-              result.GetProperty("insertedCars").GetInt32() == 2 &&
+              result.GetProperty("insertedCars").GetInt32() == 3 &&
               result.GetProperty("retainedHistoricalCars").GetInt32() == 3 &&
-              result.GetProperty("RejectedByReason").EnumerateObject().All(status => status.Value.GetInt32() == 1),
+              rejections.EnumerateObject().Count() == 2 &&
+              rejections.GetProperty("InsufficientAdvertisements").GetInt32() == 1 &&
+              rejections.GetProperty("PriceDispersion").GetInt32() == 3,
             "Refresh counts actual writes, retained dependents, active references and SQL rejection statuses");
 
         var cars = await ReadCarsAsync(options, ct);
         var active = cars.Where(car => car.Approved && !car.Deleted).ToList();
-        check(active.Count == 3 && active.Select(car => car.Slug).Distinct().Count() == 3 &&
-              active.All(car => car.Name.StartsWith("دنا", StringComparison.Ordinal)),
+        check(active.Count == 4 && active.Select(car => car.Slug).Distinct().Count() == 4 &&
+              active.Count(car => car.Name.StartsWith("دنا", StringComparison.Ordinal)) == 3 &&
+              active.Single(car => car.Name == "Conflicting Trim").Price == 3_000_000_000m,
             "One active vehicle per approved SQL row, across manufacturing years and trims");
         check(active.Single(car => car.Id == oldYear.Id).Image == "2025.jpg" &&
               active.Single(car => car.Price == 3_925_000_000m).Image == "2026.jpg",
@@ -250,7 +265,7 @@ internal static class ArchiveComparisonChecks
         await ExecuteAsync(sqlConnection, "DELETE dbo.TelegramRawArchiveSnapshots;", ct);
         var empty = JsonSerializer.SerializeToElement((await ScanAsync(options, ct)).Value);
         check(empty.GetProperty("refreshSkipped").GetBoolean() &&
-              empty.GetProperty("activeReferenceCars").GetInt32() == 3 &&
+              empty.GetProperty("activeReferenceCars").GetInt32() == 4 &&
               (await ReadCarsAsync(options, ct)).SequenceEqual(afterRepeat), "Zero approved SQL groups preserve cars");
 
         await ExecuteAsync(sqlConnection, "DROP TABLE dbo.TelegramRawArchiveSnapshots;", ct);
