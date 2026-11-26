@@ -198,7 +198,7 @@ namespace CarShow.BackgroundServices
         private static ArchiveComparison CompareArchive(
             Dictionary<string, List<ParserService.ArchivePayload>> archive, CancellationToken ct)
         {
-            var eligible = new List<(string Model, string Trim, ParsedCar Car)>();
+            var eligible = new List<(string Model, string Trim, ParsedCar Car, string MessageText)>();
             var reasons = new Dictionary<string, int>(StringComparer.Ordinal);
             var parsed = 0;
             var seen = new HashSet<(string Text, string Model, string? Trim, string? Year, string? Price)>();
@@ -225,20 +225,37 @@ namespace CarShow.BackgroundServices
                     reasons[reason] = reasons.GetValueOrDefault(reason) + 1;
                     continue;
                 }
-                eligible.Add((model, trim, new ParsedCar { Name = name, Year = year!, Price = vehicle.Price! }));
+                eligible.Add((model, trim, new ParsedCar { Name = name, Year = year!, Price = vehicle.Price! }, ParserService.CatalogNormalize(message.OriginalText)));
             }
             var groups = new List<ArchiveGroup>();
-            foreach (var group in eligible.GroupBy(x => (x.Model, x.Trim, x.Car.Year))
-                .OrderBy(x => x.Key.Model, StringComparer.Ordinal).ThenBy(x => x.Key.Trim, StringComparer.Ordinal).ThenBy(x => x.Key.Year, StringComparer.Ordinal))
+            var processed = new HashSet<(string Model, string Trim, string Year)>();
+            foreach (var first in eligible)
             {
                 ct.ThrowIfCancellationRequested();
-                var prices = group.Select(x =>
+                if (!processed.Add((first.Model, first.Trim, first.Car.Year)))
+                    continue;
+
+                var name = first.Car.Name;
+                var normalizedName = ParserService.CatalogNormalize(name);
+                var matches = new List<ParsedCar>();
+                foreach (var candidate in eligible)
                 {
-                    CarPriceReferenceBuilder.TryConvertPrice(x.Car.Price, out var price);
+                    ct.ThrowIfCancellationRequested();
+                    if (candidate.Car.Year != first.Car.Year ||
+                        !candidate.MessageText.Contains(normalizedName, StringComparison.Ordinal) ||
+                        candidate.Model != first.Model || candidate.Trim != first.Trim)
+                        continue;
+
+                    matches.Add(candidate.Car);
+                }
+
+                var prices = matches.Select(x =>
+                {
+                    CarPriceReferenceBuilder.TryConvertPrice(x.Price, out var price);
                     return price;
                 }).OrderBy(x => x).ToList();
-                var reference = prices.Count >= 2 ? CarPriceReferenceBuilder.BuildExact(group.Select(x => x.Car)).SingleOrDefault() : null;
-                groups.Add(new ArchiveGroup(group.Key.Model + " " + group.Key.Trim, group.Key.Model, group.Key.Trim, group.Key.Year, prices, reference));
+                var reference = prices.Count >= 2 ? CarPriceReferenceBuilder.BuildExact(matches).SingleOrDefault() : null;
+                groups.Add(new ArchiveGroup(name, first.Model, first.Trim, first.Car.Year, prices, reference));
             }
             return new ArchiveComparison(parsed, eligible.Count, reasons, groups);
         }
