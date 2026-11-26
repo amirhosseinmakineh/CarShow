@@ -381,7 +381,20 @@ namespace CarShow.BackgroundServices
                 .ToDictionary(x => x.Key, x => x.First());
 
             var cars = references.Select(group => { var reference = group.Reference!;
-                companiesByModel.TryGetValue(ParserService.CatalogNormalize(group.Model), out var company);
+                var model = ParserService.CatalogNormalize(group.Model);
+                // Company ownership is model-only. A trim suffix left in the
+                // extracted model must not prevent matching the catalog model.
+                if (!companiesByModel.TryGetValue(model, out var company))
+                {
+                    var matches = catalog.Where(x => ParserService.CatalogContains(model, x.Model))
+                        .ToList();
+                    var specific = matches.Where(x => !matches.Any(y =>
+                        y.Model != x.Model && ParserService.CatalogContains(y.Model, x.Model)))
+                        .ToList();
+                    if (specific.Count > 0 && specific.Select(x =>
+                        ParserService.CatalogNormalize(x.CompanyName)).Distinct().Count() == 1)
+                        company = specific.First();
+                }
                 group.CompanyName = company.CompanyName;
                 return new Car
             {
