@@ -2,6 +2,7 @@ namespace CarShow.BackgroundServices;
 
 public sealed record ArchiveComparisonResult
 {
+    public string? CompanyName { get; init; }
     public string Model { get; init; } = string.Empty;
     public string Trim { get; init; } = string.Empty;
     public int Year { get; init; }
