@@ -10,7 +10,7 @@ public class UnitOfWork : IUnitOfWork
         _context = context;
     }
 
-    private IDbContextTransaction _transaction;
+    private IDbContextTransaction? _transaction;
 
     public async Task BeginTransactionAsync()
     {
@@ -24,12 +24,30 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task CommitAsync()
     {
+        var transaction = _transaction ?? throw new InvalidOperationException("No active transaction to commit.");
         await _context.SaveChangesAsync();
-        await _transaction.CommitAsync();
+        await transaction.CommitAsync();
+        _transaction = null;
+        await transaction.DisposeAsync();
     }
 
     public async Task RollbackAsync()
     {
-        await _transaction.RollbackAsync();
+        var transaction = _transaction;
+        if (transaction is null)
+            return;
+
+        _transaction = null;
+        try
+        {
+            // SQL Server can end the transaction before the application sees the failure.
+            if (transaction.GetDbTransaction().Connection is not null)
+                await transaction.RollbackAsync();
+        }
+        finally
+        {
+            _context.ChangeTracker.Clear();
+            await transaction.DisposeAsync();
+        }
     }
 }
