@@ -12,6 +12,7 @@ namespace CarShow.Infrastracture.Context
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<UserRole> UserRoles { get; set; } = null!;
         public DbSet<Role> Roles { get; set; } = null!;
+        public DbSet<Catalog> Catalog { get; set; } = null!;
         public DbSet<Car> Cars { get; set; } = null!;
         public DbSet<Tip> Tips { get; set; } = null!;
         public DbSet<CarModel> CarModels { get; set; } = null!;
@@ -23,6 +24,14 @@ namespace CarShow.Infrastracture.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Catalog>(entity =>
+            {
+                entity.ToTable("Catalog");
+                entity.Property(x => x.CompanyName).HasMaxLength(250).IsRequired();
+                entity.Property(x => x.CarName).HasMaxLength(250).IsRequired();
+                entity.Property(x => x.TrimName).HasMaxLength(250).IsRequired();
+                entity.HasIndex(x => new { x.CompanyName, x.CarName, x.TrimName }).IsUnique();
+            });
 
             // The initial database migration created this column as TipName.
             // Keep the CLR property named Name while targeting the existing schema.
