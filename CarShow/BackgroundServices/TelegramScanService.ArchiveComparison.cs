@@ -160,8 +160,18 @@ public sealed partial class TelegramScanService
         IReadOnlyList<ArchiveComparisonResult> approved, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var cars = approved.Select(row => CreateReferenceCar(row, now))
-            .ToDictionary(car => car.Slug, StringComparer.Ordinal);
+        var cars = new Dictionary<string, Car>(StringComparer.Ordinal);
+        foreach (var row in approved.OrderBy(x => x.Model, StringComparer.Ordinal)
+                     .ThenBy(x => x.Trim, StringComparer.Ordinal).ThenBy(x => x.Year)
+                     .ThenBy(x => x.TotalCount).ThenBy(x => x.ReferencePriceToman)
+                     .ThenBy(x => x.MinPriceBillion).ThenBy(x => x.MaxPriceBillion))
+        {
+            var car = CreateReferenceCar(row, now);
+            var baseSlug = car.Slug;
+            for (var suffix = 2; cars.ContainsKey(car.Slug); suffix++)
+                car.Slug = baseSlug + "-" + suffix.ToString(CultureInfo.InvariantCulture);
+            cars.Add(car.Slug, car);
+        }
 
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         try
