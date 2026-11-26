@@ -24,6 +24,35 @@ public sealed class TelegramManagementController : ControllerBase
         _db = db;
     }
 
+    [HttpGet("scan-lab/step1")]
+    public async Task<IActionResult> GetScanLabStep1(int page = 1, int pageSize = 10, CancellationToken cancellationToken = default)
+    {
+        if (page < 1 || pageSize < 1 || pageSize > 100 || (long)(page - 1) * pageSize > int.MaxValue)
+            return BadRequest("Invalid pagination.");
+
+        var totalCount = await _db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) AS [Value] FROM dbo.TelegramRawMessages")
+            .SingleAsync(cancellationToken);
+
+        var items = await _db.Database.SqlQueryRaw<ScanLabRow>("""
+            SELECT CAST(Id AS bigint) AS Id,
+                TRIM(REPLACE(LEFT(MessageText, CHARINDEX(CHAR(10), MessageText + CHAR(10)) - 1), CHAR(13), '')) AS CarName
+            FROM dbo.TelegramRawMessages
+            """)
+            .OrderBy(row => row.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return Ok(new { items, totalCount, page, pageSize });
+    }
+
+    public sealed class ScanLabRow
+    {
+        public long Id { get; set; }
+        public string? CarName { get; set; }
+    }
+
     [HttpPost("scan")]
     public IActionResult StartScan()
     {
