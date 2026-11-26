@@ -30,7 +30,7 @@ namespace CarShow.Controllers
         public async Task<IActionResult> GetReferenceCars(
             [FromQuery] float? minPrice, [FromQuery] float? maxPrice,
             [FromQuery] string? company, [FromQuery] int pageSize = 10,
-            [FromQuery] int pageNumber = 0)
+            [FromQuery] int pageNumber = 0, [FromQuery] long? companyId = null, [FromQuery] long? modelId = null)
         {
             var result = await servicce.GetPagedReferenceCars(minPrice, maxPrice, company, pageSize, pageNumber, companyId, modelId);
             return Ok(result);
