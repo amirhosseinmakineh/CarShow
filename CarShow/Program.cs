@@ -14,6 +14,8 @@ using CarShow.Security.Token;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.SqlServer;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi;
@@ -151,11 +153,19 @@ var catalogSeedPath = Path.Combine(app.Environment.ContentRootPath, "Data", "See
     "CarShow_Final_Trimmed_Cars_Catalog_1405.html");
 if (!File.Exists(catalogSeedPath))
     throw new FileNotFoundException("Required car catalog seed is missing.", catalogSeedPath);
-using (var catalogScope = app.Services.CreateScope())
+await using (var strategyScope = app.Services.CreateAsyncScope())
 {
-    var catalogImporter = catalogScope.ServiceProvider.GetRequiredService<CatalogImportService>();
-    await using var catalogStream = File.OpenRead(catalogSeedPath);
-    var catalogResult = await catalogImporter.ImportAsync(catalogStream);
+    var db = strategyScope.ServiceProvider.GetRequiredService<CarShowContext>();
+    var strategy = new SqlServerRetryingExecutionStrategy(db, maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5),
+        errorNumbersToAdd: null);
+    var catalogResult = await strategy.ExecuteAsync(async cancellationToken =>
+    {
+        // Read the catalog and database again after an uncertain commit result.
+        await using var catalogScope = app.Services.CreateAsyncScope();
+        var catalogImporter = catalogScope.ServiceProvider.GetRequiredService<CatalogImportService>();
+        await using var catalogStream = File.OpenRead(catalogSeedPath);
+        return await catalogImporter.ImportAsync(catalogStream, cancellationToken);
+    }, app.Lifetime.ApplicationStopping);
     app.Logger.LogInformation("Catalog seed imported from {Path}: {Result}", catalogSeedPath, catalogResult);
 }
 app.Run();
