@@ -9,6 +9,7 @@ namespace CarShow.ApplicationService.Services;
 
 public sealed class CatalogImportService(
     IBaseRepository<long, Car> cars,
+    IBaseRepository<long, Catalog> catalogRepository,
     IBaseRepository<long, Company> companiesRepository,
     IBaseRepository<long, CarModel> modelsRepository,
     IBaseRepository<long, Tip> tipsRepository,
@@ -34,8 +35,19 @@ public sealed class CatalogImportService(
         await unitOfWork.BeginTransactionAsync();
         try
         {
+            var catalogKeys = (await catalogRepository.GetAll().ToListAsync(cancellationToken))
+                .Select(x => (Key(x.CompanyName), Key(x.CarName), Key(x.TrimName))).ToHashSet();
             foreach (var entry in accepted)
             {
+                if (catalogKeys.Add((Key(entry.Company), Key(entry.Model), Key(entry.Tip))))
+                {
+                    await catalogRepository.Create(new Catalog
+                    {
+                        CompanyName = entry.Company,
+                        CarName = entry.Model,
+                        TrimName = entry.Tip
+                    });
+                }
                 cancellationToken.ThrowIfCancellationRequested();
                 var companyKey = Key(entry.Company);
                 if (!companies.ContainsKey(companyKey))
