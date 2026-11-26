@@ -5,9 +5,7 @@ WITH Deduplicated AS
         Metadata,
         ROW_NUMBER() OVER
         (
-            PARTITION BY
-                ChannelUsername,
-                TelegramMessageId
+            PARTITION BY ChannelUsername, TelegramMessageId
             ORDER BY CollectedAt DESC, Id DESC
         ) AS RowNum
     FROM dbo.TelegramRawArchiveSnapshots
@@ -30,9 +28,7 @@ Archive AS
         Version INT,
         OriginalText NVARCHAR(MAX)
     ) M
-    CROSS APPLY OPENJSON(
-        A.Metadata, '$.Vehicles'
-    )
+    CROSS APPLY OPENJSON(A.Metadata, '$.Vehicles')
     WITH
     (
         Model NVARCHAR(200),
@@ -42,7 +38,7 @@ Archive AS
         IsSale BIT
     ) V
     WHERE A.RowNum = 1
-    AND M.Version = 2
+      AND M.Version = 2
 ),
 UniqueAds AS
 (
@@ -72,28 +68,20 @@ Normalized AS
         ) AS RawPrice
     FROM UniqueAds
     WHERE IsSale = 1
-    AND ISNULL(TRIM(Model), N'') <> N''
-    AND ISNULL(TRIM(Trim), N'') <> N''
+      AND ISNULL(TRIM(Model), N'') <> N''
+      AND ISNULL(TRIM(Trim), N'') <> N''
 ),
 PriceParts AS
 (
     SELECT
         *,
         CASE
-            WHEN RawPrice LIKE N'%میلیارد'
-                THEN N'Billion'
-            WHEN RawPrice LIKE N'%میلیون'
-                THEN N'Million'
+            WHEN RawPrice LIKE N'%میلیارد' THEN N'Billion'
+            WHEN RawPrice LIKE N'%میلیون' THEN N'Million'
             ELSE N'Numeric'
         END AS PriceUnit,
         TRIM(
-            REPLACE(
-                REPLACE(
-                    RawPrice,
-                    N'میلیارد', N''
-                ),
-                N'میلیون', N''
-            )
+            REPLACE(REPLACE(RawPrice, N'میلیارد', N''), N'میلیون', N'')
         ) AS AmountText
     FROM Normalized
 ),
@@ -103,17 +91,13 @@ Converted AS
         Model,
         Trim,
         CASE
-            WHEN TRY_CONVERT(INT, RawYear)
-                BETWEEN 2000 AND 2099
+            WHEN TRY_CONVERT(INT, RawYear) BETWEEN 2000 AND 2099
                 THEN TRY_CONVERT(INT, RawYear)
-            WHEN TRY_CONVERT(INT, RawYear)
-                BETWEEN 1300 AND 1499
+            WHEN TRY_CONVERT(INT, RawYear) BETWEEN 1300 AND 1499
                 THEN TRY_CONVERT(INT, RawYear) + 621
-            WHEN TRY_CONVERT(INT, RawYear)
-                BETWEEN 400 AND 499
+            WHEN TRY_CONVERT(INT, RawYear) BETWEEN 400 AND 499
                 THEN TRY_CONVERT(INT, RawYear) + 1621
-            WHEN LEN(RawYear) = 2
-                AND RawYear LIKE '0[0-9]'
+            WHEN LEN(RawYear) = 2 AND RawYear LIKE '0[0-9]'
                 THEN TRY_CONVERT(INT, RawYear) + 2021
             ELSE NULL
         END AS Year,
@@ -122,31 +106,21 @@ Converted AS
                 WHEN PriceUnit = N'Billion'
                     THEN TRY_CONVERT(
                         DECIMAL(19,9),
-                        REPLACE(
-                            REPLACE(AmountText, '/', '.'),
-                            ',', '.'
-                        )
+                        REPLACE(REPLACE(AmountText, '/', '.'), ',', '.')
                     )
                 WHEN PriceUnit = N'Million'
                     THEN TRY_CONVERT(
                         DECIMAL(19,9),
-                        REPLACE(
-                            REPLACE(AmountText, '/', '.'),
-                            ',', '.'
-                        )
+                        REPLACE(REPLACE(AmountText, '/', '.'), ',', '.')
                     ) / 1000.0
                 WHEN RawPrice COLLATE Latin1_General_100_BIN2
                     NOT LIKE '%[^0-9]%'
                     AND LEN(RawPrice) BETWEEN 4 AND 5
-                    THEN TRY_CONVERT(
-                        DECIMAL(19,9), RawPrice
-                    ) / 1000.0
+                    THEN TRY_CONVERT(DECIMAL(19,9), RawPrice) / 1000.0
                 WHEN RawPrice COLLATE Latin1_General_100_BIN2
                     NOT LIKE '%[^0-9]%'
                     AND LEN(RawPrice) BETWEEN 6 AND 8
-                    THEN TRY_CONVERT(
-                        DECIMAL(19,9), RawPrice
-                    ) / 1000000.0
+                    THEN TRY_CONVERT(DECIMAL(19,9), RawPrice) / 1000000.0
                 ELSE NULL
             END
             AS DECIMAL(19,9)
@@ -158,8 +132,8 @@ Eligible AS
     SELECT *
     FROM Converted
     WHERE Year IS NOT NULL
-    AND PriceBillion > 0
-    AND PriceBillion < 1000
+      AND PriceBillion > 0
+      AND PriceBillion < 1000
 ),
 Ranked AS
 (
@@ -203,15 +177,7 @@ FinalResult AS
 (
     SELECT
         *,
-        CASE
-            WHEN TotalCount < 2
-                THEN 'InsufficientAdvertisements'
-            WHEN TotalCount >= 3
-                AND MaxPrice - MinPrice
-                    > MedianPrice * 0.12
-                THEN 'PriceDispersion'
-            ELSE 'Approved'
-        END AS Status
+        'Approved' AS Status
     FROM PriceStatistics
 )
 SELECT
@@ -222,25 +188,16 @@ SELECT
     TotalCount,
     TotalCount AS ValidCount,
     0 AS RemovedCount,
-    CAST(MedianPrice AS DECIMAL(19,3))
-        AS MedianPriceBillion,
-    CAST(MinPrice AS DECIMAL(19,3))
-        AS MinPriceBillion,
-    CAST(MaxPrice AS DECIMAL(19,3))
-        AS MaxPriceBillion,
+    CAST(MedianPrice AS DECIMAL(19,3)) AS MedianPriceBillion,
+    CAST(MinPrice AS DECIMAL(19,3)) AS MinPriceBillion,
+    CAST(MaxPrice AS DECIMAL(19,3)) AS MaxPriceBillion,
     CASE
         WHEN Status = 'Approved'
-        THEN CAST(
-            ROUND(AveragePrice, 3)
-            AS DECIMAL(19,3)
-        )
+        THEN CAST(ROUND(AveragePrice, 3) AS DECIMAL(19,3))
     END AS ReferencePriceBillion,
     CASE
         WHEN Status = 'Approved'
-        THEN CAST(
-            ROUND(AveragePrice, 3) * 1000000000
-            AS BIGINT
-        )
+        THEN CAST(ROUND(AveragePrice, 3) * 1000000000 AS BIGINT)
     END AS ReferencePriceToman,
     Status
 FROM FinalResult

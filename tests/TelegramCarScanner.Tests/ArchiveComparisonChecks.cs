@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 internal static class ArchiveComparisonChecks
 {
-    private const string ExpectedSqlSha256 = "1bbc1eaf3a86e029a754ca01a7b9c78af23fd7b1b92a1d031d731b9dcf2444ff";
+    private const string ExpectedSqlSha256 = "ea6e92c0ffd922b83708bae246115e153be0d1d9b1be5554ac5c352091ab7648";
 
     internal static async Task RunAsync(Action<bool, string> check)
     {
@@ -176,18 +176,20 @@ internal static class ArchiveComparisonChecks
                 property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString())));
             check(manualRows.Order(StringComparer.Ordinal).SequenceEqual(appRows.Order(StringComparer.Ordinal)),
                 "Application rows match direct SQL execution across all 13 columns");
-            check(groups.Length == 8 && groups.Count(group => group.GetProperty("Status").GetString() == "Approved") == 4 &&
-                  groups.Select(group => group.GetProperty("Status").GetString()).Distinct().Count() == 3,
-                "Trimless and ineligible ads are excluded and the remaining SQL statuses are preserved");
+            check(groups.Length == 8 && groups.All(group => group.GetProperty("Status").GetString() == "Approved"),
+                "Every eligible group is approved and trimless or otherwise ineligible ads are excluded");
+            var single = groups.Single(group => group.GetProperty("Model").GetString() == "Single");
+            check(single.GetProperty("TotalCount").GetInt32() == 1 &&
+                  single.GetProperty("ReferencePriceToman").GetInt64() == 2_500_000_000L,
+                "A single eligible advertisement provides its own reference price");
             var pair = groups.Single(group => group.GetProperty("Model").GetString() == "Conflicting");
-            check(pair.GetProperty("Status").GetString() == "Approved" &&
-                  pair.GetProperty("ReferencePriceToman").GetInt64() == 3_000_000_000L,
-                "Two eligible prices beyond the old 15% limit are averaged and approved");
+            check(pair.GetProperty("ReferencePriceToman").GetInt64() == 3_000_000_000L,
+                "Two eligible prices with a wide spread are averaged");
             var outlier = groups.Single(group => group.GetProperty("Model").GetString() == "Outlier");
-            check(outlier.GetProperty("Status").GetString() == "PriceDispersion" &&
+            check(outlier.GetProperty("ReferencePriceToman").GetInt64() == 3_663_000_000L &&
                   outlier.GetProperty("ValidCount").GetInt32() == 4 &&
                   outlier.GetProperty("RemovedCount").GetInt32() == 0,
-                "The 12% dispersion check includes prices beyond the old 15% band");
+                "A wider group uses the average of every eligible price");
             var deduplicated = groups.Single(group => group.GetProperty("Trim").GetString() == "اتومات" &&
                                                        group.GetProperty("Year").GetInt32() == 2026);
             check(deduplicated.GetProperty("Model").GetString() == "دنا" &&
@@ -232,19 +234,18 @@ internal static class ArchiveComparisonChecks
         check(concurrent.StatusCode == 409, "Overlapping final scans are prevented");
         var result = JsonSerializer.SerializeToElement((await scan).Value);
         var rejections = result.GetProperty("RejectedByReason");
-        check(result.GetProperty("activeReferenceCars").GetInt32() == 4 &&
+        check(result.GetProperty("activeReferenceCars").GetInt32() == 8 &&
               result.GetProperty("deletedCars").GetInt32() == 2 &&
-              result.GetProperty("insertedCars").GetInt32() == 3 &&
+              result.GetProperty("insertedCars").GetInt32() == 7 &&
               result.GetProperty("retainedHistoricalCars").GetInt32() == 3 &&
-              rejections.EnumerateObject().Count() == 2 &&
-              rejections.GetProperty("InsufficientAdvertisements").GetInt32() == 1 &&
-              rejections.GetProperty("PriceDispersion").GetInt32() == 3,
+              !rejections.EnumerateObject().Any() && result.GetProperty("rejectedGroups").GetInt32() == 0,
             "Refresh counts actual writes, retained dependents, active references and SQL rejection statuses");
 
         var cars = await ReadCarsAsync(options, ct);
         var active = cars.Where(car => car.Approved && !car.Deleted).ToList();
-        check(active.Count == 4 && active.Select(car => car.Slug).Distinct().Count() == 4 &&
+        check(active.Count == 8 && active.Select(car => car.Slug).Distinct().Count() == 8 &&
               active.Count(car => car.Name.StartsWith("دنا", StringComparison.Ordinal)) == 3 &&
+              active.Single(car => car.Name == "Single Trim").Price == 2_500_000_000m &&
               active.Single(car => car.Name == "Conflicting Trim").Price == 3_000_000_000m,
             "One active vehicle per approved SQL row, across manufacturing years and trims");
         check(active.Single(car => car.Id == oldYear.Id).Image == "2025.jpg" &&
@@ -265,7 +266,7 @@ internal static class ArchiveComparisonChecks
         await ExecuteAsync(sqlConnection, "DELETE dbo.TelegramRawArchiveSnapshots;", ct);
         var empty = JsonSerializer.SerializeToElement((await ScanAsync(options, ct)).Value);
         check(empty.GetProperty("refreshSkipped").GetBoolean() &&
-              empty.GetProperty("activeReferenceCars").GetInt32() == 4 &&
+              empty.GetProperty("activeReferenceCars").GetInt32() == 8 &&
               (await ReadCarsAsync(options, ct)).SequenceEqual(afterRepeat), "Zero approved SQL groups preserve cars");
 
         await ExecuteAsync(sqlConnection, "DROP TABLE dbo.TelegramRawArchiveSnapshots;", ct);
