@@ -3,6 +3,7 @@ using CarShow.ApplicationService.Import;
 using CarShow.Domain.IRepository;
 using CarShow.Domain.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CarShow.ApplicationService.Services;
 
@@ -11,7 +12,8 @@ public sealed class CatalogImportService(
     IBaseRepository<long, Company> companiesRepository,
     IBaseRepository<long, CarModel> modelsRepository,
     IBaseRepository<long, Tip> tipsRepository,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    ILogger<CatalogImportService> logger)
 {
     private static string Key(string value) => string.Join(" ", value.Replace('ي', 'ی').Replace('ك', 'ک')
         .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
@@ -93,7 +95,14 @@ public sealed class CatalogImportService(
         }
         catch
         {
-            await unitOfWork.RollbackAsync();
+            try
+            {
+                await unitOfWork.RollbackAsync();
+            }
+            catch (Exception rollbackException)
+            {
+                logger.LogWarning(rollbackException, "Failed to roll back the catalog import transaction.");
+            }
             throw;
         }
     }
