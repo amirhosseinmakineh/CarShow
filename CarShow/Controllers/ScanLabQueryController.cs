@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Data;
+using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace CarShow.Controllers;
 
@@ -20,10 +21,20 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
         if (string.IsNullOrWhiteSpace(request.Sql) || request.Sql.Length > 16000)
             return BadRequest(new { message = "SQL must contain 1–16000 characters." });
 
-        var connectionString = configuration.GetConnectionString("ScanLabReadOnly");
-        var useLocalPrincipal = string.IsNullOrWhiteSpace(connectionString);
-        if (useLocalPrincipal)
-            connectionString = configuration.GetConnectionString("CarShow");
+        var parser = new TSql160Parser(true);
+        var fragment = parser.Parse(new StringReader(request.Sql), out var errors);
+        if (errors.Count != 0 || fragment is not TSqlScript script ||
+            script.Batches.Count != 1 || script.Batches[0].Statements.Count != 1 ||
+            script.Batches[0].Statements[0] is not SelectStatement)
+            return BadRequest(new { message = "Only one SELECT statement is allowed." });
+        var validator = new ArchiveQueryValidator();
+        fragment.Accept(validator);
+        if (!validator.Valid || !validator.HasArchive)
+            return BadRequest(new { message = "Only read-only archive queries are allowed." });
+        var generator = new Sql160ScriptGenerator();
+        generator.GenerateScript(fragment, out var validatedSql);
+
+        var connectionString = configuration.GetConnectionString("CarShow");
         if (string.IsNullOrWhiteSpace(connectionString))
             return StatusCode(503, new { message = "Database connection is not configured. No query was executed." });
 
@@ -40,45 +51,8 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(token);
 
-            // Provision a database-only principal, then irreversibly drop privileges
-            // for this physical session before accepting any user SQL.
-            if (useLocalPrincipal)
-            {
-                await using var setup = connection.CreateCommand();
-                setup.CommandTimeout = 5;
-                setup.CommandText = """
-                    IF DATABASE_PRINCIPAL_ID(N'ScanLabSessionReader') IS NULL
-                    BEGIN
-                        CREATE USER [ScanLabSessionReader] WITHOUT LOGIN;
-                        GRANT SELECT ON OBJECT::dbo.TelegramRawMessages TO [ScanLabSessionReader];
-                        DENY INSERT, UPDATE, DELETE, EXECUTE TO [ScanLabSessionReader];
-                    END;
-                    EXECUTE AS USER = 'ScanLabSessionReader' WITH NO REVERT;
-                    """;
-                await setup.ExecuteNonQueryAsync(token);
-            }
-
-            // Fail closed if the effective database principal is not restricted.
-            await using var check = connection.CreateCommand();
-            check.CommandText = """
-                SELECT CASE WHEN USER_NAME() IN (N'ScanLabReader', N'ScanLabSessionReader')
-                  AND (USER_NAME() = N'ScanLabSessionReader' OR IS_SRVROLEMEMBER('sysadmin') = 0)
-                  AND IS_ROLEMEMBER('db_owner') = 0
-                  AND IS_ROLEMEMBER('db_datawriter') = 0
-                  AND IS_ROLEMEMBER('db_securityadmin') = 0
-                  AND IS_ROLEMEMBER('db_ddladmin') = 0
-                  AND HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'CONTROL') = 0
-                  AND HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'ALTER') = 0
-                  AND HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'SELECT') = 0
-                  AND HAS_PERMS_BY_NAME('dbo.TelegramRawMessages', 'OBJECT', 'SELECT') = 1
-                  THEN 1 ELSE 0 END
-                """;
-            check.CommandTimeout = 5;
-            if (Convert.ToInt32(await check.ExecuteScalarAsync(token)) != 1)
-                return StatusCode(503, new { message = "Restricted scan lab database principal required." });
-
             await using var command = connection.CreateCommand();
-            command.CommandText = request.Sql;
+            command.CommandText = validatedSql;
             command.CommandTimeout = 10;
             await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleResult, token);
             var columns = Enumerable.Range(0, reader.FieldCount).Select(reader.GetName).ToArray();
@@ -102,5 +76,43 @@ public sealed class ScanLabQueryController(IConfiguration configuration) : Contr
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         { return StatusCode(408, new { message = "Query time limit exceeded." }); }
         finally { Gate.Release(); }
+    }
+    private sealed class ArchiveQueryValidator : TSqlFragmentVisitor
+    {
+        public bool Valid { get; private set; } = true;
+        public bool HasArchive { get; private set; }
+        private static readonly HashSet<string> Functions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "TRIM", "LTRIM", "RTRIM", "LEFT", "RIGHT", "CHARINDEX", "PATINDEX",
+            "CHAR", "NCHAR", "REPLACE", "SUBSTRING", "LEN", "LOWER", "UPPER",
+            "COUNT", "COUNT_BIG", "SUM", "AVG", "MIN", "MAX", "ABS", "ROUND",
+            "CONCAT", "TRANSLATE", "ROW_NUMBER", "DENSE_RANK", "RANK", "ISNULL",
+            "STRING_AGG", "REPLICATE", "REVERSE", "UNICODE", "ASCII"
+        };
+        public override void Visit(TSqlFragment node)
+        {
+            // Reject unknown table sources and potentially effectful SELECT forms.
+            if (node is TableReference && node is not NamedTableReference &&
+                node is not QueryDerivedTable && node is not QualifiedJoin &&
+                node is not UnqualifiedJoin && node is not JoinParenthesisTableReference)
+                Valid = false;
+            if (node is NamedTableReference) HasArchive = true;
+            if (node is NamedTableReference table &&
+                (table.SchemaObject.Identifiers.Count != 2 ||
+                 !string.Equals(table.SchemaObject.Identifiers[0].Value, "dbo", StringComparison.OrdinalIgnoreCase) ||
+                 !string.Equals(table.SchemaObject.Identifiers[1].Value, "TelegramRawMessages", StringComparison.OrdinalIgnoreCase) ||
+                 table.TableHints.Count != 0))
+                Valid = false;
+            if (node is FunctionCall function &&
+                (function.CallTarget != null || !Functions.Contains(function.FunctionName.Value)))
+                Valid = false;
+            if (node is SelectStatement select &&
+                (select.Into != null || select.OptimizerHints.Count != 0 || select.WithCtesAndXmlNamespaces != null))
+                Valid = false;
+            if (node is SelectSetVariable || node is NextValueForExpression ||
+                node is GlobalVariableExpression || node is VariableReference)
+                Valid = false;
+            base.Visit(node);
+        }
     }
 }
