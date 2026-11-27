@@ -140,8 +140,10 @@ internal static class ArchiveComparisonChecks
         };
         var historyOnly = new Car { Name = "Historical", IsReferenceApproved = true };
         var orderOnly = new Car { Name = "Ordered", IsReferenceApproved = true };
+        var existingTip = new Tip { Name = "اتومات" };
         await using (var setup = new CarShowContext(options))
         {
+            setup.Tips.Add(existingTip);
             setup.Cars.AddRange(oldYear, sameTrimOtherYear, historyOnly, orderOnly, new Car { Name = "Obsolete" });
             await setup.SaveChangesAsync(ct);
             setup.CarPriceHistories.AddRange(new CarPriceHistory { CarId = oldYear.Id },
@@ -256,6 +258,14 @@ internal static class ArchiveComparisonChecks
             "Unmatched vehicles with history or orders are retired");
         await using (var context = new CarShowContext(options))
         {
+            var refreshed = await context.Cars.Where(car => car.IsReferenceApproved && !car.IsDelete)
+                .Select(car => new { car.Id, car.Name, car.MarketPrice, car.TipId, Trim = car.Tip!.Name })
+                .ToListAsync(ct);
+            check(refreshed.All(car => car.TipId.HasValue) &&
+                  refreshed.Single(car => car.Id == oldYear.Id).TipId == existingTip.Id &&
+                  refreshed.Single(car => car.MarketPrice == 3_925_000_000m).TipId == existingTip.Id &&
+                  refreshed.Single(car => car.Name == "Single Trim").Trim == "Trim",
+                "Reference refresh stores a trim relation for new and retained cars and reuses existing trims");
             check(await context.CarPriceHistories.CountAsync(ct) == 2 && await context.Orders.CountAsync(ct) == 1,
                 "Dependent history and orders survive replacement");
         }
