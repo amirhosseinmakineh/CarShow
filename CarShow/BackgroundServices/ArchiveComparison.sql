@@ -211,7 +211,11 @@ CatalogLookup AS
     GROUP BY CarName
 )
 SELECT
-    C.CompanyName,
+    CONCAT(F.CleanModel, N' ', F.Trim) AS [نام خودرو],
+    F.Trim AS [تیپ از آرشیو],
+    F.Year - 621 AS [سال ساخت شمسی],
+    F.Year AS [سال ساخت میلادی],
+    C.CompanyName AS [شرکت],
     F.CleanModel AS Model,
     F.Trim,
     F.Year,
@@ -222,15 +226,28 @@ SELECT
     CAST(F.MedianPrice AS DECIMAL(19,3)) AS MedianPriceBillion,
     CAST(F.MinPrice AS DECIMAL(19,3)) AS MinPriceBillion,
     CAST(F.MaxPrice AS DECIMAL(19,3)) AS MaxPriceBillion,
-    CASE WHEN F.Status = 'Approved'
+    CASE
+        WHEN F.Status = 'Approved'
         THEN CAST(ROUND(F.AveragePrice, 3) AS DECIMAL(19,3))
     END AS ReferencePriceBillion,
-    CASE WHEN F.Status = 'Approved'
+    CASE
+        WHEN F.Status = 'Approved'
         THEN CAST(ROUND(F.AveragePrice, 3) * 1000000000 AS BIGINT)
     END AS ReferencePriceToman,
-    F.Status
+    F.Status,
+    Company.CompanyId,
+    C.CompanyName
 FROM CleanedModels F
 LEFT JOIN CatalogLookup C
     ON TRANSLATE(REPLACE(REPLACE(F.CleanModel, N'ي', N'ی'), N'ك', N'ک'),
         N'۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', N'01234567890123456789') = C.CarName
-ORDER BY F.TotalCount DESC;
+OUTER APPLY
+(
+    SELECT MIN(RegisteredCompany.Id) AS CompanyId
+    FROM dbo.Companies AS RegisteredCompany
+    WHERE RegisteredCompany.IsDelete = 0
+      AND CHARINDEX(N'،', C.CompanyName) = 0
+      AND LOWER(TRANSLATE(TRIM(RegisteredCompany.Name), N'يك', N'یک'))
+        = LOWER(TRANSLATE(TRIM(C.CompanyName), N'يك', N'یک'))
+) AS Company
+ORDER BY F.TotalCount DESC, F.CleanModel, F.Trim, F.Year DESC;
