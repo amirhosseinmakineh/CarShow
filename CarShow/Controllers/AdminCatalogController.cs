@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CarShow.Infrastracture.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -57,7 +58,6 @@ public sealed class AdminCatalogController : ControllerBase
                 x.Description,
                 x.FactoryPrice,
                 x.MarketPrice,
-                StartDate = string.Empty,
                 x.Name,
                 x.CompanyId,
                 Company = x.Company != null ? x.Company.Name : null,
@@ -79,7 +79,59 @@ public sealed class AdminCatalogController : ControllerBase
             FilteredCount = filteredCount,
             PageNumber = pageNumber,
             PageSize = pageSize,
-            Items = cars
+            Items = cars.Select(car =>
+            {
+                var (year, trim) = ReadScanMetadata(car.Description);
+                return new
+                {
+                    car.Id,
+                    car.ImageName,
+                    car.IsReferenceApproved,
+                    car.Description,
+                    car.FactoryPrice,
+                    car.MarketPrice,
+                    StartDate = year,
+                    car.Name,
+                    car.CompanyId,
+                    car.Company,
+                    car.CarModelId,
+                    car.Model,
+                    car.TipId,
+                    Tip = trim ?? car.Tip,
+                    car.EligibleForTelegramComparison,
+                    car.LastUpdated
+                };
+            }).ToList()
         });
+    }
+
+    private static (string Year, string? Trim) ReadScanMetadata(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return (string.Empty, null);
+
+        try
+        {
+            using var document = JsonDocument.Parse(description);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("Type", out var type) ||
+                type.ValueKind != JsonValueKind.String ||
+                type.GetString() != "TelegramPriceReference")
+                return (string.Empty, null);
+
+            var year = root.TryGetProperty("Year", out var yearValue) &&
+                yearValue.ValueKind is JsonValueKind.String or JsonValueKind.Number
+                ? yearValue.ToString()
+                : string.Empty;
+            var trim = root.TryGetProperty("TipName", out var trimValue) && trimValue.ValueKind == JsonValueKind.String
+                ? trimValue.GetString()
+                : null;
+            return (year, string.IsNullOrWhiteSpace(trim) ? null : trim);
+        }
+        catch (JsonException)
+        {
+            return (string.Empty, null);
+        }
     }
 }

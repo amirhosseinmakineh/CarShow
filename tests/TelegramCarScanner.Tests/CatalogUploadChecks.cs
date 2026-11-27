@@ -69,10 +69,15 @@ internal static class CatalogUploadChecks
                 var db = scope.ServiceProvider.GetRequiredService<CarShowContext>();
                 await db.Database.EnsureCreatedAsync();
                 db.CarModels.Add(new CarModel { Id = 72373, Name = "207", ImageName = "/images/cars/old.jpg" });
+                db.Tips.Add(new Tip { Id = 7, Name = "دنده‌ای" });
                 db.Cars.AddRange(
-                    new Car { Id = 11, CarModelId = 72373, IsReferenceApproved = true, ImageName = "/images/cars/old.jpg" },
+                    new Car
+                    {
+                        Id = 11, CarModelId = 72373, IsReferenceApproved = true, ImageName = "/images/cars/old.jpg",
+                        Description = """{"Type":"TelegramPriceReference","Year":"2025","TipName":"اتومات"}"""
+                    },
                     new Car { Id = 12, CarModelId = 72373, IsReferenceApproved = true, ImageName = "/images/cars/individual.jpg" },
-                    new Car { Id = 13, CarModelId = 72373 },
+                    new Car { Id = 13, CarModelId = 72373, TipId = 7, Description = "Manual description" },
                     new Car { Id = 14, CarModelId = 72373, IsReferenceApproved = true, IsDelete = true },
                     new Car { Id = 15, CarModelId = 72373, IsReferenceApproved = true });
                 var low = Guid.Parse("00000000-0000-0000-0000-000000000001");
@@ -104,6 +109,18 @@ internal static class CatalogUploadChecks
                 check(denied.StatusCode == HttpStatusCode.Unauthorized, "Upload requires admin authentication");
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", new JwtSecurityTokenHandler().WriteToken(jwt));
+
+            using (var payload = JsonDocument.Parse(await client.GetStringAsync("/api/admin/catalog")))
+            {
+                var items = payload.RootElement.GetProperty("items").EnumerateArray()
+                    .ToDictionary(row => row.GetProperty("id").GetInt64());
+                check(items[11].GetProperty("startDate").GetString() == "2025" &&
+                      items[11].GetProperty("tip").GetString() == "اتومات",
+                    "Admin catalog returns archived year and trim for a reference without a TipId");
+                check(items[13].GetProperty("startDate").GetString() == "" &&
+                      items[13].GetProperty("tip").GetString() == "دنده‌ای",
+                    "Admin catalog preserves linked trim for manually entered cars");
+            }
 
             using (var invalid = await UploadAsync(client, model, new byte[12]))
                 check(invalid.StatusCode == HttpStatusCode.BadRequest, "Invalid image is rejected");

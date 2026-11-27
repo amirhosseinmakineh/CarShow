@@ -190,6 +190,8 @@ public sealed partial class TelegramScanService
                 .GroupBy(x => LookupKey(x.Name)).ToDictionary(x => x.Key, x => x.First());
             var modelLookup = (await _db.CarModels.OrderBy(x => x.IsDelete).ThenBy(x => x.Id).ToListAsync(ct))
                 .GroupBy(x => LookupKey(x.Name)).ToDictionary(x => x.Key, x => x.First());
+            var tipLookup = (await _db.Tips.OrderBy(x => x.IsDelete).ThenBy(x => x.Id).ToListAsync(ct))
+                .GroupBy(x => LookupKey(x.Name)).ToDictionary(x => x.Key, x => x.First());
             foreach (var (slug, car) in cars)
             {
                 var row = identities[slug];
@@ -202,6 +204,17 @@ public sealed partial class TelegramScanService
                 }
                 model.IsDelete = false;
                 car.CarModel = model;
+
+                var tipKey = LookupKey(row.Trim);
+                if (!tipLookup.TryGetValue(tipKey, out var tip))
+                {
+                    tip = new Tip { Name = row.Trim };
+                    _db.Tips.Add(tip);
+                    tipLookup.Add(tipKey, tip);
+                }
+                tip.IsDelete = false;
+                car.Tip = tip;
+
                 if (!string.IsNullOrWhiteSpace(row.CompanyName) && !row.CompanyName.Contains('،'))
                 {
                     var key = LookupKey(row.CompanyName);
@@ -219,6 +232,7 @@ public sealed partial class TelegramScanService
             foreach (var car in cars.Values)
             {
                 car.CarModelId = car.CarModel!.Id;
+                car.TipId = car.Tip!.Id;
                 car.CompanyId = car.Company?.Id;
             }
 
@@ -280,6 +294,7 @@ public sealed partial class TelegramScanService
                 previous.ImageName = replacement.ImageName;
                 previous.CompanyId = replacement.CompanyId;
                 previous.CarModelId = replacement.CarModelId;
+                previous.TipId = replacement.TipId;
             }
 
             var newCars = cars.Where(x => !reused.ContainsKey(x.Key)).Select(x => x.Value).ToList();
