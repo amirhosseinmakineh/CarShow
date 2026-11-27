@@ -39,24 +39,40 @@ public sealed partial class TelegramScanService
 
         var results = new List<ArchiveComparisonResult>();
         await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleResult, ct);
+        var companyId = reader.GetOrdinal(nameof(ArchiveComparisonResult.CompanyId));
+        var companyName = reader.GetOrdinal(nameof(ArchiveComparisonResult.CompanyName));
+        var model = reader.GetOrdinal(nameof(ArchiveComparisonResult.Model));
+        var trim = reader.GetOrdinal(nameof(ArchiveComparisonResult.Trim));
+        var year = reader.GetOrdinal(nameof(ArchiveComparisonResult.Year));
+        var persianYear = reader.GetOrdinal(nameof(ArchiveComparisonResult.PersianYear));
+        var totalCount = reader.GetOrdinal(nameof(ArchiveComparisonResult.TotalCount));
+        var validCount = reader.GetOrdinal(nameof(ArchiveComparisonResult.ValidCount));
+        var removedCount = reader.GetOrdinal(nameof(ArchiveComparisonResult.RemovedCount));
+        var medianPriceBillion = reader.GetOrdinal(nameof(ArchiveComparisonResult.MedianPriceBillion));
+        var minPriceBillion = reader.GetOrdinal(nameof(ArchiveComparisonResult.MinPriceBillion));
+        var maxPriceBillion = reader.GetOrdinal(nameof(ArchiveComparisonResult.MaxPriceBillion));
+        var referencePriceBillion = reader.GetOrdinal(nameof(ArchiveComparisonResult.ReferencePriceBillion));
+        var referencePriceToman = reader.GetOrdinal(nameof(ArchiveComparisonResult.ReferencePriceToman));
+        var status = reader.GetOrdinal(nameof(ArchiveComparisonResult.Status));
         while (await reader.ReadAsync(ct))
         {
             results.Add(new ArchiveComparisonResult
             {
-                CompanyName = reader.IsDBNull(0) ? null : reader.GetString(0),
-                Model = reader.GetString(1),
-                Trim = reader.GetString(2),
-                Year = reader.GetInt32(3),
-                PersianYear = reader.GetInt32(4),
-                TotalCount = reader.GetInt32(5),
-                ValidCount = reader.GetInt32(6),
-                RemovedCount = reader.GetInt32(7),
-                MedianPriceBillion = reader.GetDecimal(8),
-                MinPriceBillion = reader.IsDBNull(9) ? null : reader.GetDecimal(9),
-                MaxPriceBillion = reader.IsDBNull(10) ? null : reader.GetDecimal(10),
-                ReferencePriceBillion = reader.IsDBNull(11) ? null : reader.GetDecimal(11),
-                ReferencePriceToman = reader.IsDBNull(12) ? null : reader.GetInt64(12),
-                Status = reader.GetString(13)
+                CompanyId = reader.IsDBNull(companyId) ? null : reader.GetInt64(companyId),
+                CompanyName = reader.IsDBNull(companyName) ? null : reader.GetString(companyName),
+                Model = reader.GetString(model),
+                Trim = reader.GetString(trim),
+                Year = reader.GetInt32(year),
+                PersianYear = reader.GetInt32(persianYear),
+                TotalCount = reader.GetInt32(totalCount),
+                ValidCount = reader.GetInt32(validCount),
+                RemovedCount = reader.GetInt32(removedCount),
+                MedianPriceBillion = reader.GetDecimal(medianPriceBillion),
+                MinPriceBillion = reader.IsDBNull(minPriceBillion) ? null : reader.GetDecimal(minPriceBillion),
+                MaxPriceBillion = reader.IsDBNull(maxPriceBillion) ? null : reader.GetDecimal(maxPriceBillion),
+                ReferencePriceBillion = reader.IsDBNull(referencePriceBillion) ? null : reader.GetDecimal(referencePriceBillion),
+                ReferencePriceToman = reader.IsDBNull(referencePriceToman) ? null : reader.GetInt64(referencePriceToman),
+                Status = reader.GetString(status)
             });
         }
         return results;

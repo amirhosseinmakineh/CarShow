@@ -141,9 +141,11 @@ internal static class ArchiveComparisonChecks
         var historyOnly = new Car { Name = "Historical", IsReferenceApproved = true };
         var orderOnly = new Car { Name = "Ordered", IsReferenceApproved = true };
         var existingTip = new Tip { Name = "اتومات" };
+        var catalogCompany = new Company { Name = "ایران خودرو" };
         await using (var setup = new CarShowContext(options))
         {
             setup.Tips.Add(existingTip);
+            setup.Companies.Add(catalogCompany);
             setup.Cars.AddRange(oldYear, sameTrimOtherYear, historyOnly, orderOnly, new Car { Name = "Obsolete" });
             await setup.SaveChangesAsync(ct);
             setup.CarPriceHistories.AddRange(new CarPriceHistory { CarId = oldYear.Id },
@@ -161,12 +163,21 @@ internal static class ArchiveComparisonChecks
         {
             command.CommandText = sql;
             await using var reader = await command.ExecuteReaderAsync(ct);
+            var resultOrdinals = typeof(ArchiveComparisonResult).GetProperties()
+                .Select(property => reader.GetOrdinal(property.Name)).ToArray();
+            var displayTrim = reader.GetOrdinal("تیپ از آرشیو");
+            var displayYear = reader.GetOrdinal("سال ساخت میلادی");
+            var trim = reader.GetOrdinal(nameof(ArchiveComparisonResult.Trim));
+            var year = reader.GetOrdinal(nameof(ArchiveComparisonResult.Year));
+            var displayFieldsMatch = true;
             while (await reader.ReadAsync(ct))
             {
-                var values = new object[reader.FieldCount];
-                reader.GetValues(values);
-                manualRows.Add(Key(values.Select(v => v is DBNull ? null : Convert.ToString(v, CultureInfo.InvariantCulture))));
+                manualRows.Add(Key(resultOrdinals.Select(reader.GetValue)
+                    .Select(value => value is DBNull ? null : Convert.ToString(value, CultureInfo.InvariantCulture))));
+                displayFieldsMatch &= reader.GetString(displayTrim) == reader.GetString(trim)
+                    && reader.GetInt32(displayYear) == reader.GetInt32(year);
             }
+            check(displayFieldsMatch, "The SQL display columns use the archived trim and normalized year");
         }
 
         await using (var context = new CarShowContext(options))
@@ -177,11 +188,13 @@ internal static class ArchiveComparisonChecks
             var appRows = groups.Select(group => Key(group.EnumerateObject().Select(property =>
                 property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString())));
             check(manualRows.Order(StringComparer.Ordinal).SequenceEqual(appRows.Order(StringComparer.Ordinal)),
-                "Application rows match direct SQL execution across all 14 columns");
+                "Application rows match direct SQL execution across all scan data columns");
             check(groups.Length == 8 && groups.All(group => group.GetProperty("Status").GetString() == "Approved"),
                 "Every eligible group is approved and trimless or otherwise ineligible ads are excluded");
             var single = groups.Single(group => group.GetProperty("Model").GetString() == "Single");
             check(single.GetProperty("TotalCount").GetInt32() == 1 &&
+                  single.GetProperty("CompanyId").ValueKind == JsonValueKind.Null &&
+                  single.GetProperty("CompanyName").ValueKind == JsonValueKind.Null &&
                   single.GetProperty("ReferencePriceToman").GetInt64() == 2_500_000_000L,
                 "A single eligible advertisement provides its own reference price");
             var pair = groups.Single(group => group.GetProperty("Model").GetString() == "Conflicting");
@@ -195,6 +208,7 @@ internal static class ArchiveComparisonChecks
             var deduplicated = groups.Single(group => group.GetProperty("Trim").GetString() == "اتومات" &&
                                                        group.GetProperty("Year").GetInt32() == 2026);
             check(deduplicated.GetProperty("CompanyName").GetString() == "ایران خودرو" &&
+                  deduplicated.GetProperty("CompanyId").GetInt64() == catalogCompany.Id &&
                   deduplicated.GetProperty("Model").GetString() == "دنا" &&
                   deduplicated.GetProperty("TotalCount").GetInt32() == 2 &&
                   deduplicated.GetProperty("ReferencePriceBillion").GetDecimal() == 3.925m &&
